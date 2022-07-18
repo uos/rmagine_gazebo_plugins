@@ -1,5 +1,7 @@
 #include <gazebo_rmagine_plugin/gazebo_rmagine_map_plugin.h>
 #include <iostream>
+#include <gazebo/sensors/SensorsIface.hh>
+#include <gazebo_rmagine_plugin/gazebo_rmagine_spherical_plugin.h>
 
 using namespace std::placeholders;
 
@@ -24,7 +26,8 @@ void RmagineMap::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
         std::bind(&RmagineMap::OnWorldUpdate, this, std::placeholders::_1)
     );
 
-    // std::cout << "RmagineMap::Load !!!!!" << std::endl;
+    // create empty map
+    m_map.reset(new rmagine::EmbreeMap);
 }
 
 std::unordered_map<uint32_t, physics::ModelPtr> RmagineMap::ToIdMap(
@@ -171,6 +174,101 @@ void RmagineMap::UpdateState()
     {
         // TODO! translate gazebo models to embree map instances
         
+        for(auto model_id : diff.added)
+        {
+            std::cout << "Add model " << model_id << " to embree map" << std::endl;
+        
+            physics::ModelPtr model = models_new[model_id];
+            std::string model_name = model->GetName();
+
+            sdf::ElementPtr sdf = model->GetSDF();
+
+            std::vector<physics::LinkPtr> links = model->GetLinks();
+
+            for(auto link : links)
+            {
+                std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
+                std::cout << "Loaded " << link->GetName() << " -> " << visuals.size() << " visuals" << std::endl;
+                for(auto elem : visuals)
+                {
+                    msgs::Visual vis = elem.second;
+                    if(vis.has_geometry())
+                    {
+                        msgs::Geometry geom = vis.geometry();
+                        if(geom.has_mesh())
+                        {
+                            std::cout << "MESH" << std::endl;
+                        }
+
+                        if(geom.has_box())
+                        {
+                            std::cout << "BOX" << std::endl;
+                        }
+
+                        if(geom.has_cylinder())
+                        {
+                            std::cout << "CYLINDER" << std::endl;
+                        }
+
+                        if(geom.has_sphere())
+                        {
+                            std::cout << "SPHERE" << std::endl;
+                        }
+
+                        if(geom.has_plane())
+                        {
+                            std::cout << "PLANE" << std::endl;
+                            msgs::PlaneGeom plane = geom.plane();
+
+                            msgs::Vector2d size = plane.size();
+                            msgs::Vector3d normal = plane.normal();
+
+                            rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
+                                m_map->device, 4, 2));
+
+                            mesh->vertices[0].x = -size.x();
+                            mesh->vertices[0].y = size.y();
+                            mesh->vertices[0].z = 0.0;  
+
+                            mesh->vertices[1].x = size.x();
+                            mesh->vertices[1].y = size.y();
+                            mesh->vertices[1].z = 0.0;
+                            
+                            mesh->vertices[2].x = size.x();
+                            mesh->vertices[2].y = -size.y();
+                            mesh->vertices[2].z = 0.0;
+
+                            mesh->vertices[3].x = size.x();
+                            mesh->vertices[3].y = -size.y();
+                            mesh->vertices[3].z = 0.0;
+
+                            mesh->faces[0].v0 = 1;
+                            mesh->faces[0].v1 = 0;
+                            mesh->faces[0].v2 = 3;
+
+                            mesh->faces[1].v0 = 3;
+                            mesh->faces[1].v1 = 2;
+                            mesh->faces[1].v2 = 1;
+
+                            mesh->commit();
+
+                            // transform
+
+                            unsigned int mesh_id = m_map->addMesh(mesh);
+                            std::cout << "Plane added to embree with id " << mesh_id << std::endl;
+                        }
+
+                        if(geom.has_heightmap())
+                        {
+                            std::cout << "HEIGHTMAP" << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+
+        m_map->scene->commit();
+
         // 1. change existing meshes in embree map
 
         // 2. add new meshes
@@ -186,8 +284,6 @@ void RmagineMap::UpdateState()
         //     m_map.reset(new rmagine::EmbreeMap(m_e_device));
         // }
     }
-
-
 
     // apply changes to gazebo state
     if(diff.HasChanged())
@@ -226,6 +322,30 @@ void RmagineMap::OnWorldUpdate(const common::UpdateInfo& info)
 {
     // this is called every simulation step
     UpdateState();
+
+
+    // TODO: get all sensors of certain type, simulate sensor data if required
+    sensors::SensorPtr sensor = sensors::get_sensor("velodyne");
+
+    if(sensor)
+    {
+        // std::cout <<  "FOUND VELODYNE" << std::endl;
+        sensors::RmagineSphericalPtr velo = std::dynamic_pointer_cast<sensors::RmagineSpherical>(sensor);
+
+        if(velo)
+        {
+            if(velo->needsUpdate())
+            {
+                std::cout << "[RmagineMap] update scanner" << std::endl;
+                velo->update();
+            }
+        } else {
+            std::cout << "Could not downcast" << std::endl;
+        }
+        
+
+    }
+
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineMap)

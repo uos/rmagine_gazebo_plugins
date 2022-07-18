@@ -4,6 +4,7 @@
 #include <ros/ros.h>
 
 #include <gazebo/physics/physics.hh>
+#include <gazebo/physics/Actor.hh>
 #include <gazebo/common/common.hh>
 #include <gazebo/gazebo.hh>
 
@@ -14,11 +15,22 @@
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
+#include <memory>
 
 
 // rmagine
 #include <rmagine/map/EmbreeMap.hpp>
 
+
+struct Base
+{
+    virtual ~Base(){}
+};
+
+struct Derived : public Base
+{
+    ~Derived(){}
+};
 
 
 namespace gazebo
@@ -60,15 +72,14 @@ public:
 
 protected:
     virtual void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf);
-
+    
     void OnWorldUpdate(const common::UpdateInfo& info);
 
 private:
 
     // todo static
     std::unordered_map<uint32_t, physics::ModelPtr> ToIdMap(
-        const std::vector<physics::ModelPtr>& models
-    );
+        const std::vector<physics::ModelPtr>& models);
 
     std::unordered_set<uint32_t> ComputeAdded(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
@@ -84,21 +95,24 @@ private:
 
     ModelsDiff ComputeDiff(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new
-        ) const;
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
     void UpdateState();
 
     physics::WorldPtr m_world;
     event::ConnectionPtr m_world_update_conn;
 
-    rmagine::EmbreeDevicePtr m_e_device;
+    // rmagine::EmbreeDevicePtr m_e_device;
     rmagine::EmbreeMapPtr m_map;
+
+    // std::unordered_map<uint32_t, rmagine::EmbreeMesh> m_rm_meshes;
+
+
+
 
     double m_changed_delta_trans = 0.00001;
     double m_changed_delta_rot = 0.001;
     double m_changed_delta_scale = 0.00001;
-
 
     
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;

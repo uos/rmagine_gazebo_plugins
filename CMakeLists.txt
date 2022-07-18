@@ -147,6 +147,37 @@ target_link_libraries(gazebo_rmagine_map_plugin
   ${rmagine_LIBRARIES}
 )
 
+add_library(gazebo_rmagine_spherical_plugin SHARED
+  src/gazebo_rmagine_spherical_plugin.cpp
+)
+
+target_link_libraries(gazebo_rmagine_spherical_plugin 
+  ${catkin_LIBRARIES}
+  ${GAZEBO_LIBRARIES}
+  ${rmagine_LIBRARIES}
+)
+
+
+add_library(gazebo_rmagine_spherical_register SHARED
+  src/gazebo_rmagine_spherical_register.cpp
+)
+
+target_link_libraries(gazebo_rmagine_spherical_register
+  gazebo_rmagine_spherical_plugin 
+  ${catkin_LIBRARIES}
+  ${GAZEBO_LIBRARIES}
+  ${rmagine_LIBRARIES}
+)
+
+
+install(
+  TARGETS 
+    gazebo_rmagine_map_plugin
+    gazebo_rmagine_spherical_plugin 
+    gazebo_rmagine_spherical_register
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
