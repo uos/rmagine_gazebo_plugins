@@ -5,6 +5,7 @@
 #include <gazebo/physics/Actor.hh>
 #include <gazebo/common/common.hh>
 #include <gazebo/gazebo.hh>
+#include <rmagine_gazebo_plugins/rmagine_embree_spherical_gzplugin.h>
 
 #include <ignition/math/Vector3.hh>
 #include <ignition/math/Pose3.hh>
@@ -16,9 +17,10 @@
 #include <memory>
 
 
+
 // rmagine
 #include <rmagine/map/EmbreeMap.hpp>
-
+#include <rmagine/simulation/SphereSimulatorEmbree.hpp>
 
 namespace gazebo
 {
@@ -86,15 +88,27 @@ private:
 
     void UpdateState();
 
+    void UpdateSensors();
+
     physics::WorldPtr m_world;
+    sdf::ElementPtr m_sdf;
+
     event::ConnectionPtr m_world_update_conn;
 
     // rmagine::EmbreeDevicePtr m_e_device;
     rmagine::EmbreeMapPtr m_map;
 
+    rmagine::SphereSimulatorEmbreePtr m_sphere_sim;
+
+
     // std::unordered_map<uint32_t, rmagine::EmbreeMesh> m_rm_meshes;
 
+    bool m_sensors_loaded = false;
+    std::vector<std::string> m_sensors;
+    std::unordered_map<std::string, sensors::RmagineEmbreeSphericalPtr> m_sphericals;
 
+    std::unordered_map<std::string, rmagine::SphereSimulatorEmbreePtr> m_sphere_sims;
+    
 
 
     double m_changed_delta_trans = 0.00001;

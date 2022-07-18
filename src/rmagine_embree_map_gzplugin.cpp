@@ -1,7 +1,9 @@
 #include <rmagine_gazebo_plugins/rmagine_embree_map_gzplugin.h>
 #include <iostream>
 #include <gazebo/sensors/SensorsIface.hh>
-#include <rmagine_gazebo_plugins/rmagine_embree_spherical_gzplugin.h>
+
+
+#include <gazebo/sensors/SensorManager.hh>
 
 using namespace std::placeholders;
 
@@ -18,9 +20,12 @@ RmagineEmbreeMap::~RmagineEmbreeMap()
     ROS_INFO("Destroying RmagineEmbreeMap.");
 }
 
-void RmagineEmbreeMap::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
+void RmagineEmbreeMap::Load(
+    physics::WorldPtr _world, 
+    sdf::ElementPtr _sdf)
 {
     m_world = _world;
+    m_sdf = _sdf;
 
     m_world_update_conn= event::Events::ConnectWorldUpdateBegin(
         std::bind(&RmagineEmbreeMap::OnWorldUpdate, this, std::placeholders::_1)
@@ -28,6 +33,9 @@ void RmagineEmbreeMap::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
 
     // create empty map
     m_map.reset(new rmagine::EmbreeMap);
+
+    // connect to simulators
+    m_sphere_sim = std::make_shared<rmagine::SphereSimulatorEmbree>(m_map);
 }
 
 std::unordered_map<uint32_t, physics::ModelPtr> RmagineEmbreeMap::ToIdMap(
@@ -134,7 +142,6 @@ std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeChanged(
                     change_found = true;
                 }
             }
-
         }
         
         if(change_found)
@@ -168,17 +175,17 @@ void RmagineEmbreeMap::UpdateState()
 
     // apply changes to rmagine
 
-
-    
     if(diff.HasChanged())
     {
         // TODO! translate gazebo models to embree map instances
         
         for(auto model_id : diff.added)
         {
+
             std::cout << "Add model " << model_id << " to embree map" << std::endl;
         
             physics::ModelPtr model = models_new[model_id];
+            
             std::string model_name = model->GetName();
 
             sdf::ElementPtr sdf = model->GetSDF();
@@ -303,6 +310,13 @@ void RmagineEmbreeMap::UpdateState()
         // remove
         for(auto rem_name : diff.removed)
         {
+            auto model = m_models[rem_name];
+            if(model->GetSensorCount() > 0)
+            {
+                // reload sensors
+                m_sensors_loaded = false;
+            }
+
             m_models.erase(rem_name);
             m_poses.erase(rem_name);
             m_scales.erase(rem_name);
@@ -311,39 +325,115 @@ void RmagineEmbreeMap::UpdateState()
         // add
         for(auto add_name : diff.added)
         {
-            m_models[add_name] = models_new[add_name];
-            m_poses[add_name] = models_new[add_name]->RelativePose();
-            m_scales[add_name] = models_new[add_name]->Scale();
+            auto model = models_new[add_name];
+            if(model->GetSensorCount() > 0)
+            {
+                // reload sensors
+                m_sensors_loaded = false;
+            }
+
+            m_models[add_name] = model;
+            m_poses[add_name] = model->RelativePose();
+            m_scales[add_name] = model->Scale();
         }
     }
 }
 
+void RmagineEmbreeMap::UpdateSensors()
+{
+    // TODO: get all sensors of certain type, simulate sensor data if required   
+    if(!m_sensors_loaded)
+    {
+        m_sphericals.clear();
+        m_sphere_sims.clear();
+
+        std::vector<sensors::SensorPtr> sensors 
+            = sensors::SensorManager::Instance()->GetSensors();
+
+        for(sensors::SensorPtr sensor : sensors)
+        {
+            sensors::RmagineEmbreeSphericalPtr spherical 
+                = std::dynamic_pointer_cast<sensors::RmagineEmbreeSpherical>(sensor);
+
+            if(spherical)
+            {
+                std::cout << "[RmagineEmbreeMap] Found Rmagine spherical sensor " << spherical->Name() << std::endl;
+            
+                m_sphericals[spherical->Name()] = spherical;
+
+                rmagine::SphereSimulatorEmbreePtr sphere_sim(new rmagine::SphereSimulatorEmbree);
+
+                sphere_sim->setMap(m_map);
+
+                rmagine::SphericalModel model;
+                // TODO fill
+                sphere_sim->setModel(model);
+
+
+                
+
+                m_sphere_sims[spherical->Name()] = sphere_sim;
+            }
+        }
+
+        m_sensors_loaded = true;
+    } 
+    
+    std::vector<std::string> sphericals_to_update;
+    for(auto elem : m_sphericals)
+    {
+        sensors::RmagineEmbreeSphericalPtr spherical = elem.second;
+        if(spherical->needsUpdate())
+        {
+            // update
+            sphericals_to_update.push_back(elem.first);
+        }
+    }
+
+    for(auto spherical_name : sphericals_to_update)
+    {
+        sensors::RmagineEmbreeSphericalPtr spherical = m_sphericals[spherical_name];
+        rmagine::SphereSimulatorEmbreePtr sim = m_sphere_sims[spherical_name];
+        
+        // TODO get Pose
+
+        rmagine::Transform pose;
+        pose.setIdentity();
+        sim->setTsb(pose);
+    }
+
+    // sensors::SensorPtr sensor = sensors::get_sensor("velodyne2");
+
+    // if(sensor)
+    // {
+    //     // std::cout <<  "FOUND VELODYNE" << std::endl;
+    //     sensors::RmagineEmbreeSphericalPtr velo 
+    //         = std::dynamic_pointer_cast<sensors::RmagineEmbreeSpherical>(sensor);
+
+    //     if(velo)
+    //     {
+    //         if(velo->needsUpdate())
+    //         {
+    //             // std::cout << "[RmagineEmbreeMap] update scanner" << std::endl;
+    //             velo->update();
+    //         }
+    //     } else {
+    //         std::cout << "Could not downcast" << std::endl;
+    //     }
+    // }
+}
+
 void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
 {
+
+
+
     // this is called every simulation step
     UpdateState();
 
 
-    // TODO: get all sensors of certain type, simulate sensor data if required
-    sensors::SensorPtr sensor = sensors::get_sensor("velodyne");
+    UpdateSensors();
 
-    if(sensor)
-    {
-        // std::cout <<  "FOUND VELODYNE" << std::endl;
-        sensors::RmagineEmbreeSphericalPtr velo 
-            = std::dynamic_pointer_cast<sensors::RmagineEmbreeSpherical>(sensor);
-
-        if(velo)
-        {
-            if(velo->needsUpdate())
-            {
-                std::cout << "[RmagineEmbreeMap] update scanner" << std::endl;
-                velo->update();
-            }
-        } else {
-            std::cout << "Could not downcast" << std::endl;
-        }
-    }
 
 }
 
