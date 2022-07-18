@@ -14,7 +14,6 @@ namespace gazebo
 
 namespace sensors
 {
-
 class RmagineEmbreeSpherical : public RaySensor
 {
 public:
@@ -32,14 +31,10 @@ public:
 
     bool needsUpdate() const;
 
-
 protected:
     virtual bool UpdateImpl(const bool _force) override;
 
     bool m_needs_update = false;
-
-// protected:
-//     virtual void Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf);
 
 };
 
