@@ -5,7 +5,11 @@
 
 #include <gazebo/sensors/SensorManager.hh>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/find_iterator.hpp>
+
 using namespace std::placeholders;
+using namespace boost::algorithm;
 
 namespace gazebo
 {
@@ -357,22 +361,99 @@ void RmagineEmbreeMap::UpdateSensors()
 
             if(spherical)
             {
-                std::cout << "[RmagineEmbreeMap] Found Rmagine spherical sensor " << spherical->Name() << std::endl;
-            
-                m_sphericals[spherical->Name()] = spherical;
+                std::cout << "[RmagineEmbreeMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
+                std::cout << "- Parent: " << spherical->ParentName() << std::endl;
+
+                std::cout << "- Existing: " << std::endl;
+                for(auto elem : m_models)
+                {
+                    std::cout << "-- " << elem.second->GetName() << std::endl;
+                }
+
+
+                std::string scoped_name = spherical->ScopedName();
+
+                std::vector<std::string> scope_names;
+
+                typedef split_iterator<std::string::iterator> string_split_iterator;
+                for(string_split_iterator It=
+                    make_split_iterator(scoped_name, first_finder("::", is_iequal()));
+                    It!=string_split_iterator();
+                    ++It)
+                {
+                    scope_names.push_back(boost::copy_range<std::string>(*It) );   
+                }
+                
+                // docs:
+                // std::cout << "- World: " << scope_names[0] << std::endl;
+                // std::cout << "- Model: " << scope_names[1] << std::endl;
+                // std::cout << "- Link: " << scope_names[2] << std::endl;
+                // std::cout << "- Name: " << scope_names[3] << std::endl;
+
+
+                physics::ModelPtr model = m_world->ModelByName(scope_names[1]);
+
+                if(!model)
+                {
+                    std::cout << "[RmagineEmbreeMap] WARNING: Coud not find model " << scope_names[1] << " to sensor " << spherical->ScopedName() << std::endl; 
+                }
+
+                if(m_models.find(model->GetId()) == m_models.end())
+                {
+                    std::cout << "[RmagineEmbreeMap] WARNING: Coud not find model " << scope_names[1] << " in model map: ";
+                    for(auto elem : m_models)
+                    {
+                        std::cout << elem.second->GetName() << ", ";
+                    } 
+                    std::cout << std::endl;
+                }
+
+                // TODO: for dynamic sensor. check if model is uppest (below world)
+
+                
+
 
                 rmagine::SphereSimulatorEmbreePtr sphere_sim(new rmagine::SphereSimulatorEmbree);
 
                 sphere_sim->setMap(m_map);
 
-                rmagine::SphericalModel model;
-                // TODO fill
-                sphere_sim->setModel(model);
+                ignition::math::Pose3d gz_pose_sensor = spherical->Pose();
+                rmagine::Transform Tsb;
+                Tsb.R.x = gz_pose_sensor.Rot().X();
+                Tsb.R.y = gz_pose_sensor.Rot().Y();
+                Tsb.R.z = gz_pose_sensor.Rot().Z();
+                Tsb.R.w = gz_pose_sensor.Rot().W();
+                Tsb.t.x = gz_pose_sensor.Pos().X();
+                Tsb.t.y = gz_pose_sensor.Pos().Y();
+                Tsb.t.z = gz_pose_sensor.Pos().Z();
+                sphere_sim->setTsb(Tsb);
 
 
+                // TODO real model
+                rmagine::SphericalModel sensor_model;
+                sensor_model.theta.min = -M_PI;
+                sensor_model.theta.inc = 0.4 * M_PI / 180.0;
+                sensor_model.theta.size = 900;
+
+                // 3D:
+                // sensor_model.phi.min = -15.0 * M_PI / 180.0;
+                // sensor_model.phi.inc = 2.0 * M_PI / 180.0;
+                // sensor_model.phi.size = 16;
                 
+                // 2D:
+                sensor_model.phi.min = 0.0;
+                sensor_model.phi.inc = 1.0;
+                sensor_model.phi.size = 1;
 
+                sensor_model.range.min = 0.1;
+                sensor_model.range.max = 130.0;
+
+                sphere_sim->setModel(sensor_model);
+
+                // store as member
+                m_sphericals[spherical->Name()] = spherical;
                 m_sphere_sims[spherical->Name()] = sphere_sim;
+                m_sphere_parents[spherical->Name()] = model->GetId();
             }
         }
 
@@ -395,32 +476,44 @@ void RmagineEmbreeMap::UpdateSensors()
         sensors::RmagineEmbreeSphericalPtr spherical = m_sphericals[spherical_name];
         rmagine::SphereSimulatorEmbreePtr sim = m_sphere_sims[spherical_name];
         
-        // TODO get Pose
+        
+        ignition::math::Pose3d gz_pose_model = m_poses[m_sphere_parents[spherical_name]];
 
-        rmagine::Transform pose;
-        pose.setIdentity();
-        sim->setTsb(pose);
+        rmagine::Transform Tbm;
+        Tbm.R.x = gz_pose_model.Rot().X();
+        Tbm.R.y = gz_pose_model.Rot().Y();
+        Tbm.R.z = gz_pose_model.Rot().Z();
+        Tbm.R.w = gz_pose_model.Rot().W();
+        Tbm.t.x = gz_pose_model.Pos().X();
+        Tbm.t.y = gz_pose_model.Pos().Y();
+        Tbm.t.z = gz_pose_model.Pos().Z();
+
+        rmagine::Memory<rmagine::Transform, rmagine::RAM> Tbms(1);
+        Tbms[0] = Tbm;
+
+        std::cout << "Simulate " << spherical->ScopedName() << std::endl;
+        auto ranges = sim->simulateRanges(Tbms);
+        std::cout << "done. " << std::endl;
+
+
+        // check results
+        unsigned int valid_pts = 0;
+        for(unsigned int i = 0; i < ranges.size(); i++)
+        {
+            if(ranges[i] > 0.1 && ranges[i] < 130.0 )
+            {
+                valid_pts++;
+            }
+        }
+
+        std::cout << valid_pts << " valid pts" << std::endl;
+
+        // TODO: update sensor
+        spherical->update();
+
+        
     }
 
-    // sensors::SensorPtr sensor = sensors::get_sensor("velodyne2");
-
-    // if(sensor)
-    // {
-    //     // std::cout <<  "FOUND VELODYNE" << std::endl;
-    //     sensors::RmagineEmbreeSphericalPtr velo 
-    //         = std::dynamic_pointer_cast<sensors::RmagineEmbreeSpherical>(sensor);
-
-    //     if(velo)
-    //     {
-    //         if(velo->needsUpdate())
-    //         {
-    //             // std::cout << "[RmagineEmbreeMap] update scanner" << std::endl;
-    //             velo->update();
-    //         }
-    //     } else {
-    //         std::cout << "Could not downcast" << std::endl;
-    //     }
-    // }
 }
 
 void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)

@@ -106,8 +106,8 @@ private:
     bool m_sensors_loaded = false;
     std::vector<std::string> m_sensors;
     std::unordered_map<std::string, sensors::RmagineEmbreeSphericalPtr> m_sphericals;
-
     std::unordered_map<std::string, rmagine::SphereSimulatorEmbreePtr> m_sphere_sims;
+    std::unordered_map<std::string, uint32_t> m_sphere_parents;
     
 
 
