@@ -1,5 +1,5 @@
-#ifndef GAZEBO_RMAGINE_SPHERICAL_PLUGIN_H
-#define GAZEBO_RMAGINE_SPHERICAL_PLUGIN_H
+#ifndef GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H
+#define GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H
 
 #include <ros/ros.h>
 
@@ -15,14 +15,14 @@ namespace gazebo
 namespace sensors
 {
 
-class RmagineSpherical : public RaySensor
+class RmagineEmbreeSpherical : public RaySensor
 {
 public:
     using Base = RaySensor;
 
-    RmagineSpherical();
+    RmagineEmbreeSpherical();
 
-    virtual ~RmagineSpherical();
+    virtual ~RmagineEmbreeSpherical();
 
     virtual void Init() override;
 
@@ -43,13 +43,13 @@ protected:
 
 };
 
-using RmagineSphericalPtr = std::shared_ptr<RmagineSpherical>;
+using RmagineEmbreeSphericalPtr = std::shared_ptr<RmagineEmbreeSpherical>;
 
 // will by generated in cpp
-void RegisterRmagineSpherical();
+void RegisterRmagineEmbreeSpherical();
 
 } // namespace sensors
 
 } // namespace gazebo
 
-#endif // GAZEBO_RMAGINE_SPHERICAL_PLUGIN_H
+#endif // GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H

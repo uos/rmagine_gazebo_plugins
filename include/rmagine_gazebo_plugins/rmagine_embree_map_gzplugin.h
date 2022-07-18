@@ -1,7 +1,5 @@
-#ifndef GAZEBO_RMAGINE_MAP_PLUGIN_H
-#define GAZEBO_RMAGINE_MAP_PLUGIN_H
-
-#include <ros/ros.h>
+#ifndef GAZEBO_RMAGINE_EMBREE_MAP_PLUGIN_H
+#define GAZEBO_RMAGINE_EMBREE_MAP_PLUGIN_H
 
 #include <gazebo/physics/physics.hh>
 #include <gazebo/physics/Actor.hh>
@@ -20,17 +18,6 @@
 
 // rmagine
 #include <rmagine/map/EmbreeMap.hpp>
-
-
-struct Base
-{
-    virtual ~Base(){}
-};
-
-struct Derived : public Base
-{
-    ~Derived(){}
-};
 
 
 namespace gazebo
@@ -64,11 +51,11 @@ struct ModelsDiff
 
 };
 
-class RmagineMap : public WorldPlugin
+class RmagineEmbreeMap : public WorldPlugin
 {
 public: 
-    RmagineMap();
-    virtual ~RmagineMap();
+    RmagineEmbreeMap();
+    virtual ~RmagineEmbreeMap();
 
 protected:
     virtual void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf);
@@ -124,4 +111,4 @@ private:
 
 } // namespace gazebo
 
-#endif // GAZEBO_RMAGINE_MAP_PLUGIN_H
+#endif // GAZEBO_RMAGINE_EMBREE_MAP_PLUGIN_H

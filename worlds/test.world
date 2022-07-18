@@ -255,7 +255,7 @@
     </model>
 
     <!-- Grid Map Plugin -->
-    <plugin name='gazebo_rmagine_map' filename='libgazebo_rmagine_map_plugin.so'>
+    <plugin name='gazebo_rmagine_embree_map' filename='libgazebo_rmagine_embree_map_plugin.so'>
     </plugin>
 
   </world>

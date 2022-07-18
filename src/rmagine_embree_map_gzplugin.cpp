@@ -1,36 +1,36 @@
-#include <gazebo_rmagine_plugin/gazebo_rmagine_map_plugin.h>
+#include <rmagine_gazebo_plugins/rmagine_embree_map_gzplugin.h>
 #include <iostream>
 #include <gazebo/sensors/SensorsIface.hh>
-#include <gazebo_rmagine_plugin/gazebo_rmagine_spherical_plugin.h>
+#include <rmagine_gazebo_plugins/rmagine_embree_spherical_gzplugin.h>
 
 using namespace std::placeholders;
 
 namespace gazebo
 {
 
-RmagineMap::RmagineMap()
+RmagineEmbreeMap::RmagineEmbreeMap()
 {
-    ROS_INFO("Constructing RmagineMap.");
+    ROS_INFO("Constructing RmagineEmbreeMap.");
 }
 
-RmagineMap::~RmagineMap()
+RmagineEmbreeMap::~RmagineEmbreeMap()
 {
-    ROS_INFO("Destroying RmagineMap.");
+    ROS_INFO("Destroying RmagineEmbreeMap.");
 }
 
-void RmagineMap::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
+void RmagineEmbreeMap::Load(physics::WorldPtr _world, sdf::ElementPtr _sdf)
 {
     m_world = _world;
 
     m_world_update_conn= event::Events::ConnectWorldUpdateBegin(
-        std::bind(&RmagineMap::OnWorldUpdate, this, std::placeholders::_1)
+        std::bind(&RmagineEmbreeMap::OnWorldUpdate, this, std::placeholders::_1)
     );
 
     // create empty map
     m_map.reset(new rmagine::EmbreeMap);
 }
 
-std::unordered_map<uint32_t, physics::ModelPtr> RmagineMap::ToIdMap(
+std::unordered_map<uint32_t, physics::ModelPtr> RmagineEmbreeMap::ToIdMap(
     const std::vector<physics::ModelPtr>& models)
 {
     std::unordered_map<uint32_t, physics::ModelPtr> ret;
@@ -46,7 +46,7 @@ std::unordered_map<uint32_t, physics::ModelPtr> RmagineMap::ToIdMap(
     return ret;
 }
 
-std::unordered_set<uint32_t> RmagineMap::ComputeAdded(
+std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeAdded(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
 {
@@ -65,7 +65,7 @@ std::unordered_set<uint32_t> RmagineMap::ComputeAdded(
     return ret;
 }
 
-std::unordered_set<uint32_t> RmagineMap::ComputeRemoved(
+std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeRemoved(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
 {
@@ -84,7 +84,7 @@ std::unordered_set<uint32_t> RmagineMap::ComputeRemoved(
     return ret;
 }
 
-std::unordered_set<uint32_t> RmagineMap::ComputeChanged(
+std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeChanged(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
 {
@@ -146,7 +146,7 @@ std::unordered_set<uint32_t> RmagineMap::ComputeChanged(
     return ret;
 }
 
-ModelsDiff RmagineMap::ComputeDiff(
+ModelsDiff RmagineEmbreeMap::ComputeDiff(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
 {
@@ -157,7 +157,7 @@ ModelsDiff RmagineMap::ComputeDiff(
     return ret;
 }
 
-void RmagineMap::UpdateState()
+void RmagineEmbreeMap::UpdateState()
 {
     std::vector<physics::ModelPtr> models = m_world->Models();
 
@@ -318,7 +318,7 @@ void RmagineMap::UpdateState()
     }
 }
 
-void RmagineMap::OnWorldUpdate(const common::UpdateInfo& info)
+void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
 {
     // this is called every simulation step
     UpdateState();
@@ -330,24 +330,23 @@ void RmagineMap::OnWorldUpdate(const common::UpdateInfo& info)
     if(sensor)
     {
         // std::cout <<  "FOUND VELODYNE" << std::endl;
-        sensors::RmagineSphericalPtr velo = std::dynamic_pointer_cast<sensors::RmagineSpherical>(sensor);
+        sensors::RmagineEmbreeSphericalPtr velo 
+            = std::dynamic_pointer_cast<sensors::RmagineEmbreeSpherical>(sensor);
 
         if(velo)
         {
             if(velo->needsUpdate())
             {
-                std::cout << "[RmagineMap] update scanner" << std::endl;
+                std::cout << "[RmagineEmbreeMap] update scanner" << std::endl;
                 velo->update();
             }
         } else {
             std::cout << "Could not downcast" << std::endl;
         }
-        
-
     }
 
 }
 
-GZ_REGISTER_WORLD_PLUGIN(RmagineMap)
+GZ_REGISTER_WORLD_PLUGIN(RmagineEmbreeMap)
 
 } // namespace gazebo

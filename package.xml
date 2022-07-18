@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>gazebo_rmagine_plugin</name>
+  <name>rmagine_gazebo_plugins</name>
   <version>0.0.0</version>
-  <description>The gazebo_rmagine_plugin package</description>
+  <description>The rmagine_gazebo_plugins package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

@@ -1,15 +1,14 @@
 #include <gazebo/gazebo.hh>
-#include <gazebo_rmagine_plugin/gazebo_rmagine_spherical_plugin.h>
-
+#include <rmagine_gazebo_plugins/rmagine_embree_spherical_gzplugin.h>
 
 
 namespace gazebo
 {
-  class RegisterRmagineSphericalPlugin : public SystemPlugin
+  class RegisterRmagineEmbreeSphericalPlugin : public SystemPlugin
   {
     /////////////////////////////////////////////
     /// \brief Destructor
-    public: virtual ~RegisterRmagineSphericalPlugin()
+    public: virtual ~RegisterRmagineEmbreeSphericalPlugin()
     {
     }
 
@@ -17,18 +16,19 @@ namespace gazebo
     /// \brief Called after the plugin has been constructed.
     public: void Load(int /*_argc*/, char ** /*_argv*/)
     {
-        sensors::RegisterRmagineSpherical();
-        printf("Loaded my sensor!\n");
+      sensors::RegisterRmagineEmbreeSpherical();
+      printf("Loaded RmagineEmbreeSpherical!\n");
     }
 
     /////////////////////////////////////////////
     // \brief Called once after Load
     private: void Init()
     {
+
     }
 
   };
 
   // Register this plugin with the simulator
-  GZ_REGISTER_SYSTEM_PLUGIN(RegisterRmagineSphericalPlugin)
+  GZ_REGISTER_SYSTEM_PLUGIN(RegisterRmagineEmbreeSphericalPlugin)
 }
