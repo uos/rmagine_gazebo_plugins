@@ -53,6 +53,15 @@ void RmagineEmbreeROS::parseOutputs(sdf::ElementPtr outputs)
                     );
             }
 
+            if(pub.msg_type == "sensor_msgs/PointCloud2")
+            {
+                pub.pub = std::make_shared<ros::Publisher>(
+                        m_nh->advertise<sensor_msgs::PointCloud2>(
+                            pub.topic, 1
+                        ) 
+                    );
+            }
+
             if(pub.pub)
             {
                 m_pubs[name] = pub;

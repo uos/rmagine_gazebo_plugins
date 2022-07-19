@@ -95,6 +95,11 @@ private:
 
     rmagine::EmbreeMeshPtr to_rmagine(const msgs::BoxGeom& box) const;
 
+    rmagine::EmbreeMeshPtr to_rmagine(const msgs::SphereGeom& sphere) const;
+
+    rmagine::EmbreeMeshPtr to_rmagine(const msgs::MeshGeom& gzmesh) const;
+
+    
 
     void UpdateState();
 

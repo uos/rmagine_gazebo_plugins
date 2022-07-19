@@ -178,46 +178,6 @@ ModelsDiff RmagineEmbreeMap::ComputeDiff(
     return ret;
 }
 
-rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
-    const msgs::BoxGeom& box) const
-{
-    msgs::Vector3d size = box.size();
-
-
-    std::cout << "BOX:" << std::endl;
-    std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
-
-    // box is in center: -size.x()/2     +size.x()/2
-
-    std::vector<rm::Vector3> vertices;
-    std::vector<rm::Face> faces;
-
-    rm::genCube(vertices, faces);
-    std::cout << vertices.size() << std::endl;
-
-    // scale
-
-
-    for(size_t i=0; i<vertices.size(); i++)
-    {
-        vertices[i].x *= size.x();
-        vertices[i].y *= size.y();
-        vertices[i].z *= size.z();
-    }
-
-
-    // fill embree mesh
-
-    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
-        m_map->device, vertices.size(), faces.size()));
-
-    std::copy(vertices.begin(), vertices.end(), mesh->vertices);
-    std::copy(faces.begin(), faces.end(), mesh->faces);
-
-    mesh->commit();
-
-    return mesh;
-}
 
 rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     const msgs::PlaneGeom& plane) const
@@ -252,8 +212,101 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     mesh->faces[1].v1 = 2;
     mesh->faces[1].v2 = 1;
 
-    mesh->commit();            
+    mesh->commit();
     return mesh;                            
+}
+
+rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+    const msgs::BoxGeom& box) const
+{
+    msgs::Vector3d size = box.size();
+
+    // box is in center: -size.x()/2     +size.x()/2
+    std::vector<rm::Vector3> vertices;
+    std::vector<rm::Face> faces;
+
+    rm::genCube(vertices, faces);
+    std::cout << vertices.size() << std::endl;
+
+    // scale
+    for(size_t i=0; i<vertices.size(); i++)
+    {
+        vertices[i].x *= size.x();
+        vertices[i].y *= size.y();
+        vertices[i].z *= size.z();
+    }
+
+    // fill embree mesh
+    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
+        m_map->device, vertices.size(), faces.size()));
+
+    std::copy(vertices.begin(), vertices.end(), mesh->vertices);
+    std::copy(faces.begin(), faces.end(), mesh->faces);
+
+    mesh->commit();
+
+    return mesh;
+}
+
+rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+    const msgs::SphereGeom& sphere) const
+{
+    std::vector<rm::Vector3> vertices;
+    std::vector<rm::Face> faces;
+    rm::genSphere(vertices, faces, 30, 30);
+
+    float diameter = sphere.radius() * 2.0;
+
+    for(size_t i=0; i<vertices.size(); i++)
+    {
+        vertices[i].x *= diameter;
+        vertices[i].y *= diameter;
+        vertices[i].z *= diameter;
+    }
+    
+    // fill embree mesh
+    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
+        m_map->device, vertices.size(), faces.size()));
+
+    std::copy(vertices.begin(), vertices.end(), mesh->vertices);
+    std::copy(faces.begin(), faces.end(), mesh->faces);
+
+    mesh->commit();
+
+    return mesh;
+}
+
+
+rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+    const msgs::MeshGeom& gzmesh) const
+{
+    rmagine::EmbreeMeshPtr mesh;
+
+    std::string filename = gzmesh.filename();
+    msgs::Vector3d scale = gzmesh.scale();
+
+    std::cout << "Loading Mesh from " << filename << ", scale: " << scale.x() << ", " << scale.y() << ", " << scale.z() << std::endl;
+
+
+    Assimp::Importer importer;
+    const aiScene* ascene = importer.ReadFile( filename, 0);
+    // const 
+
+    // auto map_tmp = rm::importEmbreeMap(filename, m_map->device);
+
+    if(ascene->mNumMeshes > 1)
+    {
+        std::cout << "WARNING " << filename << " has more than one mesh. loading first" << std::endl;
+    }
+
+    if(ascene->mNumMeshes > 0)
+    {
+        const aiMesh* amesh = ascene->mMeshes[0];
+        mesh = std::make_shared<rm::EmbreeMesh>(m_map->device, amesh);
+    }
+    
+    mesh->commit();
+    return mesh;
 }
 
 static rm::Transform to_rm(const ignition::math::Pose3d& pose)
@@ -267,6 +320,28 @@ static rm::Transform to_rm(const ignition::math::Pose3d& pose)
     T.t.y = pose.Pos().Y();
     T.t.z = pose.Pos().Z();
     return T;
+}
+
+static rm::Transform to_rm(const msgs::Pose& pose)
+{
+    rmagine::Transform T;
+    T.R.x = pose.orientation().x();
+    T.R.y = pose.orientation().y();
+    T.R.z = pose.orientation().z();
+    T.R.w = pose.orientation().w();
+    T.t.x = pose.position().x();
+    T.t.y = pose.position().y();
+    T.t.z = pose.position().z();
+    return T;
+}
+
+static rm::Vector to_rm(const msgs::Vector3d& vec)
+{
+    rm::Vector v;
+    v.x = vec.x();
+    v.y = vec.y();
+    v.z = vec.z();
+    return v;
 }
 
 void RmagineEmbreeMap::UpdateState()
@@ -286,38 +361,51 @@ void RmagineEmbreeMap::UpdateState()
         
         for(auto model_id : diff.added)
         {
-
             std::cout << "Add model " << model_id << " to embree map" << std::endl;
-        
             physics::ModelPtr model = models_new[model_id];
             std::string model_name = model->GetName();
             
-            // Transform model to world
-            ignition::math::Pose3d gz_pose_model = model->RelativePose();
-            rm::Transform Tmw = to_rm(gz_pose_model);
-
-            std::cout << Tmw << std::endl;
-            
-            rm::Matrix4x4 Mmw;
-            Mmw.set(Tmw);
-
-            // sdf::ElementPtr sdf = model->GetSDF();
-
             std::vector<physics::LinkPtr> links = model->GetLinks();
 
-            for(auto link : links)
+            for(physics::LinkPtr link : links)
             {
                 std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
                 std::cout << "Loaded " << link->GetName() << " -> " << visuals.size() << " visuals" << std::endl;
+                
+                ignition::math::Pose3d link_world_pose = link->WorldPose();
+                rm::Transform Tlw = to_rm(link_world_pose);
+                
+                
                 for(auto elem : visuals)
                 {
                     msgs::Visual vis = elem.second;
+                    msgs::Vector3d vis_scale = vis.scale();
+                    msgs::Pose vis_pose = vis.pose();
+
+                    rm::Vector Svl = to_rm(vis_scale);
+                    rm::Transform Tvl = to_rm(vis_pose);
+
+                    rm::Transform Tvw = Tlw * Tvl;
+                    rm::Matrix4x4 Mvw;
+                    Mvw.set(Tvw);
+
                     if(vis.has_geometry())
                     {
                         msgs::Geometry geom = vis.geometry();
                         if(geom.has_mesh())
                         {
                             std::cout << "MESH" << std::endl;
+                            msgs::MeshGeom gzmesh = geom.mesh();
+                            rmagine::EmbreeMeshPtr mesh = to_rmagine(gzmesh);
+
+                            if(mesh)
+                            {   
+                                mesh->transform(Mvw);
+                                unsigned int mesh_id = m_map->addMesh(mesh);
+                                std::cout << "Mesh added to embree with id " << mesh_id << std::endl;
+                            } else {
+                                std::cout << "COULD not load mesh" << std::endl;
+                            }
                         }
 
                         if(geom.has_box())
@@ -325,7 +413,7 @@ void RmagineEmbreeMap::UpdateState()
                             std::cout << "BOX" << std::endl;
                             msgs::BoxGeom box = geom.box();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(box);
-                            mesh->transform(Mmw);
+                            mesh->transform(Mvw);
                             unsigned int mesh_id = m_map->addMesh(mesh);
                             std::cout << "Box added to embree with id " << mesh_id << std::endl;
                         }
@@ -338,6 +426,11 @@ void RmagineEmbreeMap::UpdateState()
                         if(geom.has_sphere())
                         {
                             std::cout << "SPHERE" << std::endl;
+                            msgs::SphereGeom sphere = geom.sphere();
+                            rmagine::EmbreeMeshPtr mesh = to_rmagine(sphere);
+                            mesh->transform(Mvw);
+                            unsigned int mesh_id = m_map->addMesh(mesh);
+                            std::cout << "Sphere added to embree with id " << mesh_id << std::endl;
                         }
 
                         if(geom.has_plane())
@@ -345,7 +438,7 @@ void RmagineEmbreeMap::UpdateState()
                             std::cout << "PLANE" << std::endl;
                             msgs::PlaneGeom plane = geom.plane();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(plane);
-                            mesh->transform(Mmw);
+                            mesh->transform(Mvw);
                             // transform
 
                             unsigned int mesh_id = m_map->addMesh(mesh);
