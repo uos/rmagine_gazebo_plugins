@@ -40,6 +40,22 @@ public:
 
     void updateScanMsg(rm::MemoryView<float> ranges);
 
+
+    inline common::Time stamp() const 
+    {
+        return lastMeasurementTime;
+    }
+
+    inline rm::SphericalModel sensorModel() const
+    {
+        return m_sensor_model;
+    }
+    
+    inline rm::Memory<float, rm::RAM> ranges() const
+    {
+        return m_ranges;
+    }
+
 protected:
     virtual bool UpdateImpl(const bool _force) override;
 
@@ -54,6 +70,8 @@ protected:
 
     bool m_pre_alloc_mem = true;
     rm::Memory<float, rm::RAM> m_ranges;
+
+    bool m_gz_publish = false;
 
 
 private:

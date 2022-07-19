@@ -56,14 +56,13 @@ include_directories(
   ${rmagine_INCLUDE_DIRS}
 )
 
-
+#### ROS-less Gazebo plugins
 
 add_library(rmagine_embree_spherical_gzplugin SHARED
   src/rmagine_embree_spherical_gzplugin.cpp
 )
 
 target_link_libraries(rmagine_embree_spherical_gzplugin 
-  ${catkin_LIBRARIES}
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}
 )
@@ -75,12 +74,9 @@ add_library(rmagine_embree_spherical_gzregister SHARED
 
 target_link_libraries(rmagine_embree_spherical_gzregister
   rmagine_embree_spherical_gzplugin 
-  ${catkin_LIBRARIES}
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}
 )
-
-
 
 add_library(rmagine_embree_map_gzplugin SHARED
   src/rmagine_embree_map_gzplugin.cpp
@@ -88,6 +84,14 @@ add_library(rmagine_embree_map_gzplugin SHARED
 
 target_link_libraries(rmagine_embree_map_gzplugin 
   rmagine_embree_spherical_gzplugin
+  ${GAZEBO_LIBRARIES}
+  ${rmagine_LIBRARIES}
+)
+
+# ROS Gazebo plugins
+add_library(rmagine_embree_ros_gzplugin SHARED 
+  src/rmagine_embree_ros_gzplugin.cpp)
+target_link_libraries(rmagine_embree_ros_gzplugin 
   ${catkin_LIBRARIES}
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}
@@ -98,5 +102,6 @@ install(
     rmagine_embree_map_gzplugin
     rmagine_embree_spherical_gzplugin 
     rmagine_embree_spherical_gzregister
+    rmagine_embree_ros_gzplugin
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )

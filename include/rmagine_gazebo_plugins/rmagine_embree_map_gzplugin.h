@@ -16,6 +16,10 @@
 #include <unordered_set>
 #include <memory>
 
+#include <future>
+#include <thread>
+#include <chrono>
+
 
 
 // rmagine
@@ -126,6 +130,8 @@ private:
 
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
     std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
+
+    std::future<void> m_updater_thread;
 
 };
 

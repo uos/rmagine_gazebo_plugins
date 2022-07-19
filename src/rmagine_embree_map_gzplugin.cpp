@@ -9,11 +9,16 @@
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <rmagine/util/synthetic.h>
 #include <rmagine/util/prints.h>
+#include <rmagine/util/StopWatch.hpp>
 
 #include <iostream>
+#include <chrono>
 
 using namespace std::placeholders;
 using namespace boost::algorithm;
+using namespace std::chrono_literals;
+
+
 namespace rm = rmagine;
 
 namespace gazebo
@@ -377,10 +382,10 @@ void RmagineEmbreeMap::UpdateState()
     // apply changes to gazebo state
     if(diff.HasChanged())
     {
-        std::cout << "Diff: " << std::endl;
-        std::cout << "- added: " << diff.added.size() << std::endl;
-        std::cout << "- removed: " << diff.removed.size() << std::endl;
-        std::cout << "- changed: " << diff.changed.size() << std::endl;
+        // std::cout << "Diff: " << std::endl;
+        // std::cout << "- added: " << diff.added.size() << std::endl;
+        // std::cout << "- removed: " << diff.removed.size() << std::endl;
+        // std::cout << "- changed: " << diff.changed.size() << std::endl;
 
         // change
         for(auto change_name : diff.changed)
@@ -426,9 +431,6 @@ void RmagineEmbreeMap::UpdateSensors()
     // TODO: get all sensors of certain type, simulate sensor data if required   
     if(!m_sensors_loaded)
     {
-        // m_sphericals.clear();
-        // m_sphere_sims.clear();
-
         std::vector<sensors::SensorPtr> sensors 
             = sensors::SensorManager::Instance()->GetSensors();
 
@@ -445,65 +447,21 @@ void RmagineEmbreeMap::UpdateSensors()
         }
 
         m_sensors_loaded = true;
-    } 
-    
-    // std::vector<std::string> sphericals_to_update;
-    // for(auto elem : m_sphericals)
-    // {
-    //     sensors::RmagineEmbreeSphericalPtr spherical = elem.second;
-    //     if(spherical->needsUpdate())
-    //     {
-    //         // update
-    //         sphericals_to_update.push_back(elem.first);
-    //     }
-    // }
-
-    // for(auto spherical_name : sphericals_to_update)
-    // {
-    //     sensors::RmagineEmbreeSphericalPtr spherical = m_sphericals[spherical_name];
-    //     rm::SphereSimulatorEmbreePtr sim = m_sphere_sims[spherical_name];
-        
-        
-    //     ignition::math::Pose3d gz_pose_model = m_poses[m_sphere_parents[spherical_name]];
-    //     rmagine::Transform Tbm = to_rm(gz_pose_model);
-
-    //     rmagine::Memory<rmagine::Transform, rmagine::RAM> Tbms(1);
-    //     Tbms[0] = Tbm;
-
-    //     std::cout << "Simulate " << spherical->ScopedName() << std::endl;
-    //     auto ranges = sim->simulateRanges(Tbms);
-    //     std::cout << "done. " << std::endl;
-
-
-    //     // check results
-    //     unsigned int valid_pts = 0;
-    //     for(unsigned int i = 0; i < ranges.size(); i++)
-    //     {
-    //         if(ranges[i] > 0.1 && ranges[i] < 130.0 )
-    //         {
-    //             valid_pts++;
-    //         }
-    //     }
-
-    //     std::cout << valid_pts << " valid pts" << std::endl;
-
-    //     // TODO: update sensor
-    //     spherical->update(ranges);
-    // }
+    }
 }
+
+
 
 void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
 {
-
-
-
-    // this is called every simulation step
-    UpdateState();
-
-
-    UpdateSensors();
-
-
+    if(!m_updater_thread.valid() 
+        || m_updater_thread.wait_for(0ms) == std::future_status::ready)
+    {
+        m_updater_thread = std::async(std::launch::async, [this] {
+                UpdateState();
+                UpdateSensors();
+            });
+    }
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineEmbreeMap)

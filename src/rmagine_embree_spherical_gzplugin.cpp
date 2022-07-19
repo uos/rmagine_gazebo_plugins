@@ -86,9 +86,7 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     Base::Load(world_name);
     std::cout << "[RmagineEmbreeSpherical] Load " << std::endl;
 
-    std::cout << "[RmagineEmbreeSpherical] advertising topic " << this->Topic() << std::endl;
-    this->scanPub =
-        this->node->Advertise<msgs::LaserScanStamped>(this->Topic(), 50);
+    
 
     GZ_ASSERT(this->world != nullptr,
       "RaySensor did not get a valid World pointer");
@@ -113,14 +111,28 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     GZ_ASSERT(this->parentEntity != nullptr,
       "Unable to get the parent entity.");
 
-    auto pose = parentEntity->WorldPose();
+    auto pose = Pose();
+    m_Tsb = to_rm(pose);
 
-    std::cout << "Parent pose: " << pose << std::endl;
+    std::cout << "[RmagineEmbreeSpherical] advertising topic " << this->Topic() << std::endl;
+    
+    if(m_gz_publish)
+    {
+        this->scanPub =
+        this->node->Advertise<msgs::LaserScanStamped>(this->Topic(), 50);
 
-    auto pose2 = Pose();
-    m_Tsb = to_rm(pose2);
+        if (!this->scanPub || !this->scanPub->HasConnections())
+        {
+            std::cout << "[RmagineEmbreeSpherical] Gazebo internal publishing failed. Reason: ";
 
-    std::cout << "Own pose: " << pose2 << std::endl;
+            if(!this->scanPub)
+            {
+                std::cout << " No scanPub" << std::endl;
+            } else {
+                std::cout << " No connections" << std::endl;
+            }
+        }
+    }
 }
 
 void RmagineEmbreeSpherical::Init()
@@ -160,7 +172,6 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
 {   
     if(m_sphere_sim)
     {
-        std::cout << "[RmagineEmbreeSpherical] Update !!!!!!!!!!! " << std::endl;
 
         IGN_PROFILE("RmagineEmbreeSpherical::UpdateImpl");
         IGN_PROFILE_BEGIN("Update");
@@ -181,17 +192,20 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
         }
         IGN_PROFILE_END();
 
-        std::cout << "[RmagineEmbreeSpherical] Simulated " << m_ranges.size() << " ranges" << std::endl;
+        // std::cout << "[RmagineEmbreeSpherical] Simulated " << m_ranges.size() << " ranges" << std::endl;
         
-        IGN_PROFILE_BEGIN("Publish");
-        if (this->scanPub && this->scanPub->HasConnections())
+        if(m_gz_publish)
         {
-            this->scanPub->Publish(this->laserMsg);
-        } else {
-             std::cout << "[RmagineEmbreeSpherical] Publishing failed. " << std::endl;
+            IGN_PROFILE_BEGIN("Publish");
+            if (this->scanPub && this->scanPub->HasConnections())
+            {
+                this->scanPub->Publish(this->laserMsg);
+            } else {
+                 std::cout << "[RmagineEmbreeSpherical] Publishing failed. " << std::endl;
+            }
+            IGN_PROFILE_END();
         }
-        IGN_PROFILE_END();
-        
+
         return true;
     } else {
         std::cout << "[RmagineEmbreeSpherical] waiting for acceleration structure..." << std::endl;
@@ -202,7 +216,6 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
 
 void RmagineEmbreeSpherical::updateScanMsg(rm::MemoryView<float> ranges)
 {
-
         std::lock_guard<std::mutex> lock(this->mutex);
 
         msgs::Set(this->laserMsg.mutable_time(),
