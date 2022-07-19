@@ -18,11 +18,18 @@
 #include <sensor_msgs/PointCloud2.h>
 
 #include <memory>
+#include <unordered_map>
 
 namespace rm = rmagine;
 
 namespace gazebo
 {
+
+struct Publisher {
+    std::string msg_type;
+    std::string topic;
+    std::shared_ptr<ros::Publisher> pub;
+};
 
 class RmagineEmbreeROS : public SensorPlugin
 {
@@ -37,6 +44,8 @@ public:
 
 private:
 
+    void parseOutputs(sdf::ElementPtr outputs);
+
     virtual void OnUpdate();
 
     sensors::RmagineEmbreeSphericalPtr m_spherical_sensor;
@@ -44,9 +53,8 @@ private:
     event::ConnectionPtr m_update_conn;
 
     std::shared_ptr<ros::NodeHandle> m_nh;
-    std::shared_ptr<ros::Publisher> m_pub_laser;
-    std::shared_ptr<ros::Publisher> m_pub_pcl;
-    std::shared_ptr<ros::Publisher> m_pub_pcl2;
+
+    std::unordered_map<std::string, Publisher> m_pubs;
 
     std::string m_robot_namespace;
 

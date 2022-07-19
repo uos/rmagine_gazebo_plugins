@@ -230,7 +230,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
 
     mesh->vertices[0].x = -size.x();
     mesh->vertices[0].y = size.y();
-    mesh->vertices[0].z = 0.0;  
+    mesh->vertices[0].z = 0.0;
 
     mesh->vertices[1].x = size.x();
     mesh->vertices[1].y = size.y();
@@ -240,7 +240,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     mesh->vertices[2].y = -size.y();
     mesh->vertices[2].z = 0.0;
 
-    mesh->vertices[3].x = size.x();
+    mesh->vertices[3].x = -size.x();
     mesh->vertices[3].y = -size.y();
     mesh->vertices[3].z = 0.0;
 
