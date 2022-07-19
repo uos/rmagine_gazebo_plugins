@@ -1,9 +1,6 @@
 #ifndef GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H
 #define GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H
 
-#include <ros/ros.h>
-
-
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/common.hh>
 #include <gazebo/gazebo.hh>

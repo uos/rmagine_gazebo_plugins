@@ -71,20 +71,20 @@ static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
 
 
 RmagineEmbreeSpherical::RmagineEmbreeSpherical()
-:Base(sensors::RAY)
+:Base(sensors::RAY) // if sensor is base class: Base(sensors::RAY)
 {
-    std::cout << "[RmagineEmbreeSpherical] Construct !!!!!!!!!!!" << std::endl;
+    std::cout << "[RmagineEmbreeSpherical] Construct" << std::endl;
 }
 
 RmagineEmbreeSpherical::~RmagineEmbreeSpherical()
 {
-    std::cout << "[RmagineEmbreeSpherical] Destroy !!!!!!!!!!!" << std::endl;
+    std::cout << "[RmagineEmbreeSpherical] Destroy" << std::endl;
 }
 
 void RmagineEmbreeSpherical::Load(const std::string& world_name)
 {
     Base::Load(world_name);
-    std::cout << "[RmagineEmbreeSpherical] Load !!!!!!!!!!! world name " << world_name  << std::endl;
+    std::cout << "[RmagineEmbreeSpherical] Load " << std::endl;
 
     std::cout << "[RmagineEmbreeSpherical] advertising topic " << this->Topic() << std::endl;
     this->scanPub =
@@ -92,7 +92,6 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
 
     GZ_ASSERT(this->world != nullptr,
       "RaySensor did not get a valid World pointer");
-
 
     sdf::ElementPtr rayElem = this->sdf->GetElement("ray");
 
@@ -119,16 +118,13 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     std::cout << "Parent pose: " << pose << std::endl;
 
     auto pose2 = Pose();
-
     m_Tsb = to_rm(pose2);
-
 
     std::cout << "Own pose: " << pose2 << std::endl;
 }
 
 void RmagineEmbreeSpherical::Init()
 {
-    std::cout << "[RmagineEmbreeSpherical] Init !!!!!!!!!!!" << std::endl;
     Base::Init();
     this->laserMsg.mutable_scan()->set_frame(this->ParentName());
 }

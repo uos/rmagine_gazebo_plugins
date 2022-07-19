@@ -1,5 +1,5 @@
 #include <rmagine_gazebo_plugins/rmagine_embree_map_gzplugin.h>
-#include <iostream>
+
 #include <gazebo/sensors/SensorsIface.hh>
 
 
@@ -10,6 +10,8 @@
 #include <rmagine/util/synthetic.h>
 #include <rmagine/util/prints.h>
 
+#include <iostream>
+
 using namespace std::placeholders;
 using namespace boost::algorithm;
 namespace rm = rmagine;
@@ -19,12 +21,12 @@ namespace gazebo
 
 RmagineEmbreeMap::RmagineEmbreeMap()
 {
-    ROS_INFO("Constructing RmagineEmbreeMap.");
+    std::cout << "[RmagineEmbreeMap] Construct." << std::endl;
 }
 
 RmagineEmbreeMap::~RmagineEmbreeMap()
 {
-    ROS_INFO("Destroying RmagineEmbreeMap.");
+    std::cout << "[RmagineEmbreeMap] Destroy." << std::endl;
 }
 
 void RmagineEmbreeMap::Load(
