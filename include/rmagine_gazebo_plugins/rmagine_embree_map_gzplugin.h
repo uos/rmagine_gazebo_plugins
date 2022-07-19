@@ -127,6 +127,8 @@ private:
 
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
 
+    std::unordered_map<std::string, unsigned int> m_link_to_mesh;
+
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
     std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
 

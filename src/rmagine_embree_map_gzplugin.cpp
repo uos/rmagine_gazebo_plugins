@@ -212,7 +212,6 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     mesh->faces[1].v1 = 2;
     mesh->faces[1].v2 = 1;
 
-    mesh->commit();
     return mesh;                            
 }
 
@@ -240,10 +239,10 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
         m_map->device, vertices.size(), faces.size()));
 
-    std::copy(vertices.begin(), vertices.end(), mesh->vertices);
+    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
     std::copy(faces.begin(), faces.end(), mesh->faces);
 
-    mesh->commit();
+
 
     return mesh;
 }
@@ -268,10 +267,8 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
         m_map->device, vertices.size(), faces.size()));
 
-    std::copy(vertices.begin(), vertices.end(), mesh->vertices);
+    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
     std::copy(faces.begin(), faces.end(), mesh->faces);
-
-    mesh->commit();
 
     return mesh;
 }
@@ -305,7 +302,6 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
         mesh = std::make_shared<rm::EmbreeMesh>(m_map->device, amesh);
     }
     
-    mesh->commit();
     return mesh;
 }
 
@@ -372,6 +368,8 @@ void RmagineEmbreeMap::UpdateState()
                 std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
                 std::cout << "Loaded " << link->GetName() << " -> " << visuals.size() << " visuals" << std::endl;
                 
+                std::string key = model_name + "::" + link->GetName();
+
                 ignition::math::Pose3d link_world_pose = link->WorldPose();
                 rm::Transform Tlw = to_rm(link_world_pose);
                 
@@ -385,8 +383,6 @@ void RmagineEmbreeMap::UpdateState()
                     rm::Transform Tvl = to_rm(vis_pose);
 
                     rm::Transform Tvw = Tlw * Tvl;
-                    rm::Matrix4x4 Mvw;
-                    Mvw.set(Tvw);
 
                     if(vis.has_geometry())
                     {
@@ -399,8 +395,10 @@ void RmagineEmbreeMap::UpdateState()
 
                             if(mesh)
                             {   
-                                mesh->transform(Mvw);
-                                unsigned int mesh_id = m_map->addMesh(mesh);
+                                mesh->setTransform(Tvw);
+                                mesh->commit();
+                                unsigned int mesh_id = m_map->scene->add(mesh);
+                                m_link_to_mesh[key] = mesh_id;
                                 std::cout << "Mesh added to embree with id " << mesh_id << std::endl;
                             } else {
                                 std::cout << "could not load mesh" << std::endl;
@@ -412,8 +410,10 @@ void RmagineEmbreeMap::UpdateState()
                             std::cout << "BOX" << std::endl;
                             msgs::BoxGeom box = geom.box();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(box);
-                            mesh->transform(Mvw);
-                            unsigned int mesh_id = m_map->addMesh(mesh);
+                            mesh->setTransform(Tvw);
+                            mesh->commit();
+                            unsigned int mesh_id = m_map->scene->add(mesh);
+                            m_link_to_mesh[key] = mesh_id;
                             std::cout << "Box added to embree with id " << mesh_id << std::endl;
                         }
 
@@ -427,8 +427,13 @@ void RmagineEmbreeMap::UpdateState()
                             std::cout << "SPHERE" << std::endl;
                             msgs::SphereGeom sphere = geom.sphere();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(sphere);
-                            mesh->transform(Mvw);
-                            unsigned int mesh_id = m_map->addMesh(mesh);
+                            mesh->setTransform(Tvw);
+                            mesh->commit();
+
+
+                            unsigned int mesh_id = m_map->scene->add(mesh);
+
+                            m_link_to_mesh[key] = mesh_id;
                             std::cout << "Sphere added to embree with id " << mesh_id << std::endl;
                         }
 
@@ -437,10 +442,12 @@ void RmagineEmbreeMap::UpdateState()
                             std::cout << "PLANE" << std::endl;
                             msgs::PlaneGeom plane = geom.plane();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(plane);
-                            mesh->transform(Mvw);
+                            mesh->setTransform(Tvw);
+                            mesh->commit();
                             // transform
 
-                            unsigned int mesh_id = m_map->addMesh(mesh);
+                            unsigned int mesh_id = m_map->scene->add(mesh);
+                            m_link_to_mesh[key] = mesh_id;
                             std::cout << "Plane added to embree with id " << mesh_id << std::endl;
                         }
 
@@ -453,6 +460,53 @@ void RmagineEmbreeMap::UpdateState()
             }
         }
 
+        for(auto model_id : diff.changed)
+        {
+            // get embree id of model
+            auto model = m_models[model_id];
+            std::string model_name = model->GetName();
+            std::vector<physics::LinkPtr> links = model->GetLinks();
+
+            for(physics::LinkPtr link : links)
+            {
+                std::string key = model_name + link->GetName();
+
+                unsigned int mesh_id = m_link_to_mesh[key];
+
+                auto meshes = m_map->scene->meshes();
+
+                auto it = meshes.find(mesh_id);
+
+                if(it != meshes.end())
+                {
+                    std::cout << "Found link and mesh to update: " << key << std::endl;
+
+
+                    ignition::math::Pose3d link_world_pose = link->WorldPose();
+                    rm::Transform Tlw = to_rm(link_world_pose);
+                    std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
+
+                    for(auto elem : visuals)
+                    {
+                        msgs::Visual vis = elem.second;
+                        msgs::Vector3d vis_scale = vis.scale();
+                        msgs::Pose vis_pose = vis.pose();
+
+                        rm::Vector Svl = to_rm(vis_scale);
+                        rm::Transform Tvl = to_rm(vis_pose);
+
+                        rm::Transform Tvw = Tlw * Tvl;     
+                    
+                        rm::EmbreeMeshPtr mesh = it->second;
+
+                        // mesh->setTransform(Tvw);
+                        // mesh->commit();
+                    }
+                    
+                }
+            }
+        }
+
         m_map->scene->commit();
 
         // 1. change existing meshes in embree map
@@ -460,7 +514,8 @@ void RmagineEmbreeMap::UpdateState()
         // 2. add new meshes
 
         // 3. remove meshes
-        
+
+
         // if(!m_e_device)
         // {
         //     m_e_device.reset(new rmagine::EmbreeDevice);
@@ -474,11 +529,6 @@ void RmagineEmbreeMap::UpdateState()
     // apply changes to gazebo state
     if(diff.HasChanged())
     {
-        // std::cout << "Diff: " << std::endl;
-        // std::cout << "- added: " << diff.added.size() << std::endl;
-        // std::cout << "- removed: " << diff.removed.size() << std::endl;
-        // std::cout << "- changed: " << diff.changed.size() << std::endl;
-
         // change
         for(auto change_name : diff.changed)
         {
