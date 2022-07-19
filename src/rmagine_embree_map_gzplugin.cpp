@@ -375,7 +375,6 @@ void RmagineEmbreeMap::UpdateState()
                 ignition::math::Pose3d link_world_pose = link->WorldPose();
                 rm::Transform Tlw = to_rm(link_world_pose);
                 
-                
                 for(auto elem : visuals)
                 {
                     msgs::Visual vis = elem.second;
@@ -404,7 +403,7 @@ void RmagineEmbreeMap::UpdateState()
                                 unsigned int mesh_id = m_map->addMesh(mesh);
                                 std::cout << "Mesh added to embree with id " << mesh_id << std::endl;
                             } else {
-                                std::cout << "COULD not load mesh" << std::endl;
+                                std::cout << "could not load mesh" << std::endl;
                             }
                         }
 

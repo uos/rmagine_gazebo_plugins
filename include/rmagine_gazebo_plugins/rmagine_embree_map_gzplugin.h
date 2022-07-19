@@ -110,27 +110,18 @@ private:
 
     event::ConnectionPtr m_world_update_conn;
 
-    // rmagine::EmbreeDevicePtr m_e_device;
     rmagine::EmbreeMapPtr m_map;
 
-    // rmagine::SphereSimulatorEmbreePtr m_sphere_sim;
-
-
-    // std::unordered_map<uint32_t, rmagine::EmbreeMesh> m_rm_meshes;
-
     bool m_sensors_loaded = false;
-    std::vector<std::string> m_sensors;
-    std::unordered_map<std::string, sensors::RmagineEmbreeSphericalPtr> m_sphericals;
-    // std::unordered_map<std::string, rmagine::SphereSimulatorEmbreePtr> m_sphere_sims;
-    std::unordered_map<std::string, uint32_t> m_sphere_parents;
-    
-
 
     double m_changed_delta_trans = 0.00001;
     double m_changed_delta_rot = 0.001;
     double m_changed_delta_scale = 0.00001;
 
     
+    // TODO: somehow update meshes in embree map
+    std::unordered_map<uint32_t, std::vector<uint32_t> > m_model_meshes;
+
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
 
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
