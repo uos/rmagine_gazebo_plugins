@@ -120,6 +120,9 @@ private:
 
     
     // TODO: somehow update meshes in embree map
+    // model (rel pose change)
+    // - link1 (rel pose change?)
+    // - link2
     std::unordered_map<uint32_t, std::vector<uint32_t> > m_model_meshes;
 
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
