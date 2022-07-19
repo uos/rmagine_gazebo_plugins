@@ -7,9 +7,12 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
+#include <rmagine/util/synthetic.h>
+#include <rmagine/util/prints.h>
 
 using namespace std::placeholders;
 using namespace boost::algorithm;
+namespace rm = rmagine;
 
 namespace gazebo
 {
@@ -39,7 +42,7 @@ void RmagineEmbreeMap::Load(
     m_map.reset(new rmagine::EmbreeMap);
 
     // connect to simulators
-    m_sphere_sim = std::make_shared<rmagine::SphereSimulatorEmbree>(m_map);
+    // m_sphere_sim = std::make_shared<rmagine::SphereSimulatorEmbree>(m_map);
 }
 
 std::unordered_map<uint32_t, physics::ModelPtr> RmagineEmbreeMap::ToIdMap(
@@ -168,6 +171,97 @@ ModelsDiff RmagineEmbreeMap::ComputeDiff(
     return ret;
 }
 
+rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+    const msgs::BoxGeom& box) const
+{
+    msgs::Vector3d size = box.size();
+
+
+    std::cout << "BOX:" << std::endl;
+    std::cout << size.x() << ", " << size.y() << ", " << size.z() << std::endl;
+
+    // box is in center: -size.x()/2     +size.x()/2
+
+    std::vector<rm::Vector3> vertices;
+    std::vector<rm::Face> faces;
+
+    rm::genCube(vertices, faces);
+    std::cout << vertices.size() << std::endl;
+
+    // scale
+
+
+    for(size_t i=0; i<vertices.size(); i++)
+    {
+        vertices[i].x *= size.x();
+        vertices[i].y *= size.y();
+        vertices[i].z *= size.z();
+    }
+
+
+    // fill embree mesh
+
+    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
+        m_map->device, vertices.size(), faces.size()));
+
+    std::copy(vertices.begin(), vertices.end(), mesh->vertices);
+    std::copy(faces.begin(), faces.end(), mesh->faces);
+
+    mesh->commit();
+
+    return mesh;
+}
+
+rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+    const msgs::PlaneGeom& plane) const
+{
+    msgs::Vector2d size = plane.size();
+    msgs::Vector3d normal = plane.normal();
+
+    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
+        m_map->device, 4, 2));
+
+    mesh->vertices[0].x = -size.x();
+    mesh->vertices[0].y = size.y();
+    mesh->vertices[0].z = 0.0;  
+
+    mesh->vertices[1].x = size.x();
+    mesh->vertices[1].y = size.y();
+    mesh->vertices[1].z = 0.0;
+    
+    mesh->vertices[2].x = size.x();
+    mesh->vertices[2].y = -size.y();
+    mesh->vertices[2].z = 0.0;
+
+    mesh->vertices[3].x = size.x();
+    mesh->vertices[3].y = -size.y();
+    mesh->vertices[3].z = 0.0;
+
+    mesh->faces[0].v0 = 1;
+    mesh->faces[0].v1 = 0;
+    mesh->faces[0].v2 = 3;
+
+    mesh->faces[1].v0 = 3;
+    mesh->faces[1].v1 = 2;
+    mesh->faces[1].v2 = 1;
+
+    mesh->commit();            
+    return mesh;                            
+}
+
+static rm::Transform to_rm(const ignition::math::Pose3d& pose)
+{
+    rmagine::Transform T;
+    T.R.x = pose.Rot().X();
+    T.R.y = pose.Rot().Y();
+    T.R.z = pose.Rot().Z();
+    T.R.w = pose.Rot().W();
+    T.t.x = pose.Pos().X();
+    T.t.y = pose.Pos().Y();
+    T.t.z = pose.Pos().Z();
+    return T;
+}
+
 void RmagineEmbreeMap::UpdateState()
 {
     std::vector<physics::ModelPtr> models = m_world->Models();
@@ -189,10 +283,18 @@ void RmagineEmbreeMap::UpdateState()
             std::cout << "Add model " << model_id << " to embree map" << std::endl;
         
             physics::ModelPtr model = models_new[model_id];
-            
             std::string model_name = model->GetName();
+            
+            // Transform model to world
+            ignition::math::Pose3d gz_pose_model = model->RelativePose();
+            rm::Transform Tmw = to_rm(gz_pose_model);
 
-            sdf::ElementPtr sdf = model->GetSDF();
+            std::cout << Tmw << std::endl;
+            
+            rm::Matrix4x4 Mmw;
+            Mmw.set(Tmw);
+
+            // sdf::ElementPtr sdf = model->GetSDF();
 
             std::vector<physics::LinkPtr> links = model->GetLinks();
 
@@ -214,6 +316,11 @@ void RmagineEmbreeMap::UpdateState()
                         if(geom.has_box())
                         {
                             std::cout << "BOX" << std::endl;
+                            msgs::BoxGeom box = geom.box();
+                            rmagine::EmbreeMeshPtr mesh = to_rmagine(box);
+                            mesh->transform(Mmw);
+                            unsigned int mesh_id = m_map->addMesh(mesh);
+                            std::cout << "Box added to embree with id " << mesh_id << std::endl;
                         }
 
                         if(geom.has_cylinder())
@@ -230,39 +337,8 @@ void RmagineEmbreeMap::UpdateState()
                         {
                             std::cout << "PLANE" << std::endl;
                             msgs::PlaneGeom plane = geom.plane();
-
-                            msgs::Vector2d size = plane.size();
-                            msgs::Vector3d normal = plane.normal();
-
-                            rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
-                                m_map->device, 4, 2));
-
-                            mesh->vertices[0].x = -size.x();
-                            mesh->vertices[0].y = size.y();
-                            mesh->vertices[0].z = 0.0;  
-
-                            mesh->vertices[1].x = size.x();
-                            mesh->vertices[1].y = size.y();
-                            mesh->vertices[1].z = 0.0;
-                            
-                            mesh->vertices[2].x = size.x();
-                            mesh->vertices[2].y = -size.y();
-                            mesh->vertices[2].z = 0.0;
-
-                            mesh->vertices[3].x = size.x();
-                            mesh->vertices[3].y = -size.y();
-                            mesh->vertices[3].z = 0.0;
-
-                            mesh->faces[0].v0 = 1;
-                            mesh->faces[0].v1 = 0;
-                            mesh->faces[0].v2 = 3;
-
-                            mesh->faces[1].v0 = 3;
-                            mesh->faces[1].v1 = 2;
-                            mesh->faces[1].v2 = 1;
-
-                            mesh->commit();
-
+                            rmagine::EmbreeMeshPtr mesh = to_rmagine(plane);
+                            mesh->transform(Mmw);
                             // transform
 
                             unsigned int mesh_id = m_map->addMesh(mesh);
@@ -348,8 +424,8 @@ void RmagineEmbreeMap::UpdateSensors()
     // TODO: get all sensors of certain type, simulate sensor data if required   
     if(!m_sensors_loaded)
     {
-        m_sphericals.clear();
-        m_sphere_sims.clear();
+        // m_sphericals.clear();
+        // m_sphere_sims.clear();
 
         std::vector<sensors::SensorPtr> sensors 
             = sensors::SensorManager::Instance()->GetSensors();
@@ -362,158 +438,56 @@ void RmagineEmbreeMap::UpdateSensors()
             if(spherical)
             {
                 std::cout << "[RmagineEmbreeMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
-                std::cout << "- Parent: " << spherical->ParentName() << std::endl;
-
-                std::cout << "- Existing: " << std::endl;
-                for(auto elem : m_models)
-                {
-                    std::cout << "-- " << elem.second->GetName() << std::endl;
-                }
-
-
-                std::string scoped_name = spherical->ScopedName();
-
-                std::vector<std::string> scope_names;
-
-                typedef split_iterator<std::string::iterator> string_split_iterator;
-                for(string_split_iterator It=
-                    make_split_iterator(scoped_name, first_finder("::", is_iequal()));
-                    It!=string_split_iterator();
-                    ++It)
-                {
-                    scope_names.push_back(boost::copy_range<std::string>(*It) );   
-                }
-                
-                // docs:
-                // std::cout << "- World: " << scope_names[0] << std::endl;
-                // std::cout << "- Model: " << scope_names[1] << std::endl;
-                // std::cout << "- Link: " << scope_names[2] << std::endl;
-                // std::cout << "- Name: " << scope_names[3] << std::endl;
-
-
-                physics::ModelPtr model = m_world->ModelByName(scope_names[1]);
-
-                if(!model)
-                {
-                    std::cout << "[RmagineEmbreeMap] WARNING: Coud not find model " << scope_names[1] << " to sensor " << spherical->ScopedName() << std::endl; 
-                }
-
-                if(m_models.find(model->GetId()) == m_models.end())
-                {
-                    std::cout << "[RmagineEmbreeMap] WARNING: Coud not find model " << scope_names[1] << " in model map: ";
-                    for(auto elem : m_models)
-                    {
-                        std::cout << elem.second->GetName() << ", ";
-                    } 
-                    std::cout << std::endl;
-                }
-
-                // TODO: for dynamic sensor. check if model is uppest (below world)
-
-                
-
-
-                rmagine::SphereSimulatorEmbreePtr sphere_sim(new rmagine::SphereSimulatorEmbree);
-
-                sphere_sim->setMap(m_map);
-
-                ignition::math::Pose3d gz_pose_sensor = spherical->Pose();
-                rmagine::Transform Tsb;
-                Tsb.R.x = gz_pose_sensor.Rot().X();
-                Tsb.R.y = gz_pose_sensor.Rot().Y();
-                Tsb.R.z = gz_pose_sensor.Rot().Z();
-                Tsb.R.w = gz_pose_sensor.Rot().W();
-                Tsb.t.x = gz_pose_sensor.Pos().X();
-                Tsb.t.y = gz_pose_sensor.Pos().Y();
-                Tsb.t.z = gz_pose_sensor.Pos().Z();
-                sphere_sim->setTsb(Tsb);
-
-
-                // TODO real model
-                rmagine::SphericalModel sensor_model;
-                sensor_model.theta.min = -M_PI;
-                sensor_model.theta.inc = 0.4 * M_PI / 180.0;
-                sensor_model.theta.size = 900;
-
-                // 3D:
-                // sensor_model.phi.min = -15.0 * M_PI / 180.0;
-                // sensor_model.phi.inc = 2.0 * M_PI / 180.0;
-                // sensor_model.phi.size = 16;
-                
-                // 2D:
-                sensor_model.phi.min = 0.0;
-                sensor_model.phi.inc = 1.0;
-                sensor_model.phi.size = 1;
-
-                sensor_model.range.min = 0.1;
-                sensor_model.range.max = 130.0;
-
-                sphere_sim->setModel(sensor_model);
-
-                // store as member
-                m_sphericals[spherical->Name()] = spherical;
-                m_sphere_sims[spherical->Name()] = sphere_sim;
-                m_sphere_parents[spherical->Name()] = model->GetId();
+                spherical->setMap(m_map);
             }
         }
 
         m_sensors_loaded = true;
     } 
     
-    std::vector<std::string> sphericals_to_update;
-    for(auto elem : m_sphericals)
-    {
-        sensors::RmagineEmbreeSphericalPtr spherical = elem.second;
-        if(spherical->needsUpdate())
-        {
-            // update
-            sphericals_to_update.push_back(elem.first);
-        }
-    }
+    // std::vector<std::string> sphericals_to_update;
+    // for(auto elem : m_sphericals)
+    // {
+    //     sensors::RmagineEmbreeSphericalPtr spherical = elem.second;
+    //     if(spherical->needsUpdate())
+    //     {
+    //         // update
+    //         sphericals_to_update.push_back(elem.first);
+    //     }
+    // }
 
-    for(auto spherical_name : sphericals_to_update)
-    {
-        sensors::RmagineEmbreeSphericalPtr spherical = m_sphericals[spherical_name];
-        rmagine::SphereSimulatorEmbreePtr sim = m_sphere_sims[spherical_name];
+    // for(auto spherical_name : sphericals_to_update)
+    // {
+    //     sensors::RmagineEmbreeSphericalPtr spherical = m_sphericals[spherical_name];
+    //     rm::SphereSimulatorEmbreePtr sim = m_sphere_sims[spherical_name];
         
         
-        ignition::math::Pose3d gz_pose_model = m_poses[m_sphere_parents[spherical_name]];
+    //     ignition::math::Pose3d gz_pose_model = m_poses[m_sphere_parents[spherical_name]];
+    //     rmagine::Transform Tbm = to_rm(gz_pose_model);
 
-        rmagine::Transform Tbm;
-        Tbm.R.x = gz_pose_model.Rot().X();
-        Tbm.R.y = gz_pose_model.Rot().Y();
-        Tbm.R.z = gz_pose_model.Rot().Z();
-        Tbm.R.w = gz_pose_model.Rot().W();
-        Tbm.t.x = gz_pose_model.Pos().X();
-        Tbm.t.y = gz_pose_model.Pos().Y();
-        Tbm.t.z = gz_pose_model.Pos().Z();
+    //     rmagine::Memory<rmagine::Transform, rmagine::RAM> Tbms(1);
+    //     Tbms[0] = Tbm;
 
-        rmagine::Memory<rmagine::Transform, rmagine::RAM> Tbms(1);
-        Tbms[0] = Tbm;
-
-        std::cout << "Simulate " << spherical->ScopedName() << std::endl;
-        auto ranges = sim->simulateRanges(Tbms);
-        std::cout << "done. " << std::endl;
+    //     std::cout << "Simulate " << spherical->ScopedName() << std::endl;
+    //     auto ranges = sim->simulateRanges(Tbms);
+    //     std::cout << "done. " << std::endl;
 
 
-        // check results
-        unsigned int valid_pts = 0;
-        for(unsigned int i = 0; i < ranges.size(); i++)
-        {
-            if(ranges[i] > 0.1 && ranges[i] < 130.0 )
-            {
-                valid_pts++;
-            }
-        }
+    //     // check results
+    //     unsigned int valid_pts = 0;
+    //     for(unsigned int i = 0; i < ranges.size(); i++)
+    //     {
+    //         if(ranges[i] > 0.1 && ranges[i] < 130.0 )
+    //         {
+    //             valid_pts++;
+    //         }
+    //     }
 
-        std::cout << valid_pts << " valid pts" << std::endl;
+    //     std::cout << valid_pts << " valid pts" << std::endl;
 
-        // TODO: update sensor
-        spherical->update();
-
-        
-    }
-
+    //     // TODO: update sensor
+    //     spherical->update(ranges);
+    // }
 }
 
 void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)

@@ -86,6 +86,12 @@ private:
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
+
+    rmagine::EmbreeMeshPtr to_rmagine(const msgs::PlaneGeom& plane) const;
+
+    rmagine::EmbreeMeshPtr to_rmagine(const msgs::BoxGeom& box) const;
+
+
     void UpdateState();
 
     void UpdateSensors();
@@ -98,7 +104,7 @@ private:
     // rmagine::EmbreeDevicePtr m_e_device;
     rmagine::EmbreeMapPtr m_map;
 
-    rmagine::SphereSimulatorEmbreePtr m_sphere_sim;
+    // rmagine::SphereSimulatorEmbreePtr m_sphere_sim;
 
 
     // std::unordered_map<uint32_t, rmagine::EmbreeMesh> m_rm_meshes;
@@ -106,7 +112,7 @@ private:
     bool m_sensors_loaded = false;
     std::vector<std::string> m_sensors;
     std::unordered_map<std::string, sensors::RmagineEmbreeSphericalPtr> m_sphericals;
-    std::unordered_map<std::string, rmagine::SphereSimulatorEmbreePtr> m_sphere_sims;
+    // std::unordered_map<std::string, rmagine::SphereSimulatorEmbreePtr> m_sphere_sims;
     std::unordered_map<std::string, uint32_t> m_sphere_parents;
     
 
