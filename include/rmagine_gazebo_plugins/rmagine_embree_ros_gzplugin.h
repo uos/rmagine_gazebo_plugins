@@ -14,6 +14,8 @@
 #include <rmagine/simulation/SphereSimulatorEmbree.hpp>
 
 #include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #include <memory>
 
@@ -43,10 +45,12 @@ private:
 
     std::shared_ptr<ros::NodeHandle> m_nh;
     std::shared_ptr<ros::Publisher> m_pub_laser;
+    std::shared_ptr<ros::Publisher> m_pub_pcl;
+    std::shared_ptr<ros::Publisher> m_pub_pcl2;
 
     std::string m_robot_namespace;
 
-    std::string m_topic_name;
+    // std::string m_laser_topic_name;
     std::string m_frame_id;
 
     sdf::ElementPtr m_sdf;

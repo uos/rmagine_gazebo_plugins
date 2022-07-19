@@ -33,9 +33,7 @@ void RmagineEmbreeROS::Load(
         return;
     }
 
-    // Connect to the sensor update event.
-    m_update_conn = m_spherical_sensor->ConnectUpdated(
-        std::bind(&RmagineEmbreeROS::OnUpdate, this));
+    
 
     if (!ros::isInitialized())
     {
@@ -46,10 +44,48 @@ void RmagineEmbreeROS::Load(
 
     m_nh.reset(new ros::NodeHandle(m_robot_namespace));
 
-    m_topic_name = m_sdf->Get<std::string>("topic");
+
+    // m_topic_name = m_sdf->Get<std::string>("topic");
     m_frame_id = m_sdf->Get<std::string>("frame");
 
-    // m_spherical_sensor->SetActive(true);
+    if(m_sdf->HasElement("laser"))
+    {
+        sdf::ElementPtr laserElem = m_sdf->GetElement("laser");
+        std::string topic = laserElem->Get<std::string>("topic");
+        m_pub_laser = std::make_shared<ros::Publisher>(
+                        m_nh->advertise<sensor_msgs::LaserScan>(
+                            topic, 1
+                        ) 
+                    );
+    }
+
+    if(m_sdf->HasElement("pcl"))
+    {
+        sdf::ElementPtr pclElem = m_sdf->GetElement("pcl");
+        std::string topic = pclElem->Get<std::string>("topic");
+        m_pub_pcl = std::make_shared<ros::Publisher>(
+                        m_nh->advertise<sensor_msgs::PointCloud>(
+                            topic, 1
+                        ) 
+                    );
+    }
+
+    if(m_sdf->HasElement("pcl2"))
+    {
+        sdf::ElementPtr pcl2Elem = m_sdf->GetElement("pcl2");
+        std::string topic = pcl2Elem->Get<std::string>("topic");
+        m_pub_pcl2 = std::make_shared<ros::Publisher>(
+                        m_nh->advertise<sensor_msgs::PointCloud2>(
+                            topic, 1
+                        ) 
+                    );
+    }
+
+
+
+    // Connect to the sensor update event.
+    m_update_conn = m_spherical_sensor->ConnectUpdated(
+        std::bind(&RmagineEmbreeROS::OnUpdate, this));
 }
 
 void RmagineEmbreeROS::OnUpdate()
@@ -62,43 +98,61 @@ void RmagineEmbreeROS::OnUpdate()
 
     ros::Time stamp(stamp_gz.sec, stamp_gz.nsec);
 
-    if(sensor_model.phi.size == 1)
+    if(m_pub_laser)
     {
-        if(!m_pub_laser)
+        if(sensor_model.phi.size == 1)
         {
-            if(m_nh)
+            // ready to build sensor_msgs::LaserScan msg
+            sensor_msgs::LaserScan msg;
+            msg.header.stamp = stamp;
+            msg.header.frame_id = m_frame_id;
+
+            msg.ranges.resize(ranges.size());
+
+            msg.range_min = sensor_model.range.min;
+            msg.range_max = sensor_model.range.max;
+            msg.angle_min = sensor_model.theta.min;
+            msg.angle_increment = sensor_model.theta.inc;
+
+            for(size_t i=0; i<ranges.size(); i++)
             {
-                m_pub_laser = std::make_shared<ros::Publisher>(
-                        m_nh->advertise<sensor_msgs::LaserScan>(
-                            m_topic_name, 1
-                        ) 
-                    );
-            } else {
-                // TODO error message
+                msg.ranges[i] = ranges[i];
+            }
+
+            m_pub_laser->publish(msg);
+        } else {
+            std::cout << "[RmagineEmbreeROS] Could not make Laserscan. phi size 1 != " << sensor_model.phi.size << std::endl;
+        }
+    }
+    
+    if(m_pub_pcl)
+    {
+        sensor_msgs::PointCloud msg;
+        msg.header.stamp = stamp;
+        msg.header.frame_id = m_frame_id;
+        
+        msg.points.reserve(ranges.size());
+        for(size_t vid = 0; vid < sensor_model.getHeight(); vid++)
+        {
+            for(size_t hid = 0; hid < sensor_model.getWidth(); hid++)
+            {
+                const unsigned int pid = sensor_model.getBufferId(vid, hid);
+                const float range = ranges[pid];
+                if(sensor_model.range.inside(range))
+                {
+                    rm::Vector p = sensor_model.getDirection(vid, hid) * range;
+                    geometry_msgs::Point32 p_ros;
+                    p_ros.x = p.x;
+                    p_ros.y = p.y;
+                    p_ros.z = p.z;
+                    msg.points.push_back(p_ros);
+                }
             }
         }
 
-        // ready to build sensor_msgs::LaserScan msg
-        sensor_msgs::LaserScan msg;
-        msg.header.stamp = stamp;
-        msg.header.frame_id = m_frame_id;
-
-        msg.ranges.resize(ranges.size());
-
-        msg.range_min = sensor_model.range.min;
-        msg.range_max = sensor_model.range.max;
-        msg.angle_min = sensor_model.theta.min;
-        msg.angle_increment = sensor_model.theta.inc;
-
-        for(size_t i=0; i<ranges.size(); i++)
-        {
-            msg.ranges[i] = ranges[i];
-        }
-
-        m_pub_laser->publish(msg);
-    } else {
-        std::cout << "[RmagineEmbreeROS] Could not make Laserscan. phi size 1 != " << sensor_model.phi.size << std::endl;
+        m_pub_pcl->publish(msg);
     }
+
 }
 
 GZ_REGISTER_SENSOR_PLUGIN(RmagineEmbreeROS)
