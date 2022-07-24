@@ -24,6 +24,51 @@ namespace rm = rmagine;
 namespace gazebo
 {
 
+
+static rm::Transform to_rm(const ignition::math::Pose3d& pose)
+{
+    rmagine::Transform T;
+    T.R.x = pose.Rot().X();
+    T.R.y = pose.Rot().Y();
+    T.R.z = pose.Rot().Z();
+    T.R.w = pose.Rot().W();
+    T.t.x = pose.Pos().X();
+    T.t.y = pose.Pos().Y();
+    T.t.z = pose.Pos().Z();
+    return T;
+}
+
+static rm::Transform to_rm(const msgs::Pose& pose)
+{
+    rmagine::Transform T;
+    T.R.x = pose.orientation().x();
+    T.R.y = pose.orientation().y();
+    T.R.z = pose.orientation().z();
+    T.R.w = pose.orientation().w();
+    T.t.x = pose.position().x();
+    T.t.y = pose.position().y();
+    T.t.z = pose.position().z();
+    return T;
+}
+
+static rm::Vector to_rm(const msgs::Vector3d& vec)
+{
+    rm::Vector v;
+    v.x = vec.x();
+    v.y = vec.y();
+    v.z = vec.z();
+    return v;
+}
+
+static rm::Vector to_rm(const ignition::math::Vector3d& vec)
+{
+    rm::Vector v;
+    v.x = vec.X();
+    v.y = vec.Y();
+    v.z = vec.Z();
+    return v;
+}
+
 RmagineEmbreeMap::RmagineEmbreeMap()
 {
     std::cout << "[RmagineEmbreeMap] Construct." << std::endl;
@@ -231,6 +276,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     const msgs::BoxGeom& box) const
 {
     msgs::Vector3d size = box.size();
+    
 
     // box is in center: -size.x()/2     +size.x()/2
     std::vector<rm::Vector3> vertices;
@@ -239,12 +285,12 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     rm::genCube(vertices, faces);
 
     // scale
-    for(size_t i=0; i<vertices.size(); i++)
-    {
-        vertices[i].x *= size.x();
-        vertices[i].y *= size.y();
-        vertices[i].z *= size.z();
-    }
+    // for(size_t i=0; i<vertices.size(); i++)
+    // {
+    //     vertices[i].x *= size.x();
+    //     vertices[i].y *= size.y();
+    //     vertices[i].z *= size.z();
+    // }
 
     // fill embree mesh
     rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
@@ -252,6 +298,9 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
 
     std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
     std::copy(faces.begin(), faces.end(), mesh->faces);
+
+    rm::Vector3 rm_scale = to_rm(size);
+    mesh->setScale(rm_scale);
 
     return mesh;
 }
@@ -263,14 +312,14 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     std::vector<rm::Face> faces;
     rm::genSphere(vertices, faces, 30, 30);
 
-    float diameter = sphere.radius() * 2.0;
+    
 
-    for(size_t i=0; i<vertices.size(); i++)
-    {
-        vertices[i].x *= diameter;
-        vertices[i].y *= diameter;
-        vertices[i].z *= diameter;
-    }
+    // for(size_t i=0; i<vertices.size(); i++)
+    // {
+    //     vertices[i].x *= diameter;
+    //     vertices[i].y *= diameter;
+    //     vertices[i].z *= diameter;
+    // }
     
     // fill embree mesh
     rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
@@ -278,6 +327,10 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
 
     std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
     std::copy(faces.begin(), faces.end(), mesh->faces);
+
+    float diameter = sphere.radius() * 2.0;
+    rm::Vector3 scale = {diameter, diameter, diameter};
+    mesh->setScale(scale);
 
     return mesh;
 }
@@ -305,41 +358,6 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     }
     
     return mesh;
-}
-
-static rm::Transform to_rm(const ignition::math::Pose3d& pose)
-{
-    rmagine::Transform T;
-    T.R.x = pose.Rot().X();
-    T.R.y = pose.Rot().Y();
-    T.R.z = pose.Rot().Z();
-    T.R.w = pose.Rot().W();
-    T.t.x = pose.Pos().X();
-    T.t.y = pose.Pos().Y();
-    T.t.z = pose.Pos().Z();
-    return T;
-}
-
-static rm::Transform to_rm(const msgs::Pose& pose)
-{
-    rmagine::Transform T;
-    T.R.x = pose.orientation().x();
-    T.R.y = pose.orientation().y();
-    T.R.z = pose.orientation().z();
-    T.R.w = pose.orientation().w();
-    T.t.x = pose.position().x();
-    T.t.y = pose.position().y();
-    T.t.z = pose.position().z();
-    return T;
-}
-
-static rm::Vector to_rm(const msgs::Vector3d& vec)
-{
-    rm::Vector v;
-    v.x = vec.x();
-    v.y = vec.y();
-    v.z = vec.z();
-    return v;
 }
 
 void RmagineEmbreeMap::UpdateState()
@@ -421,8 +439,16 @@ void RmagineEmbreeMap::UpdateState()
                         if(geom.has_box())
                         {
                             msgs::BoxGeom box = geom.box();
-                            rmagine::EmbreeMeshPtr mesh = to_rmagine(box);
+                            rm::EmbreeMeshPtr mesh = to_rmagine(box);
+
+                            auto scale = box.size();
+                            rm::Vector3 scale_rm = to_rm(scale);
+
+                            // TODO: how to merge with link scale Svl. Check if this is right
+                            // mesh->setScale(scale_rm.mult_ewise(Svl));
                             mesh->setTransform(Tvw);
+                            mesh->apply();
+
                             mesh->commit();
                             unsigned int mesh_id = m_map->scene->add(mesh);
                             scene_changes++;
@@ -442,7 +468,11 @@ void RmagineEmbreeMap::UpdateState()
                         {
                             msgs::SphereGeom sphere = geom.sphere();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(sphere);
+                            
+                            // mesh->setScale(Svl);
                             mesh->setTransform(Tvw);
+                            mesh->apply();
+
                             mesh->commit();
 
 
@@ -459,7 +489,11 @@ void RmagineEmbreeMap::UpdateState()
                         {
                             msgs::PlaneGeom plane = geom.plane();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(plane);
+                            
+                            mesh->setScale(Svl);
                             mesh->setTransform(Tvw);
+                            mesh->apply();
+
                             mesh->commit();
                             // transform
 
@@ -495,7 +529,6 @@ void RmagineEmbreeMap::UpdateState()
             {
                 if(m_model_ignores.find(model_id) != m_model_ignores.end())
                 {
-                    // std::cout << "IGNORE updating model " << model_id << std::endl;
                     continue;
                 }
 
@@ -505,6 +538,9 @@ void RmagineEmbreeMap::UpdateState()
                 std::vector<physics::LinkPtr> links = model->GetLinks();
 
                 auto meshes = m_map->scene->meshes();
+
+                ignition::math::Vector3d model_scale_gz = model->Scale();
+                rm::Vector3 model_scale = to_rm(model_scale_gz);
 
                 for(physics::LinkPtr link : links)
                 {
@@ -544,8 +580,36 @@ void RmagineEmbreeMap::UpdateState()
 
                             rm::Transform Tvw = Tlw * Tvl;
 
+                            std::cout << "- model scale: " << model_scale << std::endl;
+                            std::cout << "- visual scale: " << Svl << std::endl;
+                            std::cout << "- transform: " << Tvw << std::endl;
+
                             rm::EmbreeMeshPtr mesh = it->second;
+                            
+                            mesh->setScale(Svl);
                             mesh->setTransform(Tvw);
+
+                            if(vis.has_geometry())
+                            {
+                                msgs::Geometry geom = vis.geometry();
+                                if(geom.has_box())
+                                {
+                                    // msgs::BoxGeom box = geom.box();
+                                    // auto geom_size = box.size();
+                                    // rm::Vector3 scale_rm = to_rm(geom_size);
+                                    mesh->setScale(model_scale);
+                                    std::cout << "- box size: " << model_scale << std::endl;
+                                }
+
+                                if(geom.has_sphere())
+                                {
+                                    // msgs::BoxGeom box = geom.box();
+                                    mesh->setScale(model_scale);
+                                    std::cout << "- sphere size: " << model_scale << std::endl;
+                                }
+                            }
+
+                            mesh->apply();
                             meshes_to_update.push_back(mesh);
 
                         } else {
@@ -568,7 +632,7 @@ void RmagineEmbreeMap::UpdateState()
         sw();
         for(auto mesh_to_update : meshes_to_update)
         {
-            rtcUpdateGeometryBuffer(mesh_to_update->handle(), RTC_BUFFER_TYPE_VERTEX, 0);
+            mesh_to_update->markAsChanged();
             mesh_to_update->commit();
             scene_changes++;
         }
