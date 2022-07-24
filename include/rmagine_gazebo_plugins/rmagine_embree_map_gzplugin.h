@@ -114,20 +114,26 @@ private:
 
     bool m_sensors_loaded = false;
 
-    double m_changed_delta_trans = 0.00001;
-    double m_changed_delta_rot = 0.001;
-    double m_changed_delta_scale = 0.00001;
+    double m_changed_delta_trans = 0.001; // meter
+    double m_changed_delta_rot = 0.001; // radian
+    double m_changed_delta_scale = 0.001;
 
-    
     // TODO: somehow update meshes in embree map
     // model (rel pose change)
     // - link1 (rel pose change?)
     // - link2
+    
+    
     std::unordered_map<uint32_t, std::vector<uint32_t> > m_model_meshes;
+    std::unordered_set<uint32_t> m_model_ignores;
+    std::unordered_set<uint32_t> m_link_ignores;
+    std::unordered_set<uint32_t> m_visual_ignores;
+
 
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
+    std::unordered_map<std::string, unsigned int> m_visual_to_mesh;
 
-    std::unordered_map<std::string, unsigned int> m_link_to_mesh;
+
 
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
     std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
