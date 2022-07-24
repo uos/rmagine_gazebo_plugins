@@ -412,110 +412,64 @@ void RmagineEmbreeMap::UpdateState()
                     if(vis.has_geometry())
                     {
                         msgs::Geometry geom = vis.geometry();
+
+                        rmagine::EmbreeMeshPtr mesh;
+
                         if(geom.has_mesh())
                         {
                             msgs::MeshGeom gzmesh = geom.mesh();
-                            rmagine::EmbreeMeshPtr mesh = to_rmagine(gzmesh);
-
-                            if(mesh)
-                            {   
-                                mesh->setTransform(Tvw);
-                                mesh->commit();
-                                unsigned int mesh_id = m_map->scene->add(mesh);
-                                scene_changes++;
-                                m_visual_to_mesh[key] = mesh_id;
-                                std::cout << "MESH created" << std::endl;
-                                std::cout << "- id: " << mesh_id << std::endl;
-                                std::cout << "- key: " << key << std::endl;
-                                std::cout << "- filename: " << gzmesh.filename() << std::endl;
-                            } else {
-                                std::cout << "could not load mesh" << std::endl;
-                            }
+                            mesh = to_rmagine(gzmesh);
                         }
 
                         if(geom.has_box())
                         {
                             msgs::BoxGeom box = geom.box();
-                            rm::EmbreeMeshPtr mesh = to_rmagine(box);
-
-                            auto scale = box.size();
-                            rm::Vector3 scale_rm = to_rm(scale);
-
-                            // TODO: how to merge with link scale Svl. Check if this is right
-                            mesh->setTransform(Tvw);
-                            mesh->apply();
-
-                            mesh->commit();
-                            unsigned int mesh_id = m_map->scene->add(mesh);
-                            scene_changes++;
-                            m_visual_to_mesh[key] = mesh_id;
-
-                            std::cout << "BOX created" << std::endl;
-                            std::cout << "- id: " << mesh_id << std::endl;
-                            std::cout << "- key: " << key << std::endl;
+                            mesh = to_rmagine(box);
                         }
 
                         if(geom.has_cylinder())
                         {
                             msgs::CylinderGeom cylinder = geom.cylinder();
                             rm::EmbreeMeshPtr mesh = to_rmagine(cylinder);
-
-                            mesh->setTransform(Tvw);
-                            mesh->apply();
-                            mesh->commit();
-
-                            unsigned int mesh_id = m_map->scene->add(mesh);
-                            scene_changes++;
-                            m_visual_to_mesh[key] = mesh_id;
-
-                            std::cout << "CYLINDER created" << std::endl;
-                            std::cout << "- id: " << mesh_id << std::endl;
-                            std::cout << "- key: " << key << std::endl;
                         }
 
                         if(geom.has_sphere())
                         {
                             msgs::SphereGeom sphere = geom.sphere();
-                            rmagine::EmbreeMeshPtr mesh = to_rmagine(sphere);
-                            
-                            mesh->setTransform(Tvw);
-                            mesh->apply();
-
-                            mesh->commit();
-
-
-                            unsigned int mesh_id = m_map->scene->add(mesh);
-                            scene_changes++;
-
-                            m_visual_to_mesh[key] = mesh_id;
-                            std::cout << "SPHERE created" << std::endl;
-                            std::cout << "- id: " << mesh_id << std::endl;
-                            std::cout << "- key: " << key << std::endl; 
+                            mesh = to_rmagine(sphere);
                         }
 
                         if(geom.has_plane())
                         {
                             msgs::PlaneGeom plane = geom.plane();
-                            rmagine::EmbreeMeshPtr mesh = to_rmagine(plane);
-                            
-                            mesh->setTransform(Tvw);
-                            mesh->apply();
-
-                            mesh->commit();
-                            // transform
-
-                            unsigned int mesh_id = m_map->scene->add(mesh);
-                            scene_changes++;
-                            m_visual_to_mesh[key] = mesh_id;
-
-                            std::cout << "PLANE created" << std::endl;
-                            std::cout << "- id: " << mesh_id << std::endl;
-                            std::cout << "- key: " << key << std::endl;
+                            mesh = to_rmagine(plane);
                         }
 
                         if(geom.has_heightmap())
                         {
                             std::cout << "TODO: HEIGHTMAP" << std::endl;
+                        }
+
+                        if(mesh)
+                        {   
+                            mesh->setTransform(Tvw);
+                            mesh->apply();
+                            mesh->commit();
+
+                            unsigned int mesh_id = m_map->scene->add(mesh);
+                            scene_changes++;
+                            m_visual_to_mesh[key] = mesh_id;
+
+                            std::cout << "MESH created" << std::endl;
+                            std::cout << "- id: " << mesh_id << std::endl;
+                            std::cout << "- key: " << key << std::endl;
+
+                            if(m_model_meshes.find(model_id) == m_model_meshes.end())
+                            {
+                                m_model_meshes[model_id] = {};
+                            }
+
+                            m_model_meshes[model_id].push_back(mesh);
                         }
                     }
                 }
@@ -532,6 +486,8 @@ void RmagineEmbreeMap::UpdateState()
 
             sw();
 
+            auto meshes = m_map->scene->meshes();
+
             for(auto model_id : diff.changed)
             {
                 if(m_model_ignores.find(model_id) != m_model_ignores.end())
@@ -543,8 +499,6 @@ void RmagineEmbreeMap::UpdateState()
                 auto model = m_models[model_id];
                 std::string model_name = model->GetName();
                 std::vector<physics::LinkPtr> links = model->GetLinks();
-
-                auto meshes = m_map->scene->meshes();
 
                 ignition::math::Vector3d model_scale_gz = model->Scale();
                 rm::Vector3 model_scale = to_rm(model_scale_gz);
@@ -638,6 +592,29 @@ void RmagineEmbreeMap::UpdateState()
             std::cout << "- Prepare meshes updates: " << el << " ms" << std::endl;
         }
 
+        if(diff.removed.size() > 0)
+        {
+            for(auto model_id : diff.removed)
+            {
+                if(m_model_ignores.find(model_id) != m_model_ignores.end())
+                {
+                    continue;
+                }
+
+                
+                auto meshes = m_model_meshes[model_id];
+                std::cout << "Remove " << meshes.size() << " meshes" << std::endl;
+
+                for(auto mesh : meshes)
+                {
+                    mesh->parent->removeMesh(mesh->geomID);
+                }
+            }
+        }
+
+        
+
+
         // mutex?
         rm::StopWatch sw;
         double el;
@@ -649,6 +626,7 @@ void RmagineEmbreeMap::UpdateState()
             mesh_to_update->commit();
             scene_changes++;
         }
+
         el = sw();
         std::cout << "- Mesh update: " << el << "s" << std::endl;
         

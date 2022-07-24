@@ -127,7 +127,7 @@ private:
     // - link2
     
     
-    std::unordered_map<uint32_t, std::vector<uint32_t> > m_model_meshes;
+    std::unordered_map<uint32_t, std::vector<rm::EmbreeMeshPtr> > m_model_meshes;
     std::unordered_set<uint32_t> m_model_ignores;
     std::unordered_set<uint32_t> m_link_ignores;
     std::unordered_set<uint32_t> m_visual_ignores;
@@ -135,7 +135,6 @@ private:
 
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
     std::unordered_map<std::string, unsigned int> m_visual_to_mesh;
-
 
 
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
