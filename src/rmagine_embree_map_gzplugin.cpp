@@ -240,34 +240,25 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     const msgs::PlaneGeom& plane) const
 {
     msgs::Vector2d size = plane.size();
+    // TODO: use normal
     msgs::Vector3d normal = plane.normal();
 
+    std::vector<rm::Vector3> vertices;
+    std::vector<rm::Face> faces;
+    rm::genPlane(vertices, faces);
+
     rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
-        m_map->device, 4, 2));
+        m_map->device,  vertices.size(), faces.size()));
 
-    mesh->vertices[0].x = -size.x();
-    mesh->vertices[0].y = size.y();
-    mesh->vertices[0].z = 0.0;
+    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
+    std::copy(faces.begin(), faces.end(), mesh->faces);
 
-    mesh->vertices[1].x = size.x();
-    mesh->vertices[1].y = size.y();
-    mesh->vertices[1].z = 0.0;
-    
-    mesh->vertices[2].x = size.x();
-    mesh->vertices[2].y = -size.y();
-    mesh->vertices[2].z = 0.0;
-
-    mesh->vertices[3].x = -size.x();
-    mesh->vertices[3].y = -size.y();
-    mesh->vertices[3].z = 0.0;
-
-    mesh->faces[0].v0 = 1;
-    mesh->faces[0].v1 = 0;
-    mesh->faces[0].v2 = 3;
-
-    mesh->faces[1].v0 = 3;
-    mesh->faces[1].v1 = 2;
-    mesh->faces[1].v2 = 1;
+    // float x = size.x();
+    rm::Vector3 scale;
+    scale.x = size.x();
+    scale.y = size.y();
+    scale.z = 1.0;
+    mesh->setScale(scale);
 
     return mesh;                            
 }
@@ -283,14 +274,6 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     std::vector<rm::Face> faces;
 
     rm::genCube(vertices, faces);
-
-    // scale
-    // for(size_t i=0; i<vertices.size(); i++)
-    // {
-    //     vertices[i].x *= size.x();
-    //     vertices[i].y *= size.y();
-    //     vertices[i].z *= size.z();
-    // }
 
     // fill embree mesh
     rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
@@ -311,15 +294,6 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     std::vector<rm::Vector3> vertices;
     std::vector<rm::Face> faces;
     rm::genSphere(vertices, faces, 30, 30);
-
-    
-
-    // for(size_t i=0; i<vertices.size(); i++)
-    // {
-    //     vertices[i].x *= diameter;
-    //     vertices[i].y *= diameter;
-    //     vertices[i].z *= diameter;
-    // }
     
     // fill embree mesh
     rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
@@ -331,6 +305,29 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     float diameter = sphere.radius() * 2.0;
     rm::Vector3 scale = {diameter, diameter, diameter};
     mesh->setScale(scale);
+
+    return mesh;
+}
+
+rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+    const msgs::CylinderGeom& cylinder) const
+{
+    std::vector<rm::Vector3> vertices;
+    std::vector<rm::Face> faces;
+
+    rm::genCylinder(vertices, faces, 100);
+
+    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
+        m_map->device, vertices.size(), faces.size()));
+
+    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
+    std::copy(faces.begin(), faces.end(), mesh->faces);
+
+    float radius = cylinder.radius();
+    float diameter = radius * 2.0;
+    float height = cylinder.length();
+    
+    mesh->setScale({diameter, diameter, height});
 
     return mesh;
 }
@@ -445,7 +442,6 @@ void RmagineEmbreeMap::UpdateState()
                             rm::Vector3 scale_rm = to_rm(scale);
 
                             // TODO: how to merge with link scale Svl. Check if this is right
-                            // mesh->setScale(scale_rm.mult_ewise(Svl));
                             mesh->setTransform(Tvw);
                             mesh->apply();
 
@@ -461,7 +457,20 @@ void RmagineEmbreeMap::UpdateState()
 
                         if(geom.has_cylinder())
                         {
-                            std::cout << "TODO: CYLINDER" << std::endl;
+                            msgs::CylinderGeom cylinder = geom.cylinder();
+                            rm::EmbreeMeshPtr mesh = to_rmagine(cylinder);
+
+                            mesh->setTransform(Tvw);
+                            mesh->apply();
+                            mesh->commit();
+
+                            unsigned int mesh_id = m_map->scene->add(mesh);
+                            scene_changes++;
+                            m_visual_to_mesh[key] = mesh_id;
+
+                            std::cout << "CYLINDER created" << std::endl;
+                            std::cout << "- id: " << mesh_id << std::endl;
+                            std::cout << "- key: " << key << std::endl;
                         }
 
                         if(geom.has_sphere())
@@ -469,7 +478,6 @@ void RmagineEmbreeMap::UpdateState()
                             msgs::SphereGeom sphere = geom.sphere();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(sphere);
                             
-                            // mesh->setScale(Svl);
                             mesh->setTransform(Tvw);
                             mesh->apply();
 
@@ -490,7 +498,6 @@ void RmagineEmbreeMap::UpdateState()
                             msgs::PlaneGeom plane = geom.plane();
                             rmagine::EmbreeMeshPtr mesh = to_rmagine(plane);
                             
-                            mesh->setScale(Svl);
                             mesh->setTransform(Tvw);
                             mesh->apply();
 
@@ -606,6 +613,12 @@ void RmagineEmbreeMap::UpdateState()
                                     // msgs::BoxGeom box = geom.box();
                                     mesh->setScale(model_scale);
                                     std::cout << "- sphere size: " << model_scale << std::endl;
+                                }
+
+                                if(geom.has_cylinder())
+                                {
+                                    mesh->setScale(model_scale);
+                                    std::cout << "- cylinder size: " << model_scale << std::endl;
                                 }
                             }
 
