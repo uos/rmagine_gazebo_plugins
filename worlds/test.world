@@ -199,6 +199,8 @@
       </link>
     </model>
     <model name='unit_cylinder'>
+      <!-- <rmagine_ignore/> -->
+      
       <pose>1.44349 -2.35546 0.5 0 -0 0</pose>
       <link name='link'>
         <inertial>

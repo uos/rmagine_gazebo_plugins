@@ -165,6 +165,70 @@ std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeRemoved(
     return ret;
 }
 
+std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeTransformed(
+    const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
+    const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
+{
+    std::unordered_set<uint32_t> ret;
+
+    for(auto elem : models_new)
+    {
+        // 1. check pose change
+        auto it_pose_old = m_poses.find(elem.first);
+
+        if(it_pose_old != m_poses.end())
+        {
+            // also exists in old models poses
+            // next: check if model pose was changed
+            ignition::math::Pose3d pose_new = elem.second->RelativePose();
+            ignition::math::Pose3d pose_old = it_pose_old->second;
+            ignition::math::Pose3d pose_delta = pose_old.Inverse() * pose_new;
+
+            if(pose_delta.Pos().Length() > m_changed_delta_trans)
+            {
+                // translation delta high enough
+                ret.insert(elem.first);
+            } else {
+                ignition::math::Quaternion q = pose_delta.Rot();
+                ignition::math::Vector3d vec(q.X(), q.Y(), q.Z());
+                double angle = 2.0 * atan2(vec.Length(), q.W());
+
+                if(angle > m_changed_delta_rot)
+                {
+                    // angle delta high enough
+                    ret.insert(elem.first);
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
+std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeScaled(
+    const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
+    const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
+{
+    std::unordered_set<uint32_t> ret;
+
+    for(auto elem : models_new)
+    {
+        // 2. check scale change
+        auto it_scale_old = m_scales.find(elem.first);
+
+        if(it_scale_old != m_scales.end())
+        {
+            double scale_change = (it_scale_old->second - elem.second->Scale()).Length();
+            if(scale_change > m_changed_delta_scale)
+            {
+                ret.insert(elem.first);
+            }
+        }
+    }
+
+    return ret;
+}
+
 std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeChanged(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
@@ -231,7 +295,9 @@ ModelsDiff RmagineEmbreeMap::ComputeDiff(
     ModelsDiff ret;
     ret.added = ComputeAdded(models_old, models_new);
     ret.removed = ComputeRemoved(models_old, models_new);
-    ret.changed = ComputeChanged(models_old, models_new);
+    ret.transformed = ComputeTransformed(models_old, models_new);
+    ret.scaled = ComputeScaled(models_old, models_new);
+
     return ret;
 }
 
@@ -375,12 +441,8 @@ void RmagineEmbreeMap::UpdateState()
         // Insert new meshes
         for(auto model_id : diff.added)
         {
-            
-            // std::cout << "Add model " << model_id << " to embree map" << std::endl;
-            
             if(m_model_ignores.find(model_id) != m_model_ignores.end())
             {
-                // std::cout << "IGNORE adding model " << model_id << std::endl;
                 continue;
             }
             
@@ -414,35 +476,41 @@ void RmagineEmbreeMap::UpdateState()
                         msgs::Geometry geom = vis.geometry();
 
                         rmagine::EmbreeMeshPtr mesh;
+                        std::string mesh_type;
 
                         if(geom.has_mesh())
                         {
                             msgs::MeshGeom gzmesh = geom.mesh();
                             mesh = to_rmagine(gzmesh);
+                            mesh_type = "MESH";
                         }
 
                         if(geom.has_box())
                         {
                             msgs::BoxGeom box = geom.box();
                             mesh = to_rmagine(box);
+                            mesh_type = "BOX";
                         }
 
                         if(geom.has_cylinder())
                         {
                             msgs::CylinderGeom cylinder = geom.cylinder();
-                            rm::EmbreeMeshPtr mesh = to_rmagine(cylinder);
+                            mesh = to_rmagine(cylinder);
+                            mesh_type = "CYLINDER";
                         }
 
                         if(geom.has_sphere())
                         {
                             msgs::SphereGeom sphere = geom.sphere();
                             mesh = to_rmagine(sphere);
+                            mesh_type = "SPHERE";
                         }
 
                         if(geom.has_plane())
                         {
                             msgs::PlaneGeom plane = geom.plane();
                             mesh = to_rmagine(plane);
+                            mesh_type = "PLANE";
                         }
 
                         if(geom.has_heightmap())
@@ -461,8 +529,11 @@ void RmagineEmbreeMap::UpdateState()
                             m_visual_to_mesh[key] = mesh_id;
 
                             std::cout << "MESH created" << std::endl;
+                            std::cout << "- type: " << mesh_type << std::endl;
                             std::cout << "- id: " << mesh_id << std::endl;
                             std::cout << "- key: " << key << std::endl;
+                            std::cout << "- scale: " << mesh->scale() << std::endl;
+                            std::cout << "- transform: " << mesh->transform() << std::endl;
 
                             if(m_model_meshes.find(model_id) == m_model_meshes.end())
                             {
@@ -476,175 +547,278 @@ void RmagineEmbreeMap::UpdateState()
             }
         }
 
-        std::vector<rm::EmbreeMeshPtr> meshes_to_update;
+        if(diff.ModelChanged())
+        {
+            std::cout << "UPDATE SCENE - prepare" << std::endl;
 
-        // Update existing meshes
-        if(diff.changed.size() > 0)
+            std::unordered_set<rm::EmbreeMeshPtr> meshes_to_transform;
+            // Transform existing meshes
+            if(diff.ModelTransformed())
+            {
+                std::cout << "1. APPLY TRANSFORMATIONS" << std::endl;
+                rm::StopWatch sw;
+                double el;
+
+                sw();
+
+                auto meshes = m_map->scene->meshes();
+
+                for(auto model_id : diff.transformed )
+                {
+                    if(m_model_ignores.find(model_id) != m_model_ignores.end())
+                    {
+                        continue;
+                    }
+
+                    // get embree id of model
+                    auto model = m_models[model_id];
+                    std::string model_name = model->GetName();
+                    std::vector<physics::LinkPtr> links = model->GetLinks();
+
+                    ignition::math::Vector3d model_scale_gz = model->Scale();
+                    rm::Vector3 model_scale = to_rm(model_scale_gz);
+
+                    for(physics::LinkPtr link : links)
+                    {
+                        std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
+
+                        for(auto elem : visuals)
+                        {
+                            msgs::Visual vis = elem.second;
+                            std::string key = vis.name();
+                            
+                            auto mesh_vis_it = m_visual_to_mesh.find(key);
+
+                            if(mesh_vis_it == m_visual_to_mesh.end())
+                            {
+                                std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
+                                std::cout << "- key: " << key << std::endl;
+                                continue;
+                            }
+
+                            unsigned int mesh_id = mesh_vis_it->second;
+                            auto it = meshes.find(mesh_id);
+
+                            if(it != meshes.end())
+                            {
+                                std::cout << "Found visual to transform" << std::endl;
+                                std::cout << "- id: " << mesh_id << std::endl;
+                                std::cout << "- key: " << key << std::endl;
+
+                                ignition::math::Pose3d link_world_pose = link->WorldPose();
+                                msgs::Pose vis_pose = vis.pose();
+
+                                // convert to rmagine
+                                rm::Transform Tlw = to_rm(link_world_pose);
+                                rm::Transform Tvl = to_rm(vis_pose);
+
+                                rm::Transform Tvw = Tlw * Tvl;
+                                std::cout << "- transform: " << Tvw << std::endl;
+
+                                rm::EmbreeMeshPtr mesh = it->second;
+                                mesh->setTransform(Tvw);
+
+                                meshes_to_transform.insert(mesh);
+
+                            } else {
+                                std::cout << "WARNING: visual not in mesh set. But it should." << std::endl;
+                                std::cout << "- id: " << mesh_id << std::endl;
+                                std::cout << "- key: " << key << std::endl;
+                            }
+                        }
+                    }
+                }
+
+                el = sw();
+                std::cout << "- Prepare meshes transforms: " << el << " ms" << std::endl;
+            }
+
+            std::unordered_set<rm::EmbreeMeshPtr> meshes_to_scale;
+
+            if(diff.ModelScaled())
+            {
+                std::cout << "2. APPLY SCALINGS" << std::endl;
+                rm::StopWatch sw;
+                double el;
+
+                sw();
+
+                auto meshes = m_map->scene->meshes();
+
+                for(auto model_id : diff.scaled )
+                {
+                    if(m_model_ignores.find(model_id) != m_model_ignores.end())
+                    {
+                        continue;
+                    }
+
+                    // get embree id of model
+                    auto model = m_models[model_id];
+                    std::string model_name = model->GetName();
+                    std::vector<physics::LinkPtr> links = model->GetLinks();
+
+                    ignition::math::Vector3d model_scale_gz = model->Scale();
+                    rm::Vector3 model_scale = to_rm(model_scale_gz);
+
+                    for(physics::LinkPtr link : links)
+                    {
+                        std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
+
+                        for(auto elem : visuals)
+                        {
+                            msgs::Visual vis = elem.second;
+                            std::string key = vis.name();
+                            
+                            auto mesh_vis_it = m_visual_to_mesh.find(key);
+
+                            if(mesh_vis_it == m_visual_to_mesh.end())
+                            {
+                                std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
+                                std::cout << "- key: " << key << std::endl;
+                                continue;
+                            }
+
+                            unsigned int mesh_id = mesh_vis_it->second;
+                            auto it = meshes.find(mesh_id);
+
+                            if(it != meshes.end())
+                            {
+                                std::cout << "Found visual to scale" << std::endl;
+                                std::cout << "- id: " << mesh_id << std::endl;
+                                std::cout << "- key: " << key << std::endl;
+
+                                msgs::Vector3d vis_scale = vis.scale();
+
+                                // convert to rmagine
+                                rm::Vector Svl = to_rm(vis_scale);
+
+                                std::cout << "- mesh scale old: " << it->second->scale() << std::endl;
+                                std::cout << "- model scale: " << model_scale << std::endl;
+                                std::cout << "- visual scale: " << Svl << std::endl;
+                                // std::cout << "- transform: " << Tvw << std::endl;
+
+                                rm::EmbreeMeshPtr mesh = it->second;
+
+                                if(vis.has_geometry())
+                                {
+                                    msgs::Geometry geom = vis.geometry();
+                                    if(geom.has_box())
+                                    {
+                                        msgs::BoxGeom box = geom.box();
+                                        auto box_size = box.size();
+                                        rm::Vector3 box_scale = to_rm(box_size);
+
+                                        std::cout << "- box scale: " << box_scale << std::endl;
+                                        std::cout << "- box size: " << model_scale << std::endl;
+
+                                        mesh->setScale(model_scale);
+                                    }
+
+                                    if(geom.has_sphere())
+                                    {
+                                        msgs::SphereGeom sphere = geom.sphere();
+                                        float diameter = sphere.radius() * 2.0;
+                                        rm::Vector3 sphere_scale = {diameter, diameter, diameter};
+
+                                        std::cout << "- sphere scale: " << sphere_scale << std::endl;
+                                        std::cout << "- sphere size: " << model_scale << std::endl;
+
+                                        mesh->setScale(model_scale);
+                                    }
+
+                                    if(geom.has_cylinder())
+                                    {
+                                        msgs::CylinderGeom cylinder = geom.cylinder();
+
+                                        float radius = cylinder.radius();
+                                        float diameter = radius * 2.0;
+                                        float height = cylinder.length();
+
+                                        rm::Vector3 cylinder_scale = {diameter, diameter, height};
+
+                                        std::cout << "- cylinder scale: " << cylinder_scale << std::endl;
+                                        std::cout << "- cylinder size: " << model_scale << std::endl;
+                                        mesh->setScale(model_scale);
+                                    }
+                                }
+
+                                meshes_to_scale.insert(mesh);
+                            } else {
+                                std::cout << "WARNING: visual not in mesh set. But it should." << std::endl;
+                                std::cout << "- id: " << mesh_id << std::endl;
+                                std::cout << "- key: " << key << std::endl;
+                            }
+                        }
+                    }
+                }
+
+                el = sw();
+                std::cout << "- Prepare meshes scalings: " << el << " ms" << std::endl;
+            }
+
+            if(diff.removed.size() > 0)
+            {
+                // for(auto model_id : diff.removed)
+                // {
+                //     if(m_model_ignores.find(model_id) != m_model_ignores.end())
+                //     {
+                //         continue;
+                //     }
+
+                //     auto meshes = m_model_meshes[model_id];
+                //     std::cout << "Remove " << meshes.size() << " meshes" << std::endl;
+
+                //     for(auto mesh : meshes)
+                //     {
+                //         mesh->parent->removeMesh(mesh->geomID);
+                //     }
+                // }
+            }
+
+            // mutex?
+            rm::StopWatch sw;
+            double el;
+
+            auto meshes_to_update = get_union(meshes_to_transform, meshes_to_scale);
+
+            sw();
+            for(auto mesh_to_update : meshes_to_update)
+            {
+                mesh_to_update->apply();
+                mesh_to_update->markAsChanged();
+                mesh_to_update->commit();
+                scene_changes++;
+            }
+
+            el = sw();
+            std::cout << "- Mesh update: " << el << "s" << std::endl;
+        }
+
+        
+
+        
+        if(scene_changes > 0)
         {
             rm::StopWatch sw;
             double el;
 
+            std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
+
             sw();
 
-            auto meshes = m_map->scene->meshes();
-
-            for(auto model_id : diff.changed)
-            {
-                if(m_model_ignores.find(model_id) != m_model_ignores.end())
-                {
-                    continue;
-                }
-
-                // get embree id of model
-                auto model = m_models[model_id];
-                std::string model_name = model->GetName();
-                std::vector<physics::LinkPtr> links = model->GetLinks();
-
-                ignition::math::Vector3d model_scale_gz = model->Scale();
-                rm::Vector3 model_scale = to_rm(model_scale_gz);
-
-                for(physics::LinkPtr link : links)
-                {
-                    std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
-
-                    for(auto elem : visuals)
-                    {
-                        msgs::Visual vis = elem.second;
-                        std::string key = vis.name();
-                        
-                        auto mesh_vis_it = m_visual_to_mesh.find(key);
-
-                        if(mesh_vis_it == m_visual_to_mesh.end())
-                        {
-                            std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
-                            std::cout << "- key: " << key << std::endl;
-                            continue;
-                        }
-
-                        unsigned int mesh_id = mesh_vis_it->second;
-                        auto it = meshes.find(mesh_id);
-
-                        if(it != meshes.end())
-                        {
-                            std::cout << "Found visual to update" << std::endl;
-                            std::cout << "- id: " << mesh_id << std::endl;
-                            std::cout << "- key: " << key << std::endl;
-
-                            ignition::math::Pose3d link_world_pose = link->WorldPose();
-                            msgs::Pose vis_pose = vis.pose();
-                            msgs::Vector3d vis_scale = vis.scale();
-
-                            // convert to rmagine
-                            rm::Transform Tlw = to_rm(link_world_pose);
-                            rm::Transform Tvl = to_rm(vis_pose);
-                            rm::Vector Svl = to_rm(vis_scale);
-
-                            rm::Transform Tvw = Tlw * Tvl;
-
-                            std::cout << "- model scale: " << model_scale << std::endl;
-                            std::cout << "- visual scale: " << Svl << std::endl;
-                            std::cout << "- transform: " << Tvw << std::endl;
-
-                            rm::EmbreeMeshPtr mesh = it->second;
-                            
-                            mesh->setScale(Svl);
-                            mesh->setTransform(Tvw);
-
-                            if(vis.has_geometry())
-                            {
-                                msgs::Geometry geom = vis.geometry();
-                                if(geom.has_box())
-                                {
-                                    // msgs::BoxGeom box = geom.box();
-                                    // auto geom_size = box.size();
-                                    // rm::Vector3 scale_rm = to_rm(geom_size);
-                                    mesh->setScale(model_scale);
-                                    std::cout << "- box size: " << model_scale << std::endl;
-                                }
-
-                                if(geom.has_sphere())
-                                {
-                                    // msgs::BoxGeom box = geom.box();
-                                    mesh->setScale(model_scale);
-                                    std::cout << "- sphere size: " << model_scale << std::endl;
-                                }
-
-                                if(geom.has_cylinder())
-                                {
-                                    mesh->setScale(model_scale);
-                                    std::cout << "- cylinder size: " << model_scale << std::endl;
-                                }
-                            }
-
-                            mesh->apply();
-                            meshes_to_update.push_back(mesh);
-
-                        } else {
-                            std::cout << "WARNING: visual not in mesh set. But it should." << std::endl;
-                            std::cout << "- id: " << mesh_id << std::endl;
-                            std::cout << "- key: " << key << std::endl;
-                        }
-                    }
-                }
-            }
+            
+            m_map->scene->commit();
 
             el = sw();
-            std::cout << "- Prepare meshes updates: " << el << " ms" << std::endl;
+            std::cout << "- Scene update: " << el << "s" << std::endl;
         }
-
-        if(diff.removed.size() > 0)
-        {
-            for(auto model_id : diff.removed)
-            {
-                if(m_model_ignores.find(model_id) != m_model_ignores.end())
-                {
-                    continue;
-                }
-
-                
-                auto meshes = m_model_meshes[model_id];
-                std::cout << "Remove " << meshes.size() << " meshes" << std::endl;
-
-                for(auto mesh : meshes)
-                {
-                    mesh->parent->removeMesh(mesh->geomID);
-                }
-            }
-        }
-
-        
-
-
-        // mutex?
-        rm::StopWatch sw;
-        double el;
-
-        sw();
-        for(auto mesh_to_update : meshes_to_update)
-        {
-            mesh_to_update->markAsChanged();
-            mesh_to_update->commit();
-            scene_changes++;
-        }
-
-        el = sw();
-        std::cout << "- Mesh update: " << el << "s" << std::endl;
-        
-
-        sw();
-        if(scene_changes > 0)
-        {
-            m_map->scene->commit();
-        }
-        el = sw();
-        std::cout << "- Scene update: " << el << "s" << std::endl;
     }
 
     // apply changes to gazebo state
     if(diff.HasChanged())
     {
         // change
-        for(auto change_name : diff.changed)
+        for(auto change_name : diff.changed())
         {
             auto model = m_models[change_name];
 

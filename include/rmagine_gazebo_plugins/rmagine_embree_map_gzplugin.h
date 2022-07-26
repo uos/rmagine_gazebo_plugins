@@ -29,11 +29,29 @@
 namespace gazebo
 {
 
+template<typename T>
+std::unordered_set<T> get_union(
+    const std::unordered_set<T>& a, const std::unordered_set<T>& b)
+{
+    std::unordered_set<T> res = a;
+    res.insert(b.begin(), b.end());
+    return res;
+}
+
 struct ModelsDiff 
 {
     std::unordered_set<uint32_t> added;
     std::unordered_set<uint32_t> removed;
-    std::unordered_set<uint32_t> changed;
+
+    std::unordered_set<uint32_t> transformed;
+    std::unordered_set<uint32_t> scaled;
+
+    std::unordered_set<uint32_t> changed() const
+    {
+        std::unordered_set<uint32_t> res = transformed;
+        res.insert(scaled.begin(), scaled.end());
+        return res;
+    }
 
     inline bool ModelAdded() const 
     {
@@ -45,16 +63,25 @@ struct ModelsDiff
         return !removed.empty();
     }
 
+    inline bool ModelTransformed() const
+    {
+        return !transformed.empty();
+    }
+
+    inline bool ModelScaled() const
+    {
+        return !scaled.empty();
+    }
+
     inline bool ModelChanged() const
     {
-        return !changed.empty();
+        return ModelTransformed() || ModelScaled();
     }
 
     inline bool HasChanged() const
     {
         return ModelAdded() || ModelRemoved() || ModelChanged();
-    } 
-
+    }
 };
 
 class RmagineEmbreeMap : public WorldPlugin
@@ -74,11 +101,20 @@ private:
     std::unordered_map<uint32_t, physics::ModelPtr> ToIdMap(
         const std::vector<physics::ModelPtr>& models);
 
+    
     std::unordered_set<uint32_t> ComputeAdded(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
     std::unordered_set<uint32_t> ComputeRemoved(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
+
+    std::unordered_set<uint32_t> ComputeTransformed(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
+
+    std::unordered_set<uint32_t> ComputeScaled(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
