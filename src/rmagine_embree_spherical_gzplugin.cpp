@@ -193,16 +193,12 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
         {
             if(m_map_mutex)
             {
-                std::cout << "-- reading lock map for simulation" << std::endl;
                 m_map_mutex->lock_shared();
-                std::cout << "-- locked for simulation" << std::endl;
-            } else {
-                std::cout << "-- sim no mutex" << std::endl;
             }
 
-            std::cout << "sim start" << std::endl;
+            // std::cout << "sim start" << std::endl;
             m_sphere_sim->simulateRanges(Tbms, m_ranges);
-            std::cout << "sim end" << std::endl;
+            // std::cout << "sim end" << std::endl;
 
             if(m_map_mutex)
             {
@@ -212,9 +208,20 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
             this->lastMeasurementTime = this->world->SimTime();
             updateScanMsg(m_ranges);
         } else {
-            std::cout << "sim start 2" << std::endl;
+            if(m_map_mutex)
+            {
+                m_map_mutex->lock_shared();
+            }
+
+            // std::cout << "sim start" << std::endl;
             auto ranges = m_sphere_sim->simulateRanges(Tbms);
-            std::cout << "sim end 2" << std::endl;
+            // std::cout << "sim end" << std::endl;
+
+            if(m_map_mutex)
+            {
+                m_map_mutex->unlock_shared();
+            }
+
             this->lastMeasurementTime = this->world->SimTime();
             updateScanMsg(ranges);
         }

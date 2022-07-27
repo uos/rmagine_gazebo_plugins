@@ -11,7 +11,7 @@
 #include <ignition/math/Pose3.hh>
 
 
-
+#include <iostream>
 
 #include <functional>
 #include <unordered_map>
@@ -86,6 +86,8 @@ struct ModelsDiff
         return ModelAdded() || ModelRemoved() || ModelChanged();
     }
 };
+
+
 
 class RmagineEmbreeMap : public WorldPlugin
 {
@@ -185,5 +187,23 @@ private:
 };
 
 } // namespace gazebo
+
+inline std::ostream& operator<<(std::ostream& os, const gazebo::ModelsDiff& diff)
+{
+    os << "ModelsDiff:\n";
+    os << "- added: " << diff.added.size() << "\n";
+    os << "- removed: " << diff.removed.size() << "\n";
+    os << "- changed: " << diff.changed().size() << "\n";
+    os << "-- transformed: " << diff.transformed.size() << "\n";
+    os << "-- scaled: " << diff.scaled.size() << "\n";
+    return os;
+}
+
+// inline std::ostream& operator<<(std::ostream& os, const gazebo::Transform& T)
+// {
+//     os << "T[" << T.t << ", " << T.R << "]";
+//     return os;
+// }
+
 
 #endif // GAZEBO_RMAGINE_EMBREE_MAP_PLUGIN_H
