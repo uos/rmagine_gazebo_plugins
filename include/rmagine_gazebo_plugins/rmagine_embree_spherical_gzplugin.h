@@ -12,6 +12,10 @@
 #include <rmagine/types/sensor_models.h>
 #include <rmagine/simulation/SphereSimulatorEmbree.hpp>
 
+#include <mutex>
+#include <shared_mutex>
+#include <memory>
+
 namespace rm = rmagine;
 
 namespace gazebo
@@ -38,8 +42,9 @@ public:
 
     void setMap(rm::EmbreeMapPtr map);
 
-    void updateScanMsg(rm::MemoryView<float> ranges);
+    void setLock(std::shared_ptr<std::shared_mutex> mutex);
 
+    void updateScanMsg(rm::MemoryView<float> ranges);
 
     inline common::Time stamp() const 
     {
@@ -66,6 +71,9 @@ protected:
     rm::SphericalModel m_sensor_model;
     rm::Transform m_Tsb;
 
+
+    std::shared_ptr<std::shared_mutex> m_map_mutex;
+    rm::EmbreeMapPtr m_map;
     rm::SphereSimulatorEmbreePtr m_sphere_sim;
 
     bool m_pre_alloc_mem = true;

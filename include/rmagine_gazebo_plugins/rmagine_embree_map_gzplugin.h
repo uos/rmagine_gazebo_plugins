@@ -11,6 +11,8 @@
 #include <ignition/math/Pose3.hh>
 
 
+
+
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
@@ -19,6 +21,7 @@
 #include <future>
 #include <thread>
 #include <chrono>
+#include <shared_mutex>
 
 
 
@@ -89,6 +92,7 @@ class RmagineEmbreeMap : public WorldPlugin
 public: 
     RmagineEmbreeMap();
     virtual ~RmagineEmbreeMap();
+    
 
 protected:
     virtual void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf);
@@ -137,18 +141,18 @@ private:
 
     rmagine::EmbreeMeshPtr to_rmagine(const msgs::MeshGeom& gzmesh) const;
 
-    
-
-
     void UpdateState();
 
     void UpdateSensors();
+
 
     physics::WorldPtr m_world;
     sdf::ElementPtr m_sdf;
 
     event::ConnectionPtr m_world_update_conn;
 
+    
+    std::shared_ptr<std::shared_mutex> m_map_mutex;
     rmagine::EmbreeMapPtr m_map;
 
     bool m_sensors_loaded = false;

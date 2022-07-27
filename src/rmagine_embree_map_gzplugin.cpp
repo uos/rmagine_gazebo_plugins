@@ -83,6 +83,7 @@ void RmagineEmbreeMap::Load(
     physics::WorldPtr _world, 
     sdf::ElementPtr _sdf)
 {
+    m_map_mutex = std::make_shared<std::shared_mutex>();
     m_world = _world;
     m_sdf = _sdf;
 
@@ -793,24 +794,35 @@ void RmagineEmbreeMap::UpdateState()
             el = sw();
             std::cout << "- Mesh update: " << el << "s" << std::endl;
         }
-
-        
-
         
         if(scene_changes > 0)
         {
             rm::StopWatch sw;
             double el;
 
+            // m_map_lock.lock();
+            // std::lock_guard<std::mutex> guard(m_map_lock);
+            
+            if(m_map_mutex)
+            {
+                std::cout << "-- lock map for updates" << std::endl;
+                m_map_mutex->lock();
+                std::cout << "-- map locked." << std::endl;
+            }
+
             std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
 
             sw();
-
-            
             m_map->scene->commit();
+            
 
             el = sw();
-            std::cout << "- Scene update: " << el << "s" << std::endl;
+            std::cout << "- Scene update finished in " << el << "s" << std::endl;
+            
+            if(m_map_mutex)
+            {
+                m_map_mutex->unlock();
+            }
         }
     }
 
@@ -875,6 +887,11 @@ void RmagineEmbreeMap::UpdateSensors()
             {
                 std::cout << "[RmagineEmbreeMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
                 spherical->setMap(m_map);
+                if(!m_map_mutex)
+                {
+                    std::cout << "[RmagineEmbreeMap] no mutex " << std::endl;
+                }
+                spherical->setLock(m_map_mutex);
             }
         }
 
