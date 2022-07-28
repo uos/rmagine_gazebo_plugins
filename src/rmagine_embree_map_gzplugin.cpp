@@ -16,6 +16,7 @@
 #include <rmagine/util/synthetic.h>
 #include <rmagine/util/prints.h>
 #include <rmagine/util/StopWatch.hpp>
+#include <rmagine/map/embree/embree_shapes.h>
 
 
 #include <iostream>
@@ -99,7 +100,7 @@ void RmagineEmbreeMap::Load(
     );
 
     // create empty map
-    m_map.reset(new rmagine::EmbreeMap);
+    m_map = std::make_shared<rm::EmbreeMap>();
 }
 
 std::unordered_map<uint32_t, physics::ModelPtr> RmagineEmbreeMap::ToIdMap(
@@ -319,13 +320,11 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     std::vector<rm::Face> faces;
     rm::genPlane(vertices, faces);
 
-    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
-        m_map->device,  vertices.size(), faces.size()));
+    rm::EmbreeMeshPtr mesh(new rm::EmbreeMesh(vertices.size(), faces.size()));
 
     std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
     std::copy(faces.begin(), faces.end(), mesh->faces);
 
-    // float x = size.x();
     rm::Vector3 scale;
     scale.x = size.x();
     scale.y = size.y();
@@ -339,20 +338,9 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     const msgs::BoxGeom& box) const
 {
     msgs::Vector3d size = box.size();
-    
-
-    // box is in center: -size.x()/2     +size.x()/2
-    std::vector<rm::Vector3> vertices;
-    std::vector<rm::Face> faces;
-
-    rm::genCube(vertices, faces);
 
     // fill embree mesh
-    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
-        m_map->device, vertices.size(), faces.size()));
-
-    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
-    std::copy(faces.begin(), faces.end(), mesh->faces);
+    rm::EmbreeCubePtr mesh = std::make_shared<rm::EmbreeCube>();
 
     rm::Vector3 rm_scale = to_rm(size);
     mesh->setScale(rm_scale);
@@ -363,16 +351,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
 rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     const msgs::SphereGeom& sphere) const
 {
-    std::vector<rm::Vector3> vertices;
-    std::vector<rm::Face> faces;
-    rm::genSphere(vertices, faces, 30, 30);
-    
-    // fill embree mesh
-    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
-        m_map->device, vertices.size(), faces.size()));
-
-    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
-    std::copy(faces.begin(), faces.end(), mesh->faces);
+    rm::EmbreeSpherePtr mesh = std::make_shared<rm::EmbreeSphere>(30, 30);
 
     float diameter = sphere.radius() * 2.0;
     rm::Vector3 scale = {diameter, diameter, diameter};
@@ -389,8 +368,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
 
     rm::genCylinder(vertices, faces, 100);
 
-    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(
-        m_map->device, vertices.size(), faces.size()));
+    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(vertices.size(), faces.size()));
 
     std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
     std::copy(faces.begin(), faces.end(), mesh->faces);
@@ -444,7 +422,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
 
         // ascene->mRootNode
 
-        mesh = std::make_shared<rm::EmbreeMesh>(m_map->device, amesh);
+        mesh = std::make_shared<rm::EmbreeMesh>(amesh);
         mesh->setScale(to_rm(scale));
 
         
@@ -564,8 +542,6 @@ void RmagineEmbreeMap::UpdateState()
                             rmagine::EmbreeMeshPtr mesh;
                             std::string mesh_type;
 
-                            
-
                             if(geom.has_mesh())
                             {
                                 std::cout << "ADD MESH..." << std::endl;
@@ -576,6 +552,7 @@ void RmagineEmbreeMap::UpdateState()
 
                             if(geom.has_box())
                             {
+                                std::cout << "ADD BOX!" << std::endl;
                                 msgs::BoxGeom box = geom.box();
                                 mesh = to_rmagine(box);
                                 mesh_type = "BOX";
@@ -583,6 +560,7 @@ void RmagineEmbreeMap::UpdateState()
 
                             if(geom.has_cylinder())
                             {
+                                std::cout << "ADD CYLINDER!" << std::endl;
                                 msgs::CylinderGeom cylinder = geom.cylinder();
                                 mesh = to_rmagine(cylinder);
                                 mesh_type = "CYLINDER";
@@ -590,6 +568,7 @@ void RmagineEmbreeMap::UpdateState()
 
                             if(geom.has_sphere())
                             {
+                                std::cout << "ADD SPHERE!" << std::endl;
                                 msgs::SphereGeom sphere = geom.sphere();
                                 mesh = to_rmagine(sphere);
                                 mesh_type = "SPHERE";
@@ -597,6 +576,7 @@ void RmagineEmbreeMap::UpdateState()
 
                             if(geom.has_plane())
                             {
+                                std::cout << "ADD PLANE!" << std::endl;
                                 msgs::PlaneGeom plane = geom.plane();
                                 mesh = to_rmagine(plane);
                                 mesh_type = "PLANE";
@@ -613,9 +593,11 @@ void RmagineEmbreeMap::UpdateState()
                                 mesh->apply();
                                 mesh->commit();
 
+                                std::cout << "Add mesh" << std::endl;
                                 unsigned int mesh_id = m_map->scene->add(mesh);
                                 scene_changes++;
                                 m_visual_to_mesh[key] = mesh_id;
+                                
 
                                 std::cout << "MESH created" << std::endl;
                                 std::cout << "- type: " << mesh_type << std::endl;
@@ -645,7 +627,7 @@ void RmagineEmbreeMap::UpdateState()
         {
             std::cout << "2. UPDATE SCENE - prepare" << std::endl;
 
-            std::unordered_set<rm::EmbreeMeshPtr> meshes_to_transform;
+            std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_transform;
             // Transform existing meshes
             if(diff.ModelTransformed())
             {
@@ -655,7 +637,7 @@ void RmagineEmbreeMap::UpdateState()
 
                 sw();
 
-                auto meshes = m_map->scene->meshes();
+                auto meshes = m_map->scene->geometries();
 
                 for(auto model_id : diff.transformed)
                 {
@@ -709,7 +691,7 @@ void RmagineEmbreeMap::UpdateState()
                                 rm::Transform Tvw = Tlw * Tvl;
                                 std::cout << "- transform: " << Tvw << std::endl;
 
-                                rm::EmbreeMeshPtr mesh = it->second;
+                                rm::EmbreeGeometryPtr mesh = it->second;
                                 mesh->setTransform(Tvw);
 
                                 meshes_to_transform.insert(mesh);
@@ -727,7 +709,7 @@ void RmagineEmbreeMap::UpdateState()
                 std::cout << "- Prepare meshes transforms: " << el << " ms" << std::endl;
             }
 
-            std::unordered_set<rm::EmbreeMeshPtr> meshes_to_scale;
+            std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_scale;
 
             if(diff.ModelScaled())
             {
@@ -737,7 +719,7 @@ void RmagineEmbreeMap::UpdateState()
 
                 sw();
 
-                auto meshes = m_map->scene->meshes();
+                auto meshes = m_map->scene->geometries();
 
                 for(auto model_id : diff.scaled )
                 {
@@ -791,7 +773,7 @@ void RmagineEmbreeMap::UpdateState()
                                 std::cout << "- visual scale: " << Svl << std::endl;
                                 // std::cout << "- transform: " << Tvw << std::endl;
 
-                                rm::EmbreeMeshPtr mesh = it->second;
+                                rm::EmbreeGeometryPtr mesh = it->second;
 
                                 if(vis.has_geometry())
                                 {
@@ -861,7 +843,12 @@ void RmagineEmbreeMap::UpdateState()
             for(auto mesh_to_update : meshes_to_update)
             {
                 mesh_to_update->apply();
-                mesh_to_update->markAsChanged();
+                auto mesh = std::dynamic_pointer_cast<rm::EmbreeMesh>(mesh_to_update);
+                if(mesh)
+                {
+                    mesh->markAsChanged();
+                }
+                
                 mesh_to_update->commit();
                 scene_changes++;
             }
@@ -885,7 +872,8 @@ void RmagineEmbreeMap::UpdateState()
 
                 for(auto mesh : meshes)
                 {
-                    mesh->parent->removeMesh(mesh->id);
+                    
+                    mesh->parent.lock()->remove(mesh->id);
                     scene_changes++;
                 }
             }
