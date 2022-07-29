@@ -315,16 +315,9 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     msgs::Vector2d size = plane.size();
     // TODO: use normal
     msgs::Vector3d normal = plane.normal();
+    // rotation of normal? angle shortest path or so
 
-    std::vector<rm::Vector3> vertices;
-    std::vector<rm::Face> faces;
-    rm::genPlane(vertices, faces);
-
-    rm::EmbreeMeshPtr mesh(new rm::EmbreeMesh(vertices.size(), faces.size()));
-
-    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
-    std::copy(faces.begin(), faces.end(), mesh->faces);
-
+    rm::EmbreePlanePtr mesh = std::make_shared<rm::EmbreePlane>();
     rm::Vector3 scale;
     scale.x = size.x();
     scale.y = size.y();
@@ -363,16 +356,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
 rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     const msgs::CylinderGeom& cylinder) const
 {
-    std::vector<rm::Vector3> vertices;
-    std::vector<rm::Face> faces;
-
-    rm::genCylinder(vertices, faces, 100);
-
-    rmagine::EmbreeMeshPtr mesh(new rmagine::EmbreeMesh(vertices.size(), faces.size()));
-
-    std::copy(vertices.begin(), vertices.end(), mesh->vertices.raw());
-    std::copy(faces.begin(), faces.end(), mesh->faces);
-
+    rm::EmbreeCylinderPtr mesh = std::make_shared<rm::EmbreeCylinder>(100);
     float radius = cylinder.radius();
     float diameter = radius * 2.0;
     float height = cylinder.length();
@@ -843,12 +827,6 @@ void RmagineEmbreeMap::UpdateState()
             for(auto mesh_to_update : meshes_to_update)
             {
                 mesh_to_update->apply();
-                auto mesh = std::dynamic_pointer_cast<rm::EmbreeMesh>(mesh_to_update);
-                if(mesh)
-                {
-                    mesh->markAsChanged();
-                }
-                
                 mesh_to_update->commit();
                 scene_changes++;
             }
@@ -872,8 +850,20 @@ void RmagineEmbreeMap::UpdateState()
 
                 for(auto mesh : meshes)
                 {
-                    
+                    // TODO why does the remove needs the mutex?
+                    // tought that the scene->commit would commit all the changes
+                    if(m_map_mutex)
+                    {
+                        m_map_mutex->lock();
+                    }
+
                     mesh->parent.lock()->remove(mesh->id);
+
+                    if(m_map_mutex)
+                    {
+                        m_map_mutex->unlock();
+                    }
+
                     scene_changes++;
                 }
             }
