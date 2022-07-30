@@ -396,12 +396,12 @@ rmagine::EmbreeScenePtr RmagineEmbreeMap::to_rmagine(
 
     if(ascene->mNumMeshes > 0)
     {
-        std::cout << "!! load scene..." << std::endl;
+        // std::cout << "!! load scene..." << std::endl;
         scene = rm::make_embree_scene(ascene);
-        std::cout << "!! done." << std::endl;
+        // std::cout << "!! done." << std::endl;
         
         // scale every geometry?
-        std::cout << "!! scale..." << std::endl;
+        // std::cout << "!! scale..." << std::endl;
         for(auto elem : scene->geometries())
         {
             auto geom = elem.second;
@@ -410,7 +410,7 @@ rmagine::EmbreeScenePtr RmagineEmbreeMap::to_rmagine(
             geom->apply();
             geom->commit();
         }
-        std::cout << "!! done." << std::endl;
+        // std::cout << "!! done." << std::endl;
     }
     
     return scene;
@@ -533,8 +533,21 @@ void RmagineEmbreeMap::UpdateState()
                                 geom->apply();
                                 geom->commit();
 
+                                // TODO why does the remove needs the mutex?
+                                // tought that the scene->commit would commit all the changes
+                                if(m_map_mutex)
+                                {
+                                    m_map_mutex->lock();
+                                }
+
                                 std::cout << "Add geom" << std::endl;
                                 unsigned int geom_id = m_map->scene->add(geom);
+
+                                if(m_map_mutex)
+                                {
+                                    m_map_mutex->unlock();
+                                }
+
                                 scene_changes++;
                                 m_visual_to_mesh[key] = geom_id;
 
