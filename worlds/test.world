@@ -59,7 +59,7 @@
           <geometry>
             <plane>
               <normal>0 0 1</normal>
-              <size>100 100</size>
+              <size>1000 1000</size>
             </plane>
           </geometry>
           <material>
@@ -254,63 +254,6 @@
         <enable_wind>0</enable_wind>
         <kinematic>0</kinematic>
       </link>
-    </model>
-
-    <model name='Dumpster'>
-      <link name='link'>
-        <collision name='collision'>
-          <geometry>
-            <mesh>
-              <scale>1.5 1.5 1.5</scale>
-              <uri>model://dumpster/meshes/dumpster.dae</uri>
-            </mesh>
-          </geometry>
-          <max_contacts>10</max_contacts>
-          <surface>
-            <contact>
-              <ode/>
-            </contact>
-            <bounce/>
-            <friction>
-              <torsional>
-                <ode/>
-              </torsional>
-              <ode/>
-            </friction>
-          </surface>
-        </collision>
-        <visual name='visual'>
-          <geometry>
-            <mesh>
-              <scale>1.5 1.5 1.5</scale>
-              <uri>model://dumpster/meshes/dumpster.dae</uri>
-            </mesh>
-          </geometry>
-          <!-- <material>
-            <script>
-              <uri>model://dumpster/materials/scripts</uri>
-              <uri>model://dumpster/materials/textures</uri>
-              <name>Dumpster/Diffuse</name>
-            </script>
-          </material> -->
-        </visual>
-        <self_collide>0</self_collide>
-        <inertial>
-          <pose>0 0 0 0 -0 0</pose>
-          <inertia>
-            <ixx>1</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>1</iyy>
-            <iyz>0</iyz>
-            <izz>1</izz>
-          </inertia>
-          <mass>1</mass>
-        </inertial>
-        <enable_wind>0</enable_wind>
-        <kinematic>0</kinematic>
-      </link>
-      <pose>-1.21954 4.45346 0 0 -0 0</pose>
     </model>
 
     <!-- Grid Map Plugin -->

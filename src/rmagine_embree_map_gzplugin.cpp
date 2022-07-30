@@ -101,6 +101,10 @@ void RmagineEmbreeMap::Load(
 
     // create empty map
     m_map = std::make_shared<rm::EmbreeMap>();
+    
+    // For gazebo dynamic environments
+    m_map->scene->setQuality(RTC_BUILD_QUALITY_LOW);
+    m_map->scene->setFlags(RTC_SCENE_FLAG_DYNAMIC);
 }
 
 std::unordered_map<uint32_t, physics::ModelPtr> RmagineEmbreeMap::ToIdMap(
@@ -366,13 +370,13 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     return mesh;
 }
 
-rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+rmagine::EmbreeScenePtr RmagineEmbreeMap::to_rmagine(
     const msgs::MeshGeom& gzmesh) const
 {
-    rmagine::EmbreeMeshPtr mesh;
+    rmagine::EmbreeScenePtr scene;
 
     std::string filename = gzmesh.filename();
-    msgs::Vector3d scale = gzmesh.scale();
+    // msgs::Vector3d scale = gzmesh.scale();
 
     if(!common::exists(gzmesh.filename()))
     {
@@ -387,80 +391,29 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     if(!ascene)
     {
         std::cout << "WARNING could not load mesh from " << filename << std::endl;
-        return mesh;
-    }
-
-    if(ascene->mNumMeshes > 1)
-    {
-        std::cout << "WARNING " << filename << " has more than one mesh. loading first" << std::endl;
+        return scene;
     }
 
     if(ascene->mNumMeshes > 0)
     {
-        const aiMesh* amesh = ascene->mMeshes[0];
-        std::cout << amesh->mNumVertices << " vertices. " << amesh->mNumFaces << " faces." << std::endl;
+        std::cout << "!! load scene..." << std::endl;
+        scene = rm::make_embree_scene(ascene);
+        std::cout << "!! done." << std::endl;
         
-        
-        
-        
-
-        // ascene->mRootNode
-
-        mesh = std::make_shared<rm::EmbreeMesh>(amesh);
-        mesh->setScale(to_rm(scale));
-
-        
-        // { // debug
-        //     const aiNode* root_node = ascene->mRootNode;
-
-        //     std::cout << "instances: " << root_node->mNumChildren << std::endl;
-
-        //     for(size_t child_id = 0; child_id < root_node->mNumChildren; child_id++)
-        //     {
-        //         std::cout << "Instance " << child_id << std::endl;
-        //         const aiNode* n = root_node->mChildren[child_id];
-        //         std::cout << "- name: " << n->mName.C_Str() << std::endl;
-        //         std::cout << "- meshes: " << n->mNumMeshes << std::endl;
-                
-        //         rm::Matrix4x4 T;
-        //         rm::convert(n->mTransformation, T);
-
-        //         std::cout << "- transform: " << std::endl;
-        //         std::cout << T << std::endl;
-
-        //         std::cout << "- children: " << n->mNumChildren << std::endl;
-        //         if(n->mNumChildren > 0)
-        //         {
-        //             // std::cout << "Has more children" << std::endl;
-        //             for(size_t i=0; i<n->mNumChildren; i++)
-        //             {
-        //                 const aiNode* n2 = n->mChildren[i];
-        //                 std::cout << "- Instance " << i << std::endl;
-        //                 std::cout << "-- name: " << n2->mName.C_Str() << std::endl;
-        //                 std::cout << "-- meshes: " << n2->mNumMeshes << std::endl;
-        //                 rm::Matrix4x4 T2;
-        //                 rm::convert(n2->mTransformation, T2);
-        //                 std::cout << "-- transform: " << std::endl;
-        //                 std::cout << T2 << std::endl;
-        //                 std::cout << "-- children: " << n2->mNumChildren << std::endl;
-
-        //                 rm::Matrix4x4 T_res = T * T2;
-        //                 std::cout << "-- transform total: " << std::endl;
-        //                 std::cout << T_res << std::endl;
-
-        //                 rm::Vector3 scale = {T_res(0,0), T_res(1,1), T_res(2,2)};
-        //                 scale = scale.mult_ewise(mesh->scale());
-        //                 mesh->setScale(scale);
-        //                 std::cout << "Set scale to " << scale << std::endl;
-                        
-        //             }
-        //         }
-        //     }
-        // }
-
+        // scale every geometry?
+        std::cout << "!! scale..." << std::endl;
+        for(auto elem : scene->geometries())
+        {
+            auto geom = elem.second;
+            rm::Vector3 scale = to_rm(gzmesh.scale());
+            geom->setScale(geom->scale().mult_ewise(scale));
+            geom->apply();
+            geom->commit();
+        }
+        std::cout << "!! done." << std::endl;
     }
     
-    return mesh;
+    return scene;
 }
 
 void RmagineEmbreeMap::UpdateState()
@@ -521,81 +474,82 @@ void RmagineEmbreeMap::UpdateState()
 
                         if(vis.has_geometry())
                         {
-                            msgs::Geometry geom = vis.geometry();
+                            msgs::Geometry gzgeom = vis.geometry();
 
-                            rmagine::EmbreeMeshPtr mesh;
-                            std::string mesh_type;
+                            std::vector<rmagine::EmbreeGeometryPtr> geoms;
 
-                            if(geom.has_mesh())
-                            {
-                                std::cout << "ADD MESH..." << std::endl;
-                                msgs::MeshGeom gzmesh = geom.mesh();
-                                mesh = to_rmagine(gzmesh);
-                                mesh_type = "MESH";
-                            }
-
-                            if(geom.has_box())
+                            if(gzgeom.has_box())
                             {
                                 std::cout << "ADD BOX!" << std::endl;
-                                msgs::BoxGeom box = geom.box();
-                                mesh = to_rmagine(box);
-                                mesh_type = "BOX";
+                                msgs::BoxGeom box = gzgeom.box();
+                                geoms.push_back(to_rmagine(box));
                             }
 
-                            if(geom.has_cylinder())
+                            if(gzgeom.has_cylinder())
                             {
                                 std::cout << "ADD CYLINDER!" << std::endl;
-                                msgs::CylinderGeom cylinder = geom.cylinder();
-                                mesh = to_rmagine(cylinder);
-                                mesh_type = "CYLINDER";
+                                msgs::CylinderGeom cylinder = gzgeom.cylinder();
+                                geoms.push_back(to_rmagine(cylinder));
                             }
 
-                            if(geom.has_sphere())
+                            if(gzgeom.has_sphere())
                             {
                                 std::cout << "ADD SPHERE!" << std::endl;
-                                msgs::SphereGeom sphere = geom.sphere();
-                                mesh = to_rmagine(sphere);
-                                mesh_type = "SPHERE";
+                                msgs::SphereGeom sphere = gzgeom.sphere();
+                                geoms.push_back(to_rmagine(sphere));
                             }
 
-                            if(geom.has_plane())
+                            if(gzgeom.has_plane())
                             {
                                 std::cout << "ADD PLANE!" << std::endl;
-                                msgs::PlaneGeom plane = geom.plane();
-                                mesh = to_rmagine(plane);
-                                mesh_type = "PLANE";
+                                msgs::PlaneGeom plane = gzgeom.plane();
+                                geoms.push_back(to_rmagine(plane));
                             }
 
-                            if(geom.has_heightmap())
+                            if(gzgeom.has_heightmap())
                             {
                                 std::cout << "TODO: HEIGHTMAP" << std::endl;
                             }
 
-                            if(mesh)
-                            {   
-                                mesh->setTransform(Tvw);
-                                mesh->apply();
-                                mesh->commit();
-
-                                std::cout << "Add mesh" << std::endl;
-                                unsigned int mesh_id = m_map->scene->add(mesh);
-                                scene_changes++;
-                                m_visual_to_mesh[key] = mesh_id;
+                            if(gzgeom.has_mesh())
+                            {
+                                std::cout << "ADD MESH..." << std::endl;
+                                msgs::MeshGeom gzmesh = gzgeom.mesh();
+                                rm::EmbreeScenePtr mesh_scene = to_rmagine(gzmesh);
+                                std::cout << "- sub instances: " << mesh_scene->count<rm::EmbreeInstance>() << std::endl;
+                                std::cout << "- sub meshes: " << mesh_scene->count<rm::EmbreeMesh>() << std::endl;
                                 
+                                for(auto elem : mesh_scene->geometries())
+                                {
+                                    geoms.push_back(elem.second);
+                                }
+                                // integrate submeshes into global scene
+                                // for(auto elem : mesh_)
+                            }
+
+                            for(auto geom : geoms)
+                            {
+                                geom->setTransform(Tvw);
+                                geom->apply();
+                                geom->commit();
+
+                                std::cout << "Add geom" << std::endl;
+                                unsigned int geom_id = m_map->scene->add(geom);
+                                scene_changes++;
+                                m_visual_to_mesh[key] = geom_id;
 
                                 std::cout << "MESH created" << std::endl;
-                                std::cout << "- type: " << mesh_type << std::endl;
-                                std::cout << "- id: " << mesh_id << std::endl;
+                                std::cout << "- id: " << geom_id << std::endl;
                                 std::cout << "- key: " << key << std::endl;
-                                std::cout << "- scale: " << mesh->scale() << std::endl;
-                                std::cout << "- transform: " << mesh->transform() << std::endl;
+                                std::cout << "- scale: " << geom->scale() << std::endl;
+                                std::cout << "- transform: " << geom->transform() << std::endl;
 
                                 if(m_model_meshes.find(model_id) == m_model_meshes.end())
                                 {
                                     m_model_meshes[model_id] = {};
                                 }
 
-                                m_model_meshes[model_id].push_back(mesh);
+                                m_model_meshes[model_id].push_back(geom);
                             }
                         }
                     }
@@ -761,10 +715,10 @@ void RmagineEmbreeMap::UpdateState()
 
                                 if(vis.has_geometry())
                                 {
-                                    msgs::Geometry geom = vis.geometry();
-                                    if(geom.has_box())
+                                    msgs::Geometry gzgeom = vis.geometry();
+                                    if(gzgeom.has_box())
                                     {
-                                        msgs::BoxGeom box = geom.box();
+                                        msgs::BoxGeom box = gzgeom.box();
                                         auto box_size = box.size();
                                         rm::Vector3 box_scale = to_rm(box_size);
 
@@ -774,9 +728,9 @@ void RmagineEmbreeMap::UpdateState()
                                         mesh->setScale(model_scale);
                                     }
 
-                                    if(geom.has_sphere())
+                                    if(gzgeom.has_sphere())
                                     {
-                                        msgs::SphereGeom sphere = geom.sphere();
+                                        msgs::SphereGeom sphere = gzgeom.sphere();
                                         float diameter = sphere.radius() * 2.0;
                                         rm::Vector3 sphere_scale = {diameter, diameter, diameter};
 
@@ -786,9 +740,9 @@ void RmagineEmbreeMap::UpdateState()
                                         mesh->setScale(model_scale);
                                     }
 
-                                    if(geom.has_cylinder())
+                                    if(gzgeom.has_cylinder())
                                     {
-                                        msgs::CylinderGeom cylinder = geom.cylinder();
+                                        msgs::CylinderGeom cylinder = gzgeom.cylinder();
 
                                         float radius = cylinder.radius();
                                         float diameter = radius * 2.0;
@@ -838,17 +792,17 @@ void RmagineEmbreeMap::UpdateState()
         if(diff.ModelRemoved())
         {
             std::cout << "3. APPLY REMOVALS" << std::endl;
-            for(auto model_id : diff.removed)
+            for(auto geom_id : diff.removed)
             {
-                if(m_model_ignores.find(model_id) != m_model_ignores.end())
+                if(m_model_ignores.find(geom_id) != m_model_ignores.end())
                 {
                     continue;
                 }
 
-                auto meshes = m_model_meshes[model_id];
-                std::cout << "Remove " << meshes.size() << " meshes" << std::endl;
+                auto geoms = m_model_meshes[geom_id];
+                std::cout << "Remove " << geoms.size() << " geometries" << std::endl;
 
-                for(auto mesh : meshes)
+                for(auto geom : geoms)
                 {
                     // TODO why does the remove needs the mutex?
                     // tought that the scene->commit would commit all the changes
@@ -857,7 +811,7 @@ void RmagineEmbreeMap::UpdateState()
                         m_map_mutex->lock();
                     }
 
-                    mesh->parent.lock()->remove(mesh->id);
+                    m_map->scene->remove(geom);
 
                     if(m_map_mutex)
                     {
@@ -891,6 +845,11 @@ void RmagineEmbreeMap::UpdateState()
             {
                 m_map_mutex->unlock();
             }
+
+
+            std::cout << "Scene Info: " << std::endl;
+            std::cout << "- instances: " << m_map->scene->count<rm::EmbreeInstance>() << std::endl;
+            std::cout << "- meshes: " << m_map->scene->count<rm::EmbreeMesh>() << std::endl;
         }
     }
 

@@ -141,7 +141,7 @@ private:
 
     rmagine::EmbreeMeshPtr to_rmagine(const msgs::CylinderGeom& cylinder) const;
 
-    rmagine::EmbreeMeshPtr to_rmagine(const msgs::MeshGeom& gzmesh) const;
+    rmagine::EmbreeScenePtr to_rmagine(const msgs::MeshGeom& gzmesh) const;
 
     void UpdateState();
 
