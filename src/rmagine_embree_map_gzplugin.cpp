@@ -384,12 +384,12 @@ rmagine::EmbreeScenePtr RmagineEmbreeMap::to_rmagine(
 
     std::cout << "Loading mesh from file " << filename << std::endl;
 
-    Assimp::Importer importer;
-    const aiScene* ascene = importer.ReadFile(filename, 0);
-
+    rm::AssimpIO io;
+    const aiScene* ascene = io.ReadFile(filename, 0);
     if(!ascene)
     {
         std::cout << "WARNING could not load mesh from " << filename << std::endl;
+        std::cerr << io.Importer::GetErrorString() << std::endl;
         return scene;
     }
 
@@ -400,6 +400,9 @@ rmagine::EmbreeScenePtr RmagineEmbreeMap::to_rmagine(
         scene = rm::make_embree_scene(ascene);
         std::cout << "!! done." << std::endl;
         
+        // // make every instance to a mesh? not possible due to
+        // scene->
+
         // scale every geometry?
         rm::Vector3 scale = to_rm(gzmesh.scale());
 
@@ -537,13 +540,28 @@ void RmagineEmbreeMap::UpdateState()
                             for(auto geom : geoms)
                             {
                                 // Transform from instance to visual (or is it to world: TODO check)
+                                
+                                
                                 auto Tiv = geom->transform();
+                                auto Tiw = Tvw * Tiv;
 
                                 std::cout << "Concatenate Tiv " << Tiv << " with Tvw " << Tvw << std::endl;
-                                std::cout << "-> Tiw: " << Tvw * Tiv << std::endl;
+                                std::cout << "-> Tiw: " << Tiw  << std::endl;
+
+                                // {
+                                //     rm::Matrix4x4 Miv, Mvw;
+                                //     Mvw.set(Tvw);
+                                //     Miv = rm::compose(Tiv, Siv);
+                                    
+                                //     auto Miw = Mvw * Miv;
+                                //     rm::Transform Ttmp;
+                                //     rm::Vector3 Stmp;
+                                //     rm::decompose(Miw, Ttmp, Stmp);
+                                //     std::cout << "-> 2. Tiw: " << Ttmp << ", Siw: " << Stmp << std::endl;
+                                // }
 
                                 // Set transform from instance to world
-                                geom->setTransform(Tvw * Tiv);
+                                geom->setTransform(Tiw);
                                 geom->apply();
                                 geom->commit();
 
@@ -569,8 +587,10 @@ void RmagineEmbreeMap::UpdateState()
                                 {
                                     m_visual_to_geoms[key] = {};
                                 }
+
                                 m_visual_to_geoms[key].push_back(geom);
                                 m_geom_to_visual[geom] = key;
+                                m_geom_to_transform[geom] = Tiv;
 
                                 std::cout << "MESH created" << std::endl;
                                 std::cout << "- id: " << geom_id << std::endl;
@@ -663,7 +683,8 @@ void RmagineEmbreeMap::UpdateState()
                                     rm::Transform Tvw = Tlw * Tvl;
                                     std::cout << "- transform: " << Tvw << std::endl;
 
-                                    geom->setTransform(Tvw);
+                                    auto Tiv = m_geom_to_transform[geom];
+                                    geom->setTransform(Tvw * Tiv);
                                     meshes_to_transform.insert(geom);
 
                                 } else {

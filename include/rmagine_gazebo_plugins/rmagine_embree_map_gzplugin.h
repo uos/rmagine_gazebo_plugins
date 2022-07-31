@@ -177,13 +177,9 @@ private:
 
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
 
-    // deprecated
-    // std::unordered_map<std::string, unsigned int> m_visual_to_mesh;
-
-    // new
     std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
     std::unordered_map<rm::EmbreeGeometryPtr, std::string> m_geom_to_visual;
-
+    std::unordered_map<rm::EmbreeGeometryPtr, rm::Transform> m_geom_to_transform;
 
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
     std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
@@ -204,12 +200,6 @@ inline std::ostream& operator<<(std::ostream& os, const gazebo::ModelsDiff& diff
     os << "-- scaled: " << diff.scaled.size() << "\n";
     return os;
 }
-
-// inline std::ostream& operator<<(std::ostream& os, const gazebo::Transform& T)
-// {
-//     os << "T[" << T.t << ", " << T.R << "]";
-//     return os;
-// }
 
 
 #endif // GAZEBO_RMAGINE_EMBREE_MAP_PLUGIN_H
