@@ -515,8 +515,9 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
 
         rm::Vector3 offset = to_rm(heightmap.origin());
 
-        float half_width = size.Y() / 2.0;
-        float half_height = size.X() / 2.0;
+
+        float half_width = size.X() / 2.0;
+        float half_height = size.Y() / 2.0;
 
         std::cout << "Filling " << mesh->vertices.size() << " vertices..." << std::endl;
         // the following cannot handle higher subsampling levels yet
@@ -527,8 +528,8 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
                 size_t buff_id = i * data->GetWidth() + j;
 
                 rm::Vector3 vertex = {
-                    static_cast<float>(i) * static_cast<float>(scale.X()) - half_height,
-                    static_cast<float>(j) * static_cast<float>(scale.Y()) - half_width,
+                    static_cast<float>(i) * static_cast<float>(scale.X()) - half_width,
+                    static_cast<float>(j) * static_cast<float>(scale.Y()) - half_height,
                     elevations[buff_id]
                 };
 
