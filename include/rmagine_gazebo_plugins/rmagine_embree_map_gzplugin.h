@@ -176,7 +176,13 @@ private:
 
 
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
-    std::unordered_map<std::string, unsigned int> m_visual_to_mesh;
+
+    // deprecated
+    // std::unordered_map<std::string, unsigned int> m_visual_to_mesh;
+
+    // new
+    std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
+    std::unordered_map<rm::EmbreeGeometryPtr, std::string> m_geom_to_visual;
 
 
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
