@@ -133,20 +133,22 @@ private:
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
 
-    rmagine::EmbreeMeshPtr to_rmagine(const msgs::PlaneGeom& plane) const;
+    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::PlaneGeom& plane) const;
 
-    rmagine::EmbreeMeshPtr to_rmagine(const msgs::BoxGeom& box) const;
+    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::BoxGeom& box) const;
 
-    rmagine::EmbreeMeshPtr to_rmagine(const msgs::SphereGeom& sphere) const;
+    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::SphereGeom& sphere) const;
 
-    rmagine::EmbreeMeshPtr to_rmagine(const msgs::CylinderGeom& cylinder) const;
+    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::CylinderGeom& cylinder) const;
+
+    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::HeightmapGeom& heightmap) const;
+
 
     rmagine::EmbreeScenePtr to_rmagine(const msgs::MeshGeom& gzmesh) const;
 
     void UpdateState();
 
     void UpdateSensors();
-
 
     physics::WorldPtr m_world;
     sdf::ElementPtr m_sdf;

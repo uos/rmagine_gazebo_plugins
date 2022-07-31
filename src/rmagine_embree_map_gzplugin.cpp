@@ -9,6 +9,7 @@
 #include <gazebo/common/URI.hh>
 #include <gazebo/common/SystemPaths.hh>
 #include <gazebo/common/CommonIface.hh>
+#include <gazebo/common/HeightmapData.hh>
 
 
 #include <boost/algorithm/string.hpp>
@@ -312,7 +313,7 @@ ModelsDiff RmagineEmbreeMap::ComputeDiff(
     return ret;
 }
 
-rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
     const msgs::PlaneGeom& plane) const
 {
     msgs::Vector2d size = plane.size();
@@ -330,7 +331,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     return mesh;                            
 }
 
-rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
     const msgs::BoxGeom& box) const
 {
     msgs::Vector3d size = box.size();
@@ -344,7 +345,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     return mesh;
 }
 
-rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
     const msgs::SphereGeom& sphere) const
 {
     rm::EmbreeSpherePtr mesh = std::make_shared<rm::EmbreeSphere>(30, 30);
@@ -356,7 +357,7 @@ rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
     return mesh;
 }
 
-rmagine::EmbreeMeshPtr RmagineEmbreeMap::to_rmagine(
+rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
     const msgs::CylinderGeom& cylinder) const
 {
     rm::EmbreeCylinderPtr mesh = std::make_shared<rm::EmbreeCylinder>(100);
@@ -420,6 +421,167 @@ rmagine::EmbreeScenePtr RmagineEmbreeMap::to_rmagine(
     }
     
     return scene;
+}
+
+void print(const msgs::HeightmapGeom& heightmap)
+{
+    std::cout << "HEIGHTMAP info: " << std::endl;
+    std::cout << "- height_size: " << heightmap.heights_size() << std::endl;
+    std::cout << "- texture_size: " << heightmap.texture_size() << std::endl;
+    std::cout << "- blend_size: " << heightmap.blend_size() << std::endl;
+    std::cout << "- filename: " << heightmap.filename() << std::endl;
+
+    rm::Vector3 size = to_rm(heightmap.size());
+    rm::Vector3 orig = to_rm(heightmap.origin());
+    std::cout << "- size: " << size << std::endl;
+    std::cout << "- orig: " << orig << std::endl;
+    std::cout << "- width: " << heightmap.width() << std::endl;
+    std::cout << "- height: " << heightmap.height() << std::endl;
+    std::cout << "- use_terrain_paging: " << heightmap.use_terrain_paging() << std::endl;
+    std::cout << "- sampling: " << heightmap.sampling() << std::endl;
+}
+
+rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
+    const msgs::HeightmapGeom& heightmap) const
+{
+    rmagine::EmbreeGeometryPtr ret;
+
+
+    
+
+
+    print(heightmap);
+
+    
+    rm::Vector3 size = to_rm(heightmap.size());
+    rm::Vector3 orig = to_rm(heightmap.origin());
+
+
+    std::string filename = heightmap.filename();
+    if(!common::exists(filename))
+    {
+        filename = common::SystemPaths::Instance()->FindFileURI(filename);
+    }
+
+    common::HeightmapData* data 
+        = common::HeightmapDataLoader::LoadTerrainFile(filename);
+
+    if(data)
+    {
+        std::cout << "Heightmap data loaded." << std::endl;
+
+        std::cout << "Data Info: " << std::endl;
+        std::cout << "- height: " << data->GetHeight() << std::endl;
+        std::cout << "- width: " << data->GetWidth() << std::endl;
+        std::cout << "- max_elevation: " << data->GetMaxElevation() << std::endl;
+
+        std::vector<float> elevations;
+        // fill heights
+        int subsampling = 1; // multiplies the resulution if set
+        unsigned int vertSize = (data->GetWidth() * subsampling);
+
+        ignition::math::Vector3d size, scale;
+        size.X(heightmap.size().x());
+        size.Y(heightmap.size().y());
+        size.Z(heightmap.size().z());
+
+        // scale. or: size of one pixel
+        scale.X(size.X() / vertSize);
+        scale.Y(size.Y() / vertSize);
+        if(ignition::math::equal(data->GetMaxElevation(), 0.0f)) {
+            scale.Z(fabs(size.Z()));
+        } else {
+            scale.Z(fabs(size.Z()) / data->GetMaxElevation());
+        }
+
+        bool flipY = false;
+
+
+        data->FillHeightMap(subsampling, vertSize, size, scale, flipY, elevations);
+
+        std::cout << "Loaded " << elevations.size() << " elevations." << std::endl;
+        
+        // NEXT: make mesh
+        // - we need one vertex per elevation
+        // - we need 1 quad for 4 vertices neighbors
+        //   -> (W-1)*(H-1) quads
+        //   -> (W-1)*(H-1)*2 triangles
+
+        rm::EmbreeMeshPtr mesh = std::make_shared<rm::EmbreeMesh>(
+            data->GetWidth() * data->GetHeight(), 
+            2 * (data->GetWidth() - 1) * (data->GetHeight() - 1) 
+        );
+
+
+        rm::Vector3 offset = to_rm(heightmap.origin());
+
+        float half_width = size.Y() / 2.0;
+        float half_height = size.X() / 2.0;
+
+        std::cout << "Filling " << mesh->vertices.size() << " vertices..." << std::endl;
+        // the following cannot handle higher subsampling levels yet
+        for(size_t i=0; i<data->GetHeight(); i++)
+        {
+            for(size_t j=0; j<data->GetWidth(); j++)
+            {
+                size_t buff_id = i * data->GetWidth() + j;
+
+                rm::Vector3 vertex = {
+                    static_cast<float>(i) * static_cast<float>(scale.X()) - half_height,
+                    static_cast<float>(j) * static_cast<float>(scale.Y()) - half_width,
+                    elevations[buff_id]
+                };
+
+                rm::Vector3 vertex_corrected = {
+                    vertex.y,
+                    -vertex.x,
+                    vertex.z
+                };
+
+                vertex_corrected += offset;
+
+                assert(buff_id < mesh->vertices.size());
+                mesh->vertices[buff_id] = vertex_corrected;
+            }
+        }
+
+        std::cout << "Filling " << mesh->Nfaces << " faces..." << std::endl;
+        // fill faces
+        for(size_t i=1; i<data->GetWidth(); i++)
+        {
+            for(size_t j=1; j<data->GetHeight(); j++)
+            {
+                unsigned int v0 = (i-1) * data->GetHeight() + (j-1);
+                unsigned int v1 =   (i) * data->GetHeight() + (j-1);
+                unsigned int v2 =   (i) * data->GetHeight() +   (j);
+                unsigned int v3 = (i-1) * data->GetHeight() +   (j);
+
+                unsigned int quad_id = (i-1) * (data->GetHeight() - 1) + (j-1);
+
+                unsigned int f0 = quad_id * 2 + 0;
+                unsigned int f1 = quad_id * 2 + 1;
+
+                assert(f0 < mesh->Nfaces);
+                assert(f1 < mesh->Nfaces);
+
+                // connect as in plane example
+                mesh->faces[f0] = {v1, v0, v3};
+                mesh->faces[f1] = {v3, v2, v1};
+            }
+        }
+
+        mesh->computeFaceNormals();
+        // mesh->apply();
+        // mesh->commit();
+
+        ret = mesh;
+        delete data;
+
+    } else {
+        std::cout << "Could not load " << filename << " with common::HeightmapDataLoader" << std::endl;
+    }
+
+    return ret;
 }
 
 void RmagineEmbreeMap::UpdateState()
@@ -519,6 +681,11 @@ void RmagineEmbreeMap::UpdateState()
                             if(gzgeom.has_heightmap())
                             {
                                 std::cout << "TODO: HEIGHTMAP" << std::endl;
+                                rm::EmbreeGeometryPtr geom = to_rmagine(gzgeom.heightmap());
+                                if(geom)
+                                {
+                                    geoms.push_back(geom);
+                                }
                             }
 
                             if(gzgeom.has_mesh())
