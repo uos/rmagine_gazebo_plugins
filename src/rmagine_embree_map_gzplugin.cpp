@@ -475,10 +475,13 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
         int subsampling = 1; // multiplies the resulution if set
         unsigned int vertSize = (data->GetWidth() * subsampling) - subsampling + 1;
 
+        float scale_x = heightmap.size().x() / (vertSize - 1);
+        float scale_y = heightmap.size().y() / (vertSize - 1);
+
         ignition::math::Vector3d size, scale;
-        size.X(heightmap.size().x());
-        size.Y(heightmap.size().y());
-        size.Z(heightmap.size().z());
+        size.X() = heightmap.size().x();
+        size.Y() = heightmap.size().y();
+        size.Z() = heightmap.size().z();
 
         // scale. or: size of one pixel
         scale.X(size.X() / vertSize);
@@ -506,7 +509,6 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
             2 * (data->GetWidth() - 1) * (data->GetHeight() - 1) 
         );
 
-
         rm::Vector3 offset = to_rm(heightmap.origin());
 
         float half_width = size.X() / 2.0;
@@ -515,8 +517,11 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
         std::cout << "Filling " << mesh->vertices.size() << " vertices..." << std::endl;
         
         rm::Vector3 correction = {0.0, 0.0, 0.0};
-        // correction.x = -scale.X() / 2.0;
-        // correction.y = scale.Y() / 2.0;
+
+
+        int center_vert = vertSize / 2;
+        
+
         
         // the following cannot handle higher subsampling levels yet
         for(size_t yimg=0; yimg < vertSize; yimg++)
@@ -524,12 +529,21 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
             for(size_t ximg=0; ximg < vertSize; ximg++)
             {
                 // in grid coords
-                size_t xcell = ximg;
-                size_t ycell = vertSize - yimg - 1;
-                size_t buff_id = ycell * vertSize + xcell;
+                size_t buff_id = yimg * vertSize + ximg;
+                float height = elevations[buff_id];
                 
-                float xworld = (static_cast<float>(xcell) + 0.5f) * static_cast<float>(scale.X()) - half_width;
-                float yworld = (static_cast<float>(ycell) + 0.5f) * static_cast<float>(scale.Y()) - half_height;
+                // grid origin is (0,0) at (ximg, yimg) = (vertSize/2, vertSize/2)
+                // example 5x5 img, image id (2,2) is grid id (0,0)
+                int xgrid = static_cast<int>(ximg) - center_vert;
+                int ygrid = static_cast<int>(yimg) - center_vert;
+
+                // std::cout << "(" << ximg << ", " << yimg << ")i -> (" << xgrid << ", " << ygrid << ")g" << std::endl;
+
+                float xworld = static_cast<float>(xgrid) * scale_x;
+                float yworld = static_cast<float>(ygrid) * scale_y;
+
+                // std::cout << "(" << xgrid << ", " << ygrid << ")g -> (" << xworld << ", " << yworld << ")w" << std::endl;
+
                 float zworld = elevations[buff_id];
 
                 rm::Vector3 vertex_corrected = {
@@ -547,16 +561,16 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
 
         std::cout << "Filling " << mesh->Nfaces << " faces..." << std::endl;
         // fill faces
-        for(size_t i=1; i<data->GetWidth(); i++)
+        for(size_t i=1; i<vertSize; i++)
         {
-            for(size_t j=1; j<data->GetHeight(); j++)
+            for(size_t j=1; j<vertSize; j++)
             {
-                unsigned int v0 = (i-1) * data->GetHeight() + (j-1);
-                unsigned int v1 =   (i) * data->GetHeight() + (j-1);
-                unsigned int v2 =   (i) * data->GetHeight() +   (j);
-                unsigned int v3 = (i-1) * data->GetHeight() +   (j);
+                unsigned int v0 = (i-1) * vertSize + (j-1);
+                unsigned int v1 = (i) * vertSize + (j-1);
+                unsigned int v2 = (i) * vertSize +   (j);
+                unsigned int v3 = (i-1) * vertSize +   (j);
 
-                unsigned int quad_id = (i-1) * (data->GetHeight() - 1) + (j-1);
+                unsigned int quad_id = (i-1) * (vertSize - 1) + (j-1);
 
                 unsigned int f0 = quad_id * 2 + 0;
                 unsigned int f1 = quad_id * 2 + 1;
@@ -784,6 +798,7 @@ void RmagineEmbreeMap::UpdateState()
         
         if(diff.ModelChanged())
         {
+
             std::cout << "2. UPDATE SCENE - prepare" << std::endl;
 
             std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_transform;
