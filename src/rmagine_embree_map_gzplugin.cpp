@@ -538,7 +538,7 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
                     zworld
                 };
 
-                // vertex_corrected += correction + offset;
+                vertex_corrected += offset;
 
                 assert(buff_id < mesh->vertices.size());
                 mesh->vertices[buff_id] = vertex_corrected;
