@@ -49,6 +49,9 @@ struct ModelsDiff
     std::unordered_set<uint32_t> transformed;
     std::unordered_set<uint32_t> scaled;
 
+    // std::unordered_map<uint32_t, std::string> joints_changed;
+    std::unordered_map<uint32_t, std::unordered_set<std::string> > joints_changed;
+
     std::unordered_set<uint32_t> changed() const
     {
         std::unordered_set<uint32_t> res = transformed;
@@ -76,14 +79,19 @@ struct ModelsDiff
         return !scaled.empty();
     }
 
+    inline bool ModelJointsChanged() const
+    {
+        return !joints_changed.empty();
+    }
+
     inline bool ModelChanged() const
     {
-        return ModelTransformed() || ModelScaled();
+        return ModelTransformed() || ModelScaled() || ModelJointsChanged();
     }
 
     inline bool HasChanged() const
     {
-        return ModelAdded() || ModelRemoved() || ModelChanged();
+        return ModelAdded() || ModelRemoved() || ModelChanged() || ModelJointsChanged();
     }
 };
 
@@ -101,12 +109,14 @@ protected:
     
     void OnWorldUpdate(const common::UpdateInfo& info);
 
+    void OnJointUpdate();
+
+    void OnJointChanged();
 private:
 
     // todo static
     std::unordered_map<uint32_t, physics::ModelPtr> ToIdMap(
         const std::vector<physics::ModelPtr>& models);
-
     
     std::unordered_set<uint32_t> ComputeAdded(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
@@ -124,7 +134,7 @@ private:
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
-    std::unordered_set<uint32_t> ComputeChanged(
+    std::unordered_map<uint32_t, std::unordered_set<std::string> > ComputeJointsChanged(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
@@ -143,7 +153,6 @@ private:
 
     rmagine::EmbreeGeometryPtr to_rmagine(const msgs::HeightmapGeom& heightmap) const;
 
-
     rmagine::EmbreeScenePtr to_rmagine(const msgs::MeshGeom& gzmesh) const;
 
     void UpdateState();
@@ -154,6 +163,8 @@ private:
     sdf::ElementPtr m_sdf;
 
     event::ConnectionPtr m_world_update_conn;
+    event::ConnectionPtr m_joint_update_conn;
+    event::ConnectionPtr m_joint_change_conn;
 
     
     std::shared_ptr<std::shared_mutex> m_map_mutex;
@@ -179,15 +190,21 @@ private:
 
     std::unordered_map<uint32_t, physics::ModelPtr> m_models;
 
+
     std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
     std::unordered_map<rm::EmbreeGeometryPtr, std::string> m_geom_to_visual;
     std::unordered_map<rm::EmbreeGeometryPtr, rm::Transform> m_geom_to_transform;
 
     std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
     std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
+    
+    // EXTRA CHECK FOR JOINTS
+    // for links of joints
+    std::unordered_map<uint32_t, 
+        std::unordered_map<std::string, ignition::math::Pose3d> 
+    > m_model_link_poses;
 
     std::future<void> m_updater_thread;
-
 };
 
 } // namespace gazebo
@@ -200,6 +217,7 @@ inline std::ostream& operator<<(std::ostream& os, const gazebo::ModelsDiff& diff
     os << "- changed: " << diff.changed().size() << "\n";
     os << "-- transformed: " << diff.transformed.size() << "\n";
     os << "-- scaled: " << diff.scaled.size() << "\n";
+    os << "-- models of changed joints: " << diff.joints_changed.size() << "\n";
     return os;
 }
 

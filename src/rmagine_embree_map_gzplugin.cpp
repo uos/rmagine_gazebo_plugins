@@ -96,10 +96,16 @@ void RmagineEmbreeMap::Load(
     m_world = _world;
     m_sdf = _sdf;
 
-    m_world_update_conn= event::Events::ConnectWorldUpdateBegin(
+    m_world_update_conn = event::Events::ConnectWorldUpdateBegin(
         std::bind(&RmagineEmbreeMap::OnWorldUpdate, this, std::placeholders::_1)
     );
 
+    // m_joint_change_conn = event::Events::ConnectJointChanged(
+    //     std::bind(&RmagineEmbreeMap::OnJointChanged, this)
+    // );
+
+
+    
     // create empty map
     m_map = std::make_shared<rm::EmbreeMap>();
     
@@ -240,59 +246,60 @@ std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeScaled(
     return ret;
 }
 
-std::unordered_set<uint32_t> RmagineEmbreeMap::ComputeChanged(
+
+std::unordered_map<uint32_t, std::unordered_set<std::string> > RmagineEmbreeMap::ComputeJointsChanged(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const
 {
-    std::unordered_set<uint32_t> ret;
+    std::unordered_map<uint32_t, std::unordered_set<std::string> > ret;
 
-    // TODO
     for(auto elem : models_new)
     {
-        // 1. check pose change
-        auto it_pose_old = m_poses.find(elem.first);
-        bool change_found = false;
-        if(it_pose_old != m_poses.end())
+        // 2. check scale change
+        uint32_t model_id = elem.first;
+
+        auto model_it = m_model_link_poses.find(elem.first);
+        if(model_it != m_model_link_poses.end())
         {
-            // also exists in old models poses
-            // next: check if model pose was changed
-            ignition::math::Pose3d pose_new = elem.second->RelativePose();
-            ignition::math::Pose3d pose_old = it_pose_old->second;
-            ignition::math::Pose3d pose_delta = pose_old.Inverse() * pose_new;
-
-            if(pose_delta.Pos().Length() > m_changed_delta_trans)
+            // found model in extra joints
+            for(auto joint : elem.second->GetJoints())
             {
-                change_found = true;
-            } else {
-                ignition::math::Quaternion q = pose_delta.Rot();
-                ignition::math::Vector3d vec(q.X(), q.Y(), q.Z());
-                double angle = 2.0 * atan2(vec.Length(), q.W());
-
-                if(angle > m_changed_delta_rot)
+                physics::LinkPtr child_link = joint->GetJointLink(0);
+                if(child_link)
                 {
-                    change_found = true;
+                    auto link_it = model_it->second.find(child_link->GetName());
+                    if(link_it != model_it->second.end())
+                    {
+                        // link found
+                        ignition::math::Pose3d pose_new = child_link->RelativePose();
+                        ignition::math::Pose3d pose_old = link_it->second;
+                        ignition::math::Pose3d pose_delta = pose_old.Inverse() * pose_new;
+
+                        if(pose_delta.Pos().Length() > m_changed_delta_trans)
+                        {
+                            if(ret.find(model_id) == ret.end())
+                            {
+                                ret[model_id] = {};
+                            }
+                            ret[model_id].insert(child_link->GetName());
+                        } else {
+                            ignition::math::Quaternion q = pose_delta.Rot();
+                            ignition::math::Vector3d vec(q.X(), q.Y(), q.Z());
+                            double angle = 2.0 * atan2(vec.Length(), q.W());
+
+                            if(angle > m_changed_delta_rot)
+                            {
+                                // angle delta high enough
+                                if(ret.find(model_id) == ret.end())
+                                {
+                                    ret[model_id] = {};
+                                }
+                                ret[model_id].insert(child_link->GetName());
+                            }
+                        }
+                    }
                 }
             }
-        }
-
-        if(!change_found)
-        {
-            // 2. check scale change
-            auto it_scale_old = m_scales.find(elem.first);
-
-            if(it_scale_old != m_scales.end())
-            {
-                double scale_change = (it_scale_old->second - elem.second->Scale()).Length();
-                if(scale_change > m_changed_delta_scale)
-                {
-                    change_found = true;
-                }
-            }
-        }
-        
-        if(change_found)
-        {
-            ret.insert(elem.first);
         }
     }
 
@@ -309,6 +316,7 @@ ModelsDiff RmagineEmbreeMap::ComputeDiff(
     ret.removed = ComputeRemoved(models_old, models_new);
     ret.transformed = ComputeTransformed(models_old, models_new);
     ret.scaled = ComputeScaled(models_old, models_new);
+    ret.joints_changed = ComputeJointsChanged(models_old, models_new);
 
     return ret;
 }
@@ -518,10 +526,7 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
         
         rm::Vector3 correction = {0.0, 0.0, 0.0};
 
-
         int center_vert = vertSize / 2;
-        
-
         
         // the following cannot handle higher subsampling levels yet
         for(size_t yimg=0; yimg < vertSize; yimg++)
@@ -611,6 +616,7 @@ void RmagineEmbreeMap::UpdateState()
     if(diff.HasChanged())
     {
         // TODO! translate gazebo models to embree map instances
+        std::cout << "SCENE HAS CHANGED" << std::endl;
         std::cout << diff << std::endl;
 
         size_t scene_changes = 0;
@@ -630,7 +636,6 @@ void RmagineEmbreeMap::UpdateState()
                 std::string model_name = model->GetName();
                 
                 std::vector<physics::LinkPtr> links = model->GetLinks();
-
                 for(physics::LinkPtr link : links)
                 {
                     std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
@@ -798,6 +803,7 @@ void RmagineEmbreeMap::UpdateState()
         
         if(diff.ModelChanged())
         {
+            std::cout << "SCENE CHANGED!" << std::endl;
 
             std::cout << "2. UPDATE SCENE - prepare" << std::endl;
 
@@ -853,7 +859,6 @@ void RmagineEmbreeMap::UpdateState()
                                     std::cout << "Found visual to transform" << std::endl;
                                     std::cout << "- key: " << key << std::endl;
                                     std::cout << "- id: " << geom_id << std::endl;
-
 
                                     ignition::math::Pose3d link_world_pose = link->WorldPose();
                                     msgs::Pose vis_pose = vis.pose();
@@ -996,21 +1001,6 @@ void RmagineEmbreeMap::UpdateState()
                                     std::cout << "- key: " << key << std::endl;
                                 }
                             }
-                            // unsigned int mesh_id = mesh_vis_it->second;
-                            // auto it = meshes.find(mesh_id);
-
-                            // if(it != meshes.end())
-                            // {
-                            //     std::cout << "Found visual to scale" << std::endl;
-                            //     std::cout << "- id: " << mesh_id << std::endl;
-                            //     std::cout << "- key: " << key << std::endl;
-
-                            //     msgs::Vector3d vis_scale = vis.scale();
-
-                            // } else {
-                            //     std::cout << "WARNING: visual not in mesh set. But it should." << std::endl;
-                            //     std::cout << "- id: " << mesh_id << std::endl;
-                            // }
                         }
                     }
                 }
@@ -1019,12 +1009,95 @@ void RmagineEmbreeMap::UpdateState()
                 std::cout << "- Prepare meshes scalings: " << el << " ms" << std::endl;
             }
 
+            std::unordered_set<rm::EmbreeGeometryPtr> mesh_links_to_update;
+            if(diff.ModelJointsChanged())
+            {
+                std::cout << "2.3. APPLY JOINT UPDATES" << std::endl;
+                rm::StopWatch sw;
+                double el;
+
+                sw();
+
+                for(auto elem : diff.joints_changed)
+                {
+                    uint32_t model_id = elem.first;
+                    if(m_model_ignores.find(model_id) != m_model_ignores.end())
+                    {
+                        continue;
+                    }
+                    
+                    for(std::string link_name : elem.second)
+                    {
+                        auto model = m_models[model_id];
+
+                        physics::LinkPtr link = model->GetLink(link_name);
+
+                        if(link)
+                        {
+                            std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
+                            for(auto elem : visuals)
+                            {
+                                msgs::Visual vis = elem.second;
+                                std::string key = vis.name();
+
+                                auto mesh_vis_it = m_visual_to_geoms.find(key);
+                                if(mesh_vis_it == m_visual_to_geoms.end())
+                                {
+                                    std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
+                                    std::cout << "- key: " << key << std::endl;
+                                    continue;
+                                }
+
+                                for(auto geom : mesh_vis_it->second)
+                                {
+                                    auto geom_id_opt = m_map->scene->getOpt(geom);
+                                    if(geom_id_opt)
+                                    {
+                                        // exists in scene
+                                        unsigned int geom_id = *geom_id_opt;
+                                        std::cout << "Found joint visual to transform" << std::endl;
+                                        std::cout << "- key: " << key << std::endl;
+                                        std::cout << "- id: " << geom_id << std::endl;
+
+
+                                        ignition::math::Pose3d link_world_pose = link->WorldPose();
+                                        msgs::Pose vis_pose = vis.pose();
+
+                                        // convert to rmagine
+                                        rm::Transform Tlw = to_rm(link_world_pose);
+                                        rm::Transform Tvl = to_rm(vis_pose);
+
+                                        rm::Transform Tvw = Tlw * Tvl;
+                                        std::cout << "- transform: " << Tvw << std::endl;
+
+                                        auto Tiv = m_geom_to_transform[geom];
+                                        geom->setTransform(Tvw * Tiv);
+                                        mesh_links_to_update.insert(geom);
+
+                                    } else {
+                                        std::cout << "WARNING: visual not in mesh set. But it should." << std::endl;
+                                        std::cout << "- key: " << key << std::endl;
+                                    }
+                                }
+                            }
+
+                            // TODO: link->GetChildJointsLinks() for all other visuals to update
+                        } else {
+                            std::cout << "WARNING: Could not find link " << link_name << " of model " << model->GetName() << std::endl; 
+                        }
+                    }
+                }
+
+                el = sw();
+                std::cout << "- Prepare meshes joint updates: " << el << " ms" << std::endl;
+            }
 
             // mutex?
             rm::StopWatch sw;
             double el;
 
             auto meshes_to_update = get_union(meshes_to_transform, meshes_to_scale);
+            meshes_to_update = get_union(meshes_to_update, mesh_links_to_update);
 
             sw();
             for(auto mesh_to_update : meshes_to_update)
@@ -1106,42 +1179,66 @@ void RmagineEmbreeMap::UpdateState()
     if(diff.HasChanged())
     {
         // change
-        for(auto change_name : diff.changed())
+        for(auto change_id : diff.changed())
         {
-            auto model = m_models[change_name];
+            auto model = m_models[change_id];
+            m_poses[change_id] = model->RelativePose();
+            m_scales[change_id] = model->Scale();
+        }
 
-            m_poses[change_name] = model->RelativePose();
-            m_scales[change_name] = model->Scale();
+        // joint changes
+        for(auto elem : diff.joints_changed)
+        {
+            auto model = m_models[elem.first];
+            for(std::string link_name : elem.second)
+            {
+                auto link = model->GetLink(link_name);
+                m_model_link_poses[elem.first][link_name] = link->RelativePose();
+            }
         }
 
         // remove
-        for(auto rem_name : diff.removed)
+        for(auto rem_id : diff.removed)
         {
-            auto model = m_models[rem_name];
+            auto model = m_models[rem_id];
             if(model->GetSensorCount() > 0)
             {
                 // reload sensors
                 m_sensors_loaded = false;
             }
 
-            m_models.erase(rem_name);
-            m_poses.erase(rem_name);
-            m_scales.erase(rem_name);
+            m_models.erase(rem_id);
+            m_poses.erase(rem_id);
+            m_scales.erase(rem_id);
+            m_model_link_poses.erase(rem_id);
         }
 
         // add
-        for(auto add_name : diff.added)
+        for(auto add_id : diff.added)
         {
-            auto model = models_new[add_name];
+            auto model = models_new[add_id];
             if(model->GetSensorCount() > 0)
             {
                 // reload sensors
                 m_sensors_loaded = false;
             }
 
-            m_models[add_name] = model;
-            m_poses[add_name] = model->RelativePose();
-            m_scales[add_name] = model->Scale();
+            m_models[add_id] = model;
+            m_poses[add_id] = model->RelativePose();
+            m_scales[add_id] = model->Scale();
+
+            // add all joints
+            for(auto joint : model->GetJoints())
+            {
+                physics::LinkPtr child_link = joint->GetJointLink(0);
+                if(child_link)
+                {
+                    m_model_link_poses[add_id][child_link->GetName()] = child_link->RelativePose();
+                    std::cout << "Register jointed link " << child_link->GetScopedName() << " for futher update checks" << std::endl;
+                } else {
+                    std::cout << "Could not get child link of joint '" << joint->GetScopedName() << "'" << std::endl;
+                }
+            }
         }
     }
 }
@@ -1194,6 +1291,16 @@ void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
                 });
         }
     }
+}
+
+void RmagineEmbreeMap::OnJointUpdate()
+{
+    std::cout << "JOINT UPDATE!!" << std::endl;
+}
+
+void RmagineEmbreeMap::OnJointChanged()
+{
+    std::cout << "JOINT CHANGE!!" << std::endl;
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineEmbreeMap)
