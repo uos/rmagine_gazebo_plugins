@@ -18,14 +18,13 @@ namespace gazebo
 class SceneState
 {
 public:
-    SceneState(const std::unordered_map<uint32_t, physics::ModelPtr>& models);
 
     SceneDiff diff(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models, 
         float change_delta_trans,
         float change_delta_rot,
         float change_delta_scale) const;
-    
+
     bool update(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models,
         const SceneDiff& diff

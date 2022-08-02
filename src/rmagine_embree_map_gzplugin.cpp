@@ -65,6 +65,8 @@ void RmagineEmbreeMap::Load(
     // For gazebo dynamic environments
     m_map->scene->setQuality(RTC_BUILD_QUALITY_LOW);
     m_map->scene->setFlags(RTC_SCENE_FLAG_DYNAMIC);
+
+    m_scene_state = std::make_shared<SceneState>();
 }
 
 
