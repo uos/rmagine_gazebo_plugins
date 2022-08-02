@@ -446,12 +446,7 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
 {
     rmagine::EmbreeGeometryPtr ret;
 
-
-    
-
-
     print(heightmap);
-
     
     rm::Vector3 size = to_rm(heightmap.size());
     rm::Vector3 orig = to_rm(heightmap.origin());
@@ -478,7 +473,7 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
         std::vector<float> elevations;
         // fill heights
         int subsampling = 1; // multiplies the resulution if set
-        unsigned int vertSize = (data->GetWidth() * subsampling);
+        unsigned int vertSize = (data->GetWidth() * subsampling) - subsampling + 1;
 
         ignition::math::Vector3d size, scale;
         size.X(heightmap.size().x());
@@ -488,15 +483,14 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
         // scale. or: size of one pixel
         scale.X(size.X() / vertSize);
         scale.Y(size.Y() / vertSize);
-        if(ignition::math::equal(data->GetMaxElevation(), 0.0f)) {
+        if(ignition::math::equal(data->GetMaxElevation(), 0.0f)) 
+        {
             scale.Z(fabs(size.Z()));
         } else {
             scale.Z(fabs(size.Z()) / data->GetMaxElevation());
         }
 
-        bool flipY = false;
-
-
+        bool flipY = true;
         data->FillHeightMap(subsampling, vertSize, size, scale, flipY, elevations);
 
         std::cout << "Loaded " << elevations.size() << " elevations." << std::endl;
@@ -515,31 +509,36 @@ rmagine::EmbreeGeometryPtr RmagineEmbreeMap::to_rmagine(
 
         rm::Vector3 offset = to_rm(heightmap.origin());
 
-
         float half_width = size.X() / 2.0;
         float half_height = size.Y() / 2.0;
 
         std::cout << "Filling " << mesh->vertices.size() << " vertices..." << std::endl;
+        
+        rm::Vector3 correction = {0.0, 0.0, 0.0};
+        // correction.x = -scale.X() / 2.0;
+        // correction.y = scale.Y() / 2.0;
+        
         // the following cannot handle higher subsampling levels yet
-        for(size_t i=0; i<data->GetHeight(); i++)
+        for(size_t yimg=0; yimg < vertSize; yimg++)
         {
-            for(size_t j=0; j<data->GetWidth(); j++)
+            for(size_t ximg=0; ximg < vertSize; ximg++)
             {
-                size_t buff_id = i * data->GetWidth() + j;
-
-                rm::Vector3 vertex = {
-                    static_cast<float>(i) * static_cast<float>(scale.X()) - half_width,
-                    static_cast<float>(j) * static_cast<float>(scale.Y()) - half_height,
-                    elevations[buff_id]
-                };
+                // in grid coords
+                size_t xcell = ximg;
+                size_t ycell = vertSize - yimg - 1;
+                size_t buff_id = ycell * vertSize + xcell;
+                
+                float xworld = (static_cast<float>(xcell) + 0.5f) * static_cast<float>(scale.X()) - half_width;
+                float yworld = (static_cast<float>(ycell) + 0.5f) * static_cast<float>(scale.Y()) - half_height;
+                float zworld = elevations[buff_id];
 
                 rm::Vector3 vertex_corrected = {
-                    vertex.y,
-                    -vertex.x,
-                    vertex.z
+                    xworld,
+                    yworld,
+                    zworld
                 };
 
-                vertex_corrected += offset;
+                // vertex_corrected += correction + offset;
 
                 assert(buff_id < mesh->vertices.size());
                 mesh->vertices[buff_id] = vertex_corrected;
