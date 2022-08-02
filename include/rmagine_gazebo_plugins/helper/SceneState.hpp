@@ -19,8 +19,17 @@ class SceneState
 {
 public:
     SceneState(const std::unordered_map<uint32_t, physics::ModelPtr>& models);
+
+    SceneDiff diff(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models, 
+        float change_delta_trans,
+        float change_delta_rot,
+        float change_delta_scale) const;
     
-    SceneDiff changes() const;
+    bool update(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const SceneDiff& diff
+    );
 
 // TODO private
 // private:
@@ -38,6 +47,21 @@ public:
 
 using SceneStatePtr = std::shared_ptr<SceneState>;
 
+// static SceneDiff ComputeSceneDiff(
+//     const SceneState& state_old, 
+//     const std::unordered_map<uint32_t, physics::ModelPtr>& models)
+// {
+//     SceneDiff ret;
+
+//     return ret;
+// }
+
+// static SceneDiff ComputeSceneDiff(
+//     const SceneState& state_old, 
+//     const SceneState& state_new)
+// {
+    
+// }
 
 } // namespace gazebo
 

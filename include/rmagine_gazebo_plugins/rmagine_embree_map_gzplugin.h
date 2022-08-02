@@ -24,7 +24,7 @@
 #include <chrono>
 #include <shared_mutex>
 
-
+#include "helper/SceneState.hpp"
 
 // rmagine
 #include <rmagine/map/EmbreeMap.hpp>
@@ -93,7 +93,6 @@ class RmagineEmbreeMap : public WorldPlugin
 public: 
     RmagineEmbreeMap();
     virtual ~RmagineEmbreeMap();
-    
 
 protected:
     virtual void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf);
@@ -160,21 +159,24 @@ private:
     std::unordered_set<uint32_t> m_visual_ignores;
 
 
-    std::unordered_map<uint32_t, physics::ModelPtr> m_models;
+    // std::unordered_map<uint32_t, physics::ModelPtr> m_models;
 
 
     std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
     std::unordered_map<rm::EmbreeGeometryPtr, std::string> m_geom_to_visual;
     std::unordered_map<rm::EmbreeGeometryPtr, rm::Transform> m_geom_to_transform;
 
-    std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
-    std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
+    // std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
+    // std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
     
-    // EXTRA CHECK FOR JOINTS
-    // for links of joints
-    std::unordered_map<uint32_t, 
-        std::unordered_map<std::string, ignition::math::Pose3d> 
-    > m_model_link_poses;
+    // // EXTRA CHECK FOR JOINTS
+    // // for links of joints
+    // std::unordered_map<uint32_t, 
+    //     std::unordered_map<std::string, ignition::math::Pose3d> 
+    // > m_model_link_poses;
+
+
+    SceneStatePtr m_scene_state;
 
     std::future<void> m_updater_thread;
 };
