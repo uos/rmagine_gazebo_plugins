@@ -6,6 +6,7 @@
 #include <gazebo/common/common.hh>
 #include <gazebo/gazebo.hh>
 #include <rmagine_gazebo_plugins/rmagine_embree_spherical_gzplugin.h>
+#include <rmagine_gazebo_plugins/helper/helper_functions.h>
 
 #include <ignition/math/Vector3.hh>
 #include <ignition/math/Pose3.hh>
@@ -32,15 +33,6 @@
 namespace gazebo
 {
 
-template<typename T>
-std::unordered_set<T> get_union(
-    const std::unordered_set<T>& a, const std::unordered_set<T>& b)
-{
-    std::unordered_set<T> res = a;
-    res.insert(b.begin(), b.end());
-    return res;
-}
-
 struct ModelsDiff 
 {
     std::unordered_set<uint32_t> added;
@@ -49,7 +41,6 @@ struct ModelsDiff
     std::unordered_set<uint32_t> transformed;
     std::unordered_set<uint32_t> scaled;
 
-    // std::unordered_map<uint32_t, std::string> joints_changed;
     std::unordered_map<uint32_t, std::unordered_set<std::string> > joints_changed;
 
     std::unordered_set<uint32_t> changed() const
@@ -114,10 +105,6 @@ protected:
     void OnJointChanged();
 private:
 
-    // todo static
-    std::unordered_map<uint32_t, physics::ModelPtr> ToIdMap(
-        const std::vector<physics::ModelPtr>& models);
-    
     std::unordered_set<uint32_t> ComputeAdded(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
@@ -142,19 +129,6 @@ private:
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
         const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
 
-
-    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::PlaneGeom& plane) const;
-
-    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::BoxGeom& box) const;
-
-    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::SphereGeom& sphere) const;
-
-    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::CylinderGeom& cylinder) const;
-
-    rmagine::EmbreeGeometryPtr to_rmagine(const msgs::HeightmapGeom& heightmap) const;
-
-    rmagine::EmbreeScenePtr to_rmagine(const msgs::MeshGeom& gzmesh) const;
-
     void UpdateState();
 
     void UpdateSensors();
@@ -163,8 +137,6 @@ private:
     sdf::ElementPtr m_sdf;
 
     event::ConnectionPtr m_world_update_conn;
-    event::ConnectionPtr m_joint_update_conn;
-    event::ConnectionPtr m_joint_change_conn;
 
     
     std::shared_ptr<std::shared_mutex> m_map_mutex;

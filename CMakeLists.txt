@@ -59,6 +59,18 @@ include_directories(
 
 #### ROS-less Gazebo plugins
 
+add_library(rmagine_gazebo_helper SHARED
+  src/helper/helper_functions.cpp
+  src/helper/SceneState.cpp    
+  src/helper/SceneDiff.cpp
+  src/helper/conversions.cpp
+)
+
+target_link_libraries(rmagine_gazebo_helper 
+  ${GAZEBO_LIBRARIES}
+  ${rmagine_LIBRARIES}
+)
+
 add_library(rmagine_embree_spherical_gzplugin SHARED
   src/rmagine_embree_spherical_gzplugin.cpp
 )
@@ -81,10 +93,12 @@ target_link_libraries(rmagine_embree_spherical_gzregister
 
 add_library(rmagine_embree_map_gzplugin SHARED
   src/rmagine_embree_map_gzplugin.cpp
+  src/helper/embree_conversions.cpp
 )
 
 target_link_libraries(rmagine_embree_map_gzplugin 
   rmagine_embree_spherical_gzplugin
+  rmagine_gazebo_helper
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}
 )
