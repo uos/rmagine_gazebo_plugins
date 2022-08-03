@@ -32,61 +32,12 @@
 
 namespace gazebo
 {
-
-struct ModelsDiff 
+struct VisualTransform 
 {
-    std::unordered_set<uint32_t> added;
-    std::unordered_set<uint32_t> removed;
-
-    std::unordered_set<uint32_t> transformed;
-    std::unordered_set<uint32_t> scaled;
-
-    std::unordered_map<uint32_t, std::unordered_set<std::string> > joints_changed;
-
-    std::unordered_set<uint32_t> changed() const
-    {
-        std::unordered_set<uint32_t> res = transformed;
-        res.insert(scaled.begin(), scaled.end());
-        return res;
-    }
-
-    inline bool ModelAdded() const 
-    {
-        return !added.empty();
-    }
-
-    inline bool ModelRemoved() const 
-    {
-        return !removed.empty();
-    }
-
-    inline bool ModelTransformed() const
-    {
-        return !transformed.empty();
-    }
-
-    inline bool ModelScaled() const
-    {
-        return !scaled.empty();
-    }
-
-    inline bool ModelJointsChanged() const
-    {
-        return !joints_changed.empty();
-    }
-
-    inline bool ModelChanged() const
-    {
-        return ModelTransformed() || ModelScaled() || ModelJointsChanged();
-    }
-
-    inline bool HasChanged() const
-    {
-        return ModelAdded() || ModelRemoved() || ModelChanged() || ModelJointsChanged();
-    }
+    std::string name;
+    rmagine::Transform T;
+    uint32_t model_id;
 };
-
-
 
 class RmagineEmbreeMap : public WorldPlugin
 {
@@ -98,35 +49,23 @@ protected:
     virtual void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf);
     
     void OnWorldUpdate(const common::UpdateInfo& info);
-
-    void OnJointUpdate();
-
-    void OnJointChanged();
 private:
 
-    std::unordered_set<uint32_t> ComputeAdded(
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
+    std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> EmbreeUpdateAdded(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_set<uint32_t>& added) const;
 
-    std::unordered_set<uint32_t> ComputeRemoved(
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
+    std::unordered_set<rm::EmbreeGeometryPtr> EmbreeUpdateTransformed(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_set<uint32_t>& transformed);
 
-    std::unordered_set<uint32_t> ComputeTransformed(
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
+    std::unordered_set<rm::EmbreeGeometryPtr> EmbreeUpdateScaled(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_set<uint32_t>& scaled);
 
-    std::unordered_set<uint32_t> ComputeScaled(
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
-
-    std::unordered_map<uint32_t, std::unordered_set<std::string> > ComputeJointsChanged(
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
-
-    ModelsDiff ComputeDiff(
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_old,
-        const std::unordered_map<uint32_t, physics::ModelPtr>& models_new) const;
+    std::unordered_set<rm::EmbreeGeometryPtr> EmbreeUpdateJointChanges(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_map<uint32_t, std::unordered_set<std::string> >& joints_changed);
 
     void UpdateState();
 
@@ -162,38 +101,22 @@ private:
     // std::unordered_map<uint32_t, physics::ModelPtr> m_models;
 
 
-    std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
-    std::unordered_map<rm::EmbreeGeometryPtr, std::string> m_geom_to_visual;
-    std::unordered_map<rm::EmbreeGeometryPtr, rm::Transform> m_geom_to_transform;
-
-    // std::unordered_map<uint32_t, ignition::math::Pose3d> m_poses;
-    // std::unordered_map<uint32_t, ignition::math::Vector3d> m_scales;
     
-    // // EXTRA CHECK FOR JOINTS
-    // // for links of joints
-    // std::unordered_map<uint32_t, 
-    //     std::unordered_map<std::string, ignition::math::Pose3d> 
-    // > m_model_link_poses;
+
+    std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
+    // std::unordered_map<rm::EmbreeGeometryPtr, std::string> m_geom_to_visual;
+    // std::unordered_map<rm::EmbreeGeometryPtr, rm::Transform> m_geom_to_transform;
+
+    std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> m_geom_to_visual;
 
 
-    SceneStatePtr m_scene_state;
+
+    SceneState m_scene_state;
 
     std::future<void> m_updater_thread;
 };
 
 } // namespace gazebo
-
-inline std::ostream& operator<<(std::ostream& os, const gazebo::ModelsDiff& diff)
-{
-    os << "ModelsDiff:\n";
-    os << "- added: " << diff.added.size() << "\n";
-    os << "- removed: " << diff.removed.size() << "\n";
-    os << "- changed: " << diff.changed().size() << "\n";
-    os << "-- transformed: " << diff.transformed.size() << "\n";
-    os << "-- scaled: " << diff.scaled.size() << "\n";
-    os << "-- models of changed joints: " << diff.joints_changed.size() << "\n";
-    return os;
-}
 
 
 #endif // GAZEBO_RMAGINE_EMBREE_MAP_PLUGIN_H

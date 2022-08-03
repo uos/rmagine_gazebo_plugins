@@ -81,11 +81,11 @@ target_link_libraries(rmagine_embree_spherical_gzplugin
 )
 
 
-add_library(rmagine_embree_spherical_gzregister SHARED
+add_library(rmagine_embree_sensors_gzregister SHARED
   src/rmagine_embree_spherical_gzregister.cpp
 )
 
-target_link_libraries(rmagine_embree_spherical_gzregister
+target_link_libraries(rmagine_embree_sensors_gzregister
   rmagine_embree_spherical_gzplugin 
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}
@@ -116,7 +116,7 @@ install(
   TARGETS 
     rmagine_embree_map_gzplugin
     rmagine_embree_spherical_gzplugin 
-    rmagine_embree_spherical_gzregister
+    rmagine_embree_sensors_gzregister
     rmagine_embree_ros_gzplugin
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
