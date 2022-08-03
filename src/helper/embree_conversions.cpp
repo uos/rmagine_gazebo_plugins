@@ -226,9 +226,7 @@ rmagine::EmbreeGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
 rmagine::EmbreeScenePtr to_rm(const msgs::MeshGeom& gzmesh)
 {
     rmagine::EmbreeScenePtr scene;
-
     std::string filename = gzmesh.filename();
-    // msgs::Vector3d scale = gzmesh.scale();
 
     if(!common::exists(gzmesh.filename()))
     {

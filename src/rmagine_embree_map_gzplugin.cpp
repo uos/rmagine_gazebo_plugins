@@ -151,7 +151,9 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                     if(gzgeom.has_heightmap())
                     {
-                        // std::cout << "TODO: HEIGHTMAP" << std::endl;
+                        std::cout << "ADD HEIGHTMAP!" << std::endl;
+                        // std::cout << "- " << gzgeom.
+
                         rm::EmbreeGeometryPtr geom = to_rm(gzgeom.heightmap());
                         if(geom)
                         {
@@ -282,7 +284,7 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
     const std::unordered_set<uint32_t>& scaled)
 {
     std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_scale;
-    for(auto model_id : scaled )
+    for(auto model_id : scaled)
     {
         if(m_model_ignores.find(model_id) != m_model_ignores.end())
         {
@@ -510,7 +512,7 @@ void RmagineEmbreeMap::UpdateState()
         // Insert new meshes
         if(diff.ModelAdded())
         {
-            // std::cout << "1. ADD MODELS" << std::endl;
+            std::cout << "1. ADD MODELS" << std::endl;
             updates_add = EmbreeUpdateAdded(models_new, diff.added);
             scene_changes += updates_add.size();
 
@@ -578,25 +580,35 @@ void RmagineEmbreeMap::UpdateState()
             std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_scale;
             if(diff.ModelScaled())
             {
-                std::cout << "2.2. APPLY SCALINGS" << std::endl;
+                
                 rm::StopWatch sw;
                 double el;
                 sw();
                 meshes_to_scale = EmbreeUpdateScaled(models_new, diff.scaled);
                 el = sw();
-                std::cout << "- Prepare meshes scalings: " << el << " ms" << std::endl;
+
+                if(!meshes_to_scale.empty())
+                {
+                    std::cout << "2.2. APPLY SCALINGS" << std::endl;
+                    std::cout << "- Prepare meshes scalings " << meshes_to_scale.size() << ": " << el << " ms" << std::endl;
+                }
             }
 
             std::unordered_set<rm::EmbreeGeometryPtr> mesh_links_to_update;
             if(diff.ModelJointsChanged())
             {
-                std::cout << "2.3. APPLY JOINT UPDATES" << std::endl;
+                
                 rm::StopWatch sw;
                 double el;
                 sw();
                 mesh_links_to_update = EmbreeUpdateJointChanges(models_new, diff.joints_changed);
                 el = sw();
-                std::cout << "- Prepare meshes joint updates: " << el << " ms" << std::endl;
+
+                if(!mesh_links_to_update.empty())
+                {
+                    std::cout << "2.3. APPLY JOINT UPDATES" << std::endl;
+                    std::cout << "- Prepare meshes joint updates " << mesh_links_to_update.size() << ": " << el << " ms" << std::endl;
+                }
             }
 
             // mutex?
