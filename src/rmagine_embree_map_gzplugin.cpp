@@ -151,7 +151,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                     if(gzgeom.has_heightmap())
                     {
-                        std::cout << "TODO: HEIGHTMAP" << std::endl;
+                        // std::cout << "TODO: HEIGHTMAP" << std::endl;
                         rm::EmbreeGeometryPtr geom = to_rm(gzgeom.heightmap());
                         if(geom)
                         {
@@ -247,9 +247,9 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
                     {
                         // exists in scene
                         unsigned int geom_id = *geom_id_opt;
-                        std::cout << "Found visual to transform" << std::endl;
-                        std::cout << "- key: " << key << std::endl;
-                        std::cout << "- id: " << geom_id << std::endl;
+                        // std::cout << "Found visual to transform" << std::endl;
+                        // std::cout << "- key: " << key << std::endl;
+                        // std::cout << "- id: " << geom_id << std::endl;
 
                         ignition::math::Pose3d link_world_pose = link->WorldPose();
                         msgs::Pose vis_pose = vis.pose();
@@ -259,7 +259,7 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
                         rm::Transform Tvl = to_rm(vis_pose);
 
                         rm::Transform Tvw = Tlw * Tvl;
-                        std::cout << "- transform: " << Tvw << std::endl;
+                        // std::cout << "- transform: " << Tvw << std::endl;
 
                         auto Tiv = m_geom_to_visual[geom].T;
                         geom->setTransform(Tvw * Tiv);
@@ -329,9 +329,9 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
                     {
                         // exists in scene
                         unsigned int geom_id = *geom_id_opt;
-                        std::cout << "Found visual to scale" << std::endl;
-                        std::cout << "- key: " << key << std::endl;
-                        std::cout << "- id: " << geom_id << std::endl;
+                        // std::cout << "Found visual to scale" << std::endl;
+                        // std::cout << "- key: " << key << std::endl;
+                        // std::cout << "- id: " << geom_id << std::endl;
 
                         msgs::Vector3d vis_scale = vis.scale();
 
@@ -447,9 +447,9 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                         {
                             // exists in scene
                             unsigned int geom_id = *geom_id_opt;
-                            std::cout << "Found joint visual to transform" << std::endl;
-                            std::cout << "- key: " << key << std::endl;
-                            std::cout << "- id: " << geom_id << std::endl;
+                            // std::cout << "Found joint visual to transform" << std::endl;
+                            // std::cout << "- key: " << key << std::endl;
+                            // std::cout << "- id: " << geom_id << std::endl;
 
 
                             ignition::math::Pose3d link_world_pose = link->WorldPose();
@@ -460,7 +460,7 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                             rm::Transform Tvl = to_rm(vis_pose);
 
                             rm::Transform Tvw = Tlw * Tvl;
-                            std::cout << "- transform: " << Tvw << std::endl;
+                            // std::cout << "- transform: " << Tvw << std::endl;
 
                             auto Tiv = m_geom_to_visual[geom].T;
                             geom->setTransform(Tvw * Tiv);
@@ -500,8 +500,8 @@ void RmagineEmbreeMap::UpdateState()
     if(diff.HasChanged())
     {
         // TODO! translate gazebo models to embree map instances
-        std::cout << "SCENE HAS CHANGED" << std::endl;
-        std::cout << diff << std::endl;
+        // std::cout << "SCENE HAS CHANGED" << std::endl;
+        // std::cout << diff << std::endl;
 
         size_t scene_changes = 0;
 
@@ -510,7 +510,7 @@ void RmagineEmbreeMap::UpdateState()
         // Insert new meshes
         if(diff.ModelAdded())
         {
-            std::cout << "1. ADD MODELS" << std::endl;
+            // std::cout << "1. ADD MODELS" << std::endl;
             updates_add = EmbreeUpdateAdded(models_new, diff.added);
             scene_changes += updates_add.size();
 
@@ -559,20 +559,20 @@ void RmagineEmbreeMap::UpdateState()
 
         if(diff.ModelChanged())
         {
-            std::cout << "SCENE CHANGED!" << std::endl;
+            // std::cout << "SCENE CHANGED!" << std::endl;
 
-            std::cout << "2. UPDATE SCENE - prepare" << std::endl;
+            // std::cout << "2. UPDATE SCENE - prepare" << std::endl;
             std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_transform;
             // Transform existing meshes
             if(diff.ModelTransformed())
             {
-                std::cout << "2.1. APPLY TRANSFORMATIONS" << std::endl;
+                // std::cout << "2.1. APPLY TRANSFORMATIONS" << std::endl;
                 rm::StopWatch sw;
                 double el;
                 sw();
                 meshes_to_transform = EmbreeUpdateTransformed(models_new, diff.transformed);
                 el = sw();
-                std::cout << "- Prepare meshes transforms: " << el << " ms" << std::endl;
+                // std::cout << "- Prepare meshes transforms: " << el << " ms" << std::endl;
             }
 
             std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_scale;
@@ -606,7 +606,7 @@ void RmagineEmbreeMap::UpdateState()
             auto meshes_to_update = get_union(meshes_to_transform, meshes_to_scale);
             meshes_to_update = get_union(meshes_to_update, mesh_links_to_update);
 
-            sw();
+            // sw();
             for(auto mesh_to_update : meshes_to_update)
             {
                 mesh_to_update->apply();
@@ -614,13 +614,13 @@ void RmagineEmbreeMap::UpdateState()
                 scene_changes++;
             }
 
-            el = sw();
-            std::cout << "- Geometry updates: " << el << "s" << std::endl;
+            // el = sw();
+            // std::cout << "- Geometry updates: " << el << "s" << std::endl;
         }
         
         if(diff.ModelRemoved())
         {
-            std::cout << "3. APPLY REMOVALS" << std::endl;
+            // std::cout << "3. APPLY REMOVALS" << std::endl;
             for(auto geom_id : diff.removed)
             {
                 if(m_model_ignores.find(geom_id) != m_model_ignores.end())
@@ -629,7 +629,7 @@ void RmagineEmbreeMap::UpdateState()
                 }
 
                 auto geoms = m_model_meshes[geom_id];
-                std::cout << "Remove " << geoms.size() << " geometries" << std::endl;
+                // std::cout << "Remove " << geoms.size() << " geometries" << std::endl;
 
                 for(auto geom : geoms)
                 {
@@ -662,23 +662,22 @@ void RmagineEmbreeMap::UpdateState()
                 m_map_mutex->lock();
             }
 
-            std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
+            // std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
 
             sw();
             m_map->scene->commit();
             
             el = sw();
-            std::cout << "- Scene update finished in " << el << "s" << std::endl;
+            // std::cout << "- Scene update finished in " << el << "s" << std::endl;
             
             if(m_map_mutex)
             {
                 m_map_mutex->unlock();
             }
 
-
-            std::cout << "Scene Info: " << std::endl;
-            std::cout << "- instances: " << m_map->scene->count<rm::EmbreeInstance>() << std::endl;
-            std::cout << "- meshes: " << m_map->scene->count<rm::EmbreeMesh>() << std::endl;
+            // std::cout << "Scene Info: " << std::endl;
+            // std::cout << "- instances: " << m_map->scene->count<rm::EmbreeInstance>() << std::endl;
+            // std::cout << "- meshes: " << m_map->scene->count<rm::EmbreeMesh>() << std::endl;
         }
     }
 
