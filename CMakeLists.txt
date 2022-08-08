@@ -80,7 +80,6 @@ target_link_libraries(rmagine_embree_spherical_gzplugin
   ${rmagine_LIBRARIES}
 )
 
-
 add_library(rmagine_embree_sensors_gzregister SHARED
   src/rmagine_embree_spherical_gzregister.cpp
 )
@@ -127,7 +126,7 @@ install(
 ### OPTIX
 if(${rmagine_optix_FOUND})
 
-
+#### ROS-less Gazebo plugins
 add_library(rmagine_optix_spherical_gzplugin SHARED
   src/rmagine_optix_spherical_gzplugin.cpp
 )
@@ -136,8 +135,6 @@ target_link_libraries(rmagine_optix_spherical_gzplugin
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}
 )
-
-
 
 add_library(rmagine_optix_sensors_gzregister SHARED
   src/rmagine_optix_spherical_gzregister.cpp
@@ -148,7 +145,6 @@ target_link_libraries(rmagine_optix_sensors_gzregister
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}
 )
-
 
 add_library(rmagine_optix_map_gzplugin SHARED
   src/rmagine_optix_map_gzplugin.cpp
@@ -162,7 +158,6 @@ target_link_libraries(rmagine_optix_map_gzplugin
   ${rmagine_LIBRARIES}
 )
 
-
 # ROS Gazebo plugins
 add_library(rmagine_optix_ros_gzplugin SHARED 
   src/rmagine_optix_ros_gzplugin.cpp)
@@ -174,8 +169,6 @@ target_link_libraries(rmagine_optix_ros_gzplugin
   ${rmagine_LIBRARIES}
 )
 
-
-
 install(
   TARGETS 
     rmagine_optix_map_gzplugin
@@ -185,6 +178,4 @@ install(
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
-
-
-endif()
+endif(${rmagine_optix_FOUND})
