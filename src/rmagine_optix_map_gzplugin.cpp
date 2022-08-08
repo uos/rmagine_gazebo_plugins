@@ -413,8 +413,8 @@ void RmagineOptixMap::UpdateState()
     // apply changes to rmagine
     if(diff.HasChanged())
     {
-        std::cout << "UPDATE OPTIX SCENE" << std::endl;
-        std::cout << diff << std::endl;
+        // std::cout << "UPDATE OPTIX SCENE" << std::endl;
+        // std::cout << diff << std::endl;
 
         // count total scene changes
         size_t scene_changes = 0;
@@ -488,7 +488,7 @@ void RmagineOptixMap::UpdateState()
                 inst_links_to_update = OptixUpdateJointChanges(models_new, diff.joints_changed);
             }
 
-            
+
 
             auto meshes_to_update = get_union(insts_to_transform, insts_to_scale);
             meshes_to_update = get_union(meshes_to_update, inst_links_to_update);
@@ -529,13 +529,13 @@ void RmagineOptixMap::UpdateState()
                 m_map_mutex->lock();
             }
 
-            std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
+            // std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
 
-            sw();
+            // sw();
             insts_old->commit();
             m_map->scene()->commit();
-            el = sw();
-            std::cout << "- Scene update finished in " << el << "s" << std::endl;
+            // el = sw();
+            // std::cout << "- Scene update finished in " << el << "s" << std::endl;
 
             if(m_map_mutex)
             {
