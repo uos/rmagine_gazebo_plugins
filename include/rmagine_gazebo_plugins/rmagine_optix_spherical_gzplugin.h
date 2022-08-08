@@ -1,5 +1,5 @@
-#ifndef GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H
-#define GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H
+#ifndef GAZEBO_RMAGINE_OPTIX_SPHERICAL_PLUGIN_H
+#define GAZEBO_RMAGINE_OPTIX_SPHERICAL_PLUGIN_H
 
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/common.hh>
@@ -8,9 +8,9 @@
 
 #include <rmagine/noise/noise.h>
 #include <rmagine/math/types.h>
-#include <rmagine/types/Memory.hpp>
+#include <rmagine/types/MemoryCuda.hpp>
 #include <rmagine/types/sensor_models.h>
-#include <rmagine/simulation/SphereSimulatorEmbree.hpp>
+#include <rmagine/simulation/SphereSimulatorOptix.hpp>
 
 #include <mutex>
 #include <shared_mutex>
@@ -23,14 +23,14 @@ namespace gazebo
 
 namespace sensors
 {
-class RmagineEmbreeSpherical : public Sensor
+class RmagineOptixSpherical : public Sensor
 {
 public:
     using Base = Sensor;
 
-    RmagineEmbreeSpherical();
+    RmagineOptixSpherical();
 
-    virtual ~RmagineEmbreeSpherical();
+    virtual ~RmagineOptixSpherical();
 
     virtual void Load(const std::string& world_name) override;
 
@@ -40,11 +40,11 @@ public:
 
     virtual bool IsActive() const override;
 
-    void setMap(rm::EmbreeMapPtr map);
+    void setMap(rm::OptixMapPtr map);
 
     void setLock(std::shared_ptr<std::shared_mutex> mutex);
 
-    void updateScanMsg(rm::MemoryView<float> ranges);
+    void updateScanMsg(rm::MemoryView<float, rm::VRAM_CUDA> ranges);
 
     inline common::Time stamp() const 
     {
@@ -56,7 +56,7 @@ public:
         return m_sensor_model;
     }
     
-    inline rm::Memory<float, rm::RAM> ranges() const
+    inline rm::Memory<float, rm::VRAM_CUDA> ranges() const
     {
         return m_ranges;
     }
@@ -73,14 +73,13 @@ protected:
 
 
     std::shared_ptr<std::shared_mutex> m_map_mutex;
-    rm::EmbreeMapPtr m_map;
-    rm::SphereSimulatorEmbreePtr m_sphere_sim;
+    rm::OptixMapPtr m_map;
+    rm::SphereSimulatorOptixPtr m_sphere_sim;
 
     bool m_pre_alloc_mem = true;
-    rm::Memory<float, rm::RAM> m_ranges;
+    rm::Memory<float, rm::VRAM_CUDA> m_ranges;
 
     bool m_gz_publish = false;
-
 
 private:
 
@@ -99,13 +98,13 @@ private:
     bool m_waiting_for_map = false;
 };
 
-using RmagineEmbreeSphericalPtr = std::shared_ptr<RmagineEmbreeSpherical>;
+using RmagineOptixSphericalPtr = std::shared_ptr<RmagineOptixSpherical>;
 
 // will by generated in cpp
-void RegisterRmagineEmbreeSpherical();
+void RegisterRmagineOptixSpherical();
 
 } // namespace sensors
 
 } // namespace gazebo
 
-#endif // GAZEBO_RMAGINE_EMBREE_SPHERICAL_PLUGIN_H
+#endif // GAZEBO_RMAGINE_OPTIX_SPHERICAL_PLUGIN_H

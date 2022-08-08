@@ -1,4 +1,4 @@
-#include <rmagine_gazebo_plugins/rmagine_embree_spherical_gzplugin.h>
+#include <rmagine_gazebo_plugins/rmagine_optix_spherical_gzplugin.h>
 
 #include <gazebo/sensors/SensorFactory.hh>
 
@@ -29,7 +29,7 @@ static rm::Transform to_rm(const ignition::math::Pose3d& pose)
 
 static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
 {
-    std::cout << "[RmagineEmbreeSpherical] fetching parameters from sdf" << std::endl;
+    std::cout << "[RmagineOptixSpherical] fetching parameters from sdf" << std::endl;
 
     sdf::ElementPtr scanElem = rayElem->GetElement("scan");
 
@@ -68,26 +68,23 @@ static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
     return sensor_model;
 }
 
-
-
-RmagineEmbreeSpherical::RmagineEmbreeSpherical()
+RmagineOptixSpherical::RmagineOptixSpherical()
 :Base(sensors::RAY) // if sensor is base class: Base(sensors::RAY)
 {
-    std::cout << "[RmagineEmbreeSpherical] Construct" << std::endl;
+    std::cout << "[RmagineOptixSpherical] Construct" << std::endl;
 }
 
-RmagineEmbreeSpherical::~RmagineEmbreeSpherical()
+RmagineOptixSpherical::~RmagineOptixSpherical()
 {
-    std::cout << "[RmagineEmbreeSpherical] Destroy" << std::endl;
+    std::cout << "[RmagineOptixSpherical] Destroy" << std::endl;
 }
 
-void RmagineEmbreeSpherical::Load(const std::string& world_name)
+void RmagineOptixSpherical::Load(const std::string& world_name)
 {
     Base::Load(world_name);
-    std::cout << "[RmagineEmbreeSpherical] Load " << std::endl;
+    std::cout << "[RmagineOptixSpherical] Load " << std::endl;
 
     
-
     GZ_ASSERT(this->world != nullptr,
       "RaySensor did not get a valid World pointer");
 
@@ -114,16 +111,16 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     auto pose = Pose();
     m_Tsb = to_rm(pose);
 
-    std::cout << "[RmagineEmbreeSpherical] advertising topic " << this->Topic() << std::endl;
+    std::cout << "[RmagineOptixSpherical] advertising topic " << this->Topic() << std::endl;
     
     if(m_gz_publish)
     {
         this->scanPub =
-        this->node->Advertise<msgs::LaserScanStamped>(this->Topic(), 50);
+            this->node->Advertise<msgs::LaserScanStamped>(this->Topic(), 50);
 
-        if (!this->scanPub || !this->scanPub->HasConnections())
+        if(!this->scanPub || !this->scanPub->HasConnections())
         {
-            std::cout << "[RmagineEmbreeSpherical] Gazebo internal publishing failed. Reason: ";
+            std::cout << "[RmagineOptixSpherical] Gazebo internal publishing failed. Reason: ";
 
             if(!this->scanPub)
             {
@@ -135,13 +132,13 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     }
 }
 
-void RmagineEmbreeSpherical::Init()
+void RmagineOptixSpherical::Init()
 {
     Base::Init();
     this->laserMsg.mutable_scan()->set_frame(this->ParentName());
 }
 
-std::string RmagineEmbreeSpherical::Topic() const
+std::string RmagineOptixSpherical::Topic() const
 {
     std::string topicName = "~/";
     topicName += this->ParentName() + "/" + this->Name() + "/scan";
@@ -150,22 +147,21 @@ std::string RmagineEmbreeSpherical::Topic() const
     return topicName;
 }
 
-bool RmagineEmbreeSpherical::IsActive() const
+bool RmagineOptixSpherical::IsActive() const
 {
     return Sensor::IsActive() ||
         (this->scanPub && this->scanPub->HasConnections());
 }
 
-void RmagineEmbreeSpherical::setMap(rm::EmbreeMapPtr map)
+void RmagineOptixSpherical::setMap(rm::OptixMapPtr map)
 {
     m_map = map;
     
     if(m_sphere_sim)
     {
         m_sphere_sim->setMap(map);
-
     } else {
-        m_sphere_sim = std::make_shared<rm::SphereSimulatorEmbree>(map);
+        m_sphere_sim = std::make_shared<rm::SphereSimulatorOptix>(map);
         m_sphere_sim->setTsb(m_Tsb);
         m_sphere_sim->setModel(m_sensor_model);
     }
@@ -173,22 +169,22 @@ void RmagineEmbreeSpherical::setMap(rm::EmbreeMapPtr map)
     m_waiting_for_map = false;
 }
 
-void RmagineEmbreeSpherical::setLock(std::shared_ptr<std::shared_mutex> mutex)
+void RmagineOptixSpherical::setLock(std::shared_ptr<std::shared_mutex> mutex)
 {
     m_map_mutex = mutex;
 }
 
-bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
+bool RmagineOptixSpherical::UpdateImpl(const bool _force)
 {   
     if(m_sphere_sim)
     {
-
-        IGN_PROFILE("RmagineEmbreeSpherical::UpdateImpl");
+        IGN_PROFILE("RmagineOptixSpherical::UpdateImpl");
         IGN_PROFILE_BEGIN("Update");
 
         auto pose = parentEntity->WorldPose();
         rm::Memory<rm::Transform> Tbms(1);
         Tbms[0] = to_rm(pose);
+        rm::Memory<rm::Transform, rm::VRAM_CUDA> Tbms_ = Tbms;
         
         if(m_pre_alloc_mem)
         {
@@ -198,7 +194,7 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
             }
 
             // std::cout << "sim start" << std::endl;
-            m_sphere_sim->simulateRanges(Tbms, m_ranges);
+            m_sphere_sim->simulateRanges(Tbms_, m_ranges);
             // std::cout << "sim end" << std::endl;
 
             if(m_map_mutex)
@@ -215,8 +211,7 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
             }
 
             // std::cout << "sim start" << std::endl;
-            auto ranges = m_sphere_sim->simulateRanges(Tbms);
-            // std::cout << "sim end" << std::endl;
+            auto ranges = m_sphere_sim->simulateRanges(Tbms_);
 
             if(m_map_mutex)
             {
@@ -228,7 +223,7 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
         }
         IGN_PROFILE_END();
 
-        // std::cout << "[RmagineEmbreeSpherical] Simulated " << m_ranges.size() << " ranges" << std::endl;
+        // std::cout << "[RmagineOptixSpherical] Simulated " << m_ranges.size() << " ranges" << std::endl;
         
         if(m_gz_publish)
         {
@@ -237,7 +232,7 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
             {
                 this->scanPub->Publish(this->laserMsg);
             } else {
-                 std::cout << "[RmagineEmbreeSpherical] Publishing failed. " << std::endl;
+                 std::cout << "[RmagineOptixSpherical] Publishing failed. " << std::endl;
             }
             IGN_PROFILE_END();
         }
@@ -246,7 +241,7 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
     } else {
         if(!m_waiting_for_map)
         {
-            std::cout << "[RmagineEmbreeSpherical] waiting for RmagineEmbreeMap..." << std::endl;
+            std::cout << "[RmagineOptixSpherical] waiting for RmagineOptixMap..." << std::endl;
             m_waiting_for_map = true;
         }
     }
@@ -254,62 +249,68 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
     return false;
 }
 
-void RmagineEmbreeSpherical::updateScanMsg(rm::MemoryView<float> ranges)
+void RmagineOptixSpherical::updateScanMsg(
+    rm::MemoryView<float, rm::VRAM_CUDA> ranges_)
 {
-        std::lock_guard<std::mutex> lock(this->mutex);
+    std::lock_guard<std::mutex> lock(this->mutex);
+    
+    // download
+    rm::Memory<float, rm::RAM_CUDA> ranges = ranges_;
 
-        msgs::Set(this->laserMsg.mutable_time(),
-            this->lastMeasurementTime);
+    msgs::Set(this->laserMsg.mutable_time(),
+        this->lastMeasurementTime);
 
-        msgs::LaserScan *scan = this->laserMsg.mutable_scan();
+    msgs::LaserScan *scan = this->laserMsg.mutable_scan();
 
-        msgs::Set(scan->mutable_world_pose(),
-            this->pose + this->parentEntity->WorldPose());
-        
-        scan->set_angle_min(m_sensor_model.theta.min);
-        scan->set_angle_max(m_sensor_model.theta.max());
-        scan->set_angle_step(m_sensor_model.theta.inc);
-        scan->set_count(m_sensor_model.theta.size);
+    msgs::Set(scan->mutable_world_pose(),
+        this->pose + this->parentEntity->WorldPose());
+    
+    scan->set_angle_min(m_sensor_model.theta.min);
+    scan->set_angle_max(m_sensor_model.theta.max());
+    scan->set_angle_step(m_sensor_model.theta.inc);
+    scan->set_count(m_sensor_model.theta.size);
 
-        scan->set_vertical_angle_min(m_sensor_model.phi.min);
-        scan->set_vertical_angle_max(m_sensor_model.phi.max());
-        scan->set_vertical_angle_step(m_sensor_model.phi.inc);
-        scan->set_vertical_count(m_sensor_model.phi.size);
+    scan->set_vertical_angle_min(m_sensor_model.phi.min);
+    scan->set_vertical_angle_max(m_sensor_model.phi.max());
+    scan->set_vertical_angle_step(m_sensor_model.phi.inc);
+    scan->set_vertical_count(m_sensor_model.phi.size);
 
-        scan->set_range_min(m_sensor_model.range.min);
-        scan->set_range_max(m_sensor_model.range.max);
+    scan->set_range_min(m_sensor_model.range.min);
+    scan->set_range_max(m_sensor_model.range.max);
 
-        scan->clear_ranges();
-        scan->clear_intensities();
+    scan->clear_ranges();
+    scan->clear_intensities();
 
-        // vertical direction
-        for (unsigned int vid = 0; vid < m_sensor_model.phi.size; ++vid)
-        {   
-            // horizontal direction
-            for (unsigned int hid = 0; hid < m_sensor_model.theta.size; ++hid)
+    
+
+    // vertical direction
+    for (unsigned int vid = 0; vid < m_sensor_model.phi.size; ++vid)
+    {   
+        // horizontal direction
+        for (unsigned int hid = 0; hid < m_sensor_model.theta.size; ++hid)
+        {
+            unsigned int meas_id = m_sensor_model.getBufferId(vid, hid);
+            double range;
+            range = ranges[meas_id];
+            if(range >= m_sensor_model.range.max)
             {
-                unsigned int meas_id = m_sensor_model.getBufferId(vid, hid);
-                double range;
-                range = ranges[meas_id];
-                if(range >= m_sensor_model.range.max)
-                {
-                    range = ignition::math::INF_D;
-                } else if(range <= m_sensor_model.range.min) {
-                    range = -ignition::math::INF_D;
-                }
-
-                scan->add_ranges(range);
+                range = ignition::math::INF_D;
+            } else if(range <= m_sensor_model.range.min) {
+                range = -ignition::math::INF_D;
             }
+
+            scan->add_ranges(range);
         }
+    }
 }
 
-void RmagineEmbreeSpherical::Fini()
+void RmagineOptixSpherical::Fini()
 {
     Base::Fini();
     this->scanPub.reset();
 }
 
-GZ_REGISTER_STATIC_SENSOR("rmagine_embree_spherical", RmagineEmbreeSpherical)
+GZ_REGISTER_STATIC_SENSOR("rmagine_optix_spherical", RmagineOptixSpherical)
 
 } // namespace sensors
 

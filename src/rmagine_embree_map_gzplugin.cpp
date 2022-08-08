@@ -4,8 +4,6 @@
 #include <rmagine_gazebo_plugins/helper/embree_conversions.h>
 
 #include <gazebo/sensors/SensorsIface.hh>
-
-
 #include <gazebo/sensors/SensorManager.hh>
 
 
@@ -35,7 +33,6 @@ namespace rm = rmagine;
 
 namespace gazebo
 {
-
 
 RmagineEmbreeMap::RmagineEmbreeMap()
 {
