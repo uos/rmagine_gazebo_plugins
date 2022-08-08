@@ -250,12 +250,12 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
 }
 
 void RmagineOptixSpherical::updateScanMsg(
-    rm::MemoryView<float, rm::VRAM_CUDA> ranges_)
+    const rm::MemoryView<float, rm::VRAM_CUDA>& ranges_)
 {
     std::lock_guard<std::mutex> lock(this->mutex);
     
     // download
-    rm::Memory<float, rm::RAM_CUDA> ranges = ranges_;
+    rm::Memory<float, rm::RAM> ranges = ranges_;
 
     msgs::Set(this->laserMsg.mutable_time(),
         this->lastMeasurementTime);

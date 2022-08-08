@@ -488,10 +488,7 @@ void RmagineOptixMap::UpdateState()
                 inst_links_to_update = OptixUpdateJointChanges(models_new, diff.joints_changed);
             }
 
-
-
-            // auto meshes_to_update = get_union(meshes_to_transform, meshes_to_scale);
-            // meshes_to_update = get_union(meshes_to_update, mesh_links_to_update);
+            
 
             auto meshes_to_update = get_union(insts_to_transform, insts_to_scale);
             meshes_to_update = get_union(meshes_to_update, inst_links_to_update);

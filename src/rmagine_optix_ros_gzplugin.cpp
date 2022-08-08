@@ -68,8 +68,6 @@ void RmagineOptixROS::parseOutputs(sdf::ElementPtr outputs)
             } 
         }
 
-        
-
         it = it->GetNextElement();
     }
 
@@ -148,7 +146,8 @@ void RmagineOptixROS::OnUpdate()
 
     common::Time stamp_gz = m_spherical_sensor->stamp();
     rm::SphericalModel sensor_model = m_spherical_sensor->sensorModel();
-    rm::Memory<float, rm::RAM_CUDA> ranges = m_spherical_sensor->ranges();
+    // download
+    rm::Memory<float, rm::RAM> ranges = m_spherical_sensor->ranges();
 
     ros::Time stamp(stamp_gz.sec, stamp_gz.nsec);
 

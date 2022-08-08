@@ -44,7 +44,7 @@ public:
 
     void setLock(std::shared_ptr<std::shared_mutex> mutex);
 
-    void updateScanMsg(rm::MemoryView<float, rm::VRAM_CUDA> ranges);
+    void updateScanMsg(const rm::MemoryView<float, rm::VRAM_CUDA>& ranges);
 
     inline common::Time stamp() const 
     {
