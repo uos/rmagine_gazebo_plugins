@@ -5,6 +5,7 @@
 #include <rmagine/math/types.h>
 #include <rmagine/map/AssimpIO.hpp>
 #include <rmagine/map/optix/optix_shapes.h>
+#include <rmagine/util/prints.h>
 
 #include <gazebo/common/URI.hh>
 #include <gazebo/common/SystemPaths.hh>
@@ -12,6 +13,8 @@
 #include <gazebo/common/HeightmapData.hh>
 
 #include <iostream>
+
+
 
 
 namespace rm = rmagine;
@@ -104,13 +107,16 @@ rm::OptixScenePtr to_rm(const msgs::MeshGeom& gzmesh)
 
     if(ascene->mNumMeshes > 0)
     {
-        rm::OptixScenePtr ret = rm::make_optix_scene(ascene);
+        ret = rm::make_optix_scene(ascene);
 
         rm::Vector3 scale = to_rm(gzmesh.scale());
+
         for(auto elem : ret->geometries())
         {
             auto geom = elem.second;   
             geom->setScale(geom->scale().mult_ewise(scale));
+            geom->apply();
+            geom->commit();
         }
     }
     

@@ -342,48 +342,50 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
                         // std::cout << "- visual scale: " << Svl << std::endl;
                         // std::cout << "- transform: " << Tvw << std::endl;
 
-                        if(vis.has_geometry())
-                        {
-                            msgs::Geometry gzgeom = vis.geometry();
-                            if(gzgeom.has_box())
-                            {
-                                msgs::BoxGeom box = gzgeom.box();
-                                auto box_size = box.size();
-                                rm::Vector3 box_scale = to_rm(box_size);
+                        geom->setScale(model_scale);
 
-                                // std::cout << "- box scale: " << box_scale << std::endl;
-                                // std::cout << "- box size: " << model_scale << std::endl;
+                        // if(vis.has_geometry())
+                        // {
+                        //     msgs::Geometry gzgeom = vis.geometry();
+                        //     if(gzgeom.has_box())
+                        //     {
+                        //         // msgs::BoxGeom box = gzgeom.box();
+                        //         // auto box_size = box.size();
+                        //         // rm::Vector3 box_scale = to_rm(box_size);
 
-                                geom->setScale(model_scale);
-                            }
+                        //         // std::cout << "- box scale: " << box_scale << std::endl;
+                        //         // std::cout << "- box size: " << model_scale << std::endl;
 
-                            if(gzgeom.has_sphere())
-                            {
-                                msgs::SphereGeom sphere = gzgeom.sphere();
-                                float diameter = sphere.radius() * 2.0;
-                                rm::Vector3 sphere_scale = {diameter, diameter, diameter};
+                        //         geom->setScale(model_scale);
+                        //     }
 
-                                // std::cout << "- sphere scale: " << sphere_scale << std::endl;
-                                // std::cout << "- sphere size: " << model_scale << std::endl;
+                        //     if(gzgeom.has_sphere())
+                        //     {
+                        //         // msgs::SphereGeom sphere = gzgeom.sphere();
+                        //         // float diameter = sphere.radius() * 2.0;
+                        //         // rm::Vector3 sphere_scale = {diameter, diameter, diameter};
 
-                                geom->setScale(model_scale);
-                            }
+                        //         // std::cout << "- sphere scale: " << sphere_scale << std::endl;
+                        //         // std::cout << "- sphere size: " << model_scale << std::endl;
 
-                            if(gzgeom.has_cylinder())
-                            {
-                                msgs::CylinderGeom cylinder = gzgeom.cylinder();
+                        //         geom->setScale(model_scale);
+                        //     }
 
-                                float radius = cylinder.radius();
-                                float diameter = radius * 2.0;
-                                float height = cylinder.length();
+                        //     if(gzgeom.has_cylinder())
+                        //     {
+                        //         // msgs::CylinderGeom cylinder = gzgeom.cylinder();
 
-                                rm::Vector3 cylinder_scale = {diameter, diameter, height};
+                        //         // float radius = cylinder.radius();
+                        //         // float diameter = radius * 2.0;
+                        //         // float height = cylinder.length();
 
-                                // std::cout << "- cylinder scale: " << cylinder_scale << std::endl;
-                                // std::cout << "- cylinder size: " << model_scale << std::endl;
-                                geom->setScale(model_scale);
-                            }
-                        }
+                        //         // rm::Vector3 cylinder_scale = {diameter, diameter, height};
+
+                        //         // std::cout << "- cylinder scale: " << cylinder_scale << std::endl;
+                        //         // std::cout << "- cylinder size: " << model_scale << std::endl;
+                        //         geom->setScale(model_scale);
+                        //     }
+                        // }
 
                         meshes_to_scale.insert(geom);
                     } else {
@@ -534,7 +536,7 @@ void RmagineEmbreeMap::UpdateState()
                 m_model_meshes[model_id].push_back(geom);
 
                 // insert global
-                m_geom_to_visual[elem.first] = elem.second;
+                m_geom_to_visual[geom] = elem.second;
             }
 
             // TODO: check 
@@ -594,7 +596,6 @@ void RmagineEmbreeMap::UpdateState()
             std::unordered_set<rm::EmbreeGeometryPtr> mesh_links_to_update;
             if(diff.ModelJointsChanged())
             {
-                
                 rm::StopWatch sw;
                 double el;
                 sw();
@@ -675,7 +676,6 @@ void RmagineEmbreeMap::UpdateState()
 
             sw();
             m_map->scene->commit();
-            
             el = sw();
             // std::cout << "- Scene update finished in " << el << "s" << std::endl;
             

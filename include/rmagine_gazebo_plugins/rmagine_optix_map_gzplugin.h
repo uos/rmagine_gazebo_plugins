@@ -26,8 +26,16 @@
 // rmagine
 #include <rmagine/map/OptixMap.hpp>
 
+
 namespace gazebo
 {
+
+struct VisualTransform 
+{
+    std::string name;
+    rmagine::Transform T;
+    uint32_t model_id;
+};
 
 class RmagineOptixMap : public WorldPlugin
 {
@@ -40,6 +48,22 @@ protected:
     
     void OnWorldUpdate(const common::UpdateInfo& info);
 private:
+
+    std::unordered_map<rmagine::OptixInstPtr, VisualTransform> OptixUpdateAdded(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_set<uint32_t>& added) const;
+
+    std::unordered_set<rmagine::OptixInstPtr> OptixUpdateTransformed(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_set<uint32_t>& transformed);
+
+    std::unordered_set<rmagine::OptixInstPtr> OptixUpdateScaled(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_set<uint32_t>& scaled);
+
+    std::unordered_set<rmagine::OptixInstPtr> OptixUpdateJointChanges(
+        const std::unordered_map<uint32_t, physics::ModelPtr>& models,
+        const std::unordered_map<uint32_t, std::unordered_set<std::string> >& joints_changed);
 
     void UpdateState();
 
@@ -62,6 +86,12 @@ private:
     std::unordered_set<uint32_t> m_model_ignores;
     std::unordered_set<uint32_t> m_link_ignores;
     std::unordered_set<uint32_t> m_visual_ignores;
+
+
+    std::unordered_map<uint32_t, std::vector<rmagine::OptixInstPtr> > m_model_meshes;
+    std::unordered_map<std::string, std::vector<rmagine::OptixInstPtr> > m_visual_to_geoms;
+    std::unordered_map<rmagine::OptixInstPtr, VisualTransform> m_geom_to_visual;
+
 
     SceneState m_scene_state;
 

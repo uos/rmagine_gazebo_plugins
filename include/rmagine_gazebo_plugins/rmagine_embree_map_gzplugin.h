@@ -92,14 +92,14 @@ private:
     // - link2
     
     
-    std::unordered_map<uint32_t, std::vector<rm::EmbreeGeometryPtr> > m_model_meshes;
+    
     std::unordered_set<uint32_t> m_model_ignores;
     std::unordered_set<uint32_t> m_link_ignores;
     std::unordered_set<uint32_t> m_visual_ignores;
 
 
     
-
+    std::unordered_map<uint32_t, std::vector<rm::EmbreeGeometryPtr> > m_model_meshes;
     std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
     std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> m_geom_to_visual;
 
