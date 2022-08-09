@@ -94,6 +94,7 @@
       <static>1</static>
     </model>
 
+    
     <population name="forrest">
       <model name="tree">
         <include>
@@ -101,11 +102,10 @@
         </include>
       </model>
       <pose>0 0 0 0 0 0</pose>
-      <cylinder>
-        <radius>100</radius>
-        <length>0.01</length>
-      </cylinder>
-      <model_count>100</model_count>
+      <box>
+        <size>200 200 0.01</size>
+      </box>
+      <model_count>500</model_count>
       <distribution>
         <type>random</type>
       </distribution>
