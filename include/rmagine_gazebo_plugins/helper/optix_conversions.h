@@ -8,9 +8,12 @@
 namespace gazebo
 {
 
+
 rmagine::OptixGeometryPtr to_rm(const msgs::PlaneGeom& plane);
 
-rmagine::OptixGeometryPtr to_rm(const msgs::BoxGeom& box);
+// rmagine::OptixGeometryPtr to_rm(const msgs::BoxGeom& box);
+
+rmagine::OptixInstPtr to_rm(const msgs::BoxGeom& box);
 
 rmagine::OptixGeometryPtr to_rm(const msgs::SphereGeom& sphere);
 

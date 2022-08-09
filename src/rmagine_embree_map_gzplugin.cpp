@@ -36,12 +36,12 @@ namespace gazebo
 
 RmagineEmbreeMap::RmagineEmbreeMap()
 {
-    std::cout << "[RmagineEmbreeMap] Construct." << std::endl;
+    std::cout << "[RmagineEmbreeMap] Constructed." << std::endl;
 }
 
 RmagineEmbreeMap::~RmagineEmbreeMap()
 {
-    std::cout << "[RmagineEmbreeMap] Destroy." << std::endl;
+    std::cout << "[RmagineEmbreeMap] Destroyed." << std::endl;
 }
 
 void RmagineEmbreeMap::Load(
@@ -62,6 +62,8 @@ void RmagineEmbreeMap::Load(
     // For gazebo dynamic environments
     m_map->scene->setQuality(RTC_BUILD_QUALITY_LOW);
     m_map->scene->setFlags(RTC_SCENE_FLAG_DYNAMIC);
+
+    std::cout << "[RmagineEmbreeMap] Loaded." << std::endl;
 }
 
 std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::EmbreeUpdateAdded(

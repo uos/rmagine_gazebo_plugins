@@ -15,6 +15,9 @@
 #include <iostream>
 
 
+#include <rmagine/map/optix/OptixInstances.hpp>
+#include <rmagine/map/optix/OptixInst.hpp>
+
 
 
 namespace rm = rmagine;
@@ -41,17 +44,34 @@ rmagine::OptixGeometryPtr to_rm(const msgs::PlaneGeom& plane)
     return mesh;
 }
 
-rmagine::OptixGeometryPtr to_rm(const msgs::BoxGeom& box)
+// rmagine::OptixGeometryPtr to_rm(const msgs::BoxGeom& box)
+// {
+//     // fill embree mesh
+//     rm::OptixCubePtr mesh = std::make_shared<rm::OptixCube>();
+
+//     msgs::Vector3d size = box.size();
+//     rm::Vector3 rm_scale = to_rm(size);
+//     mesh->setScale(rm_scale);
+
+//     return mesh;
+// }
+
+rmagine::OptixInstPtr to_rm(const msgs::BoxGeom& box)
 {
-    msgs::Vector3d size = box.size();
-
-    // fill embree mesh
+    // make basic mesh
     rm::OptixCubePtr mesh = std::make_shared<rm::OptixCube>();
+    mesh->apply();
+    mesh->commit();
 
+    // make inst
+    rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+    mesh_inst->setGeometry(mesh);
+    msgs::Vector3d size = box.size();
     rm::Vector3 rm_scale = to_rm(size);
-    mesh->setScale(rm_scale);
+    mesh_inst->setScale(rm_scale);
+    mesh_inst->apply();
 
-    return mesh;
+    return mesh_inst;
 }
 
 rmagine::OptixGeometryPtr to_rm(const msgs::SphereGeom& sphere)
@@ -84,7 +104,8 @@ rmagine::OptixGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
     return ret;
 }
 
-rm::OptixScenePtr to_rm(const msgs::MeshGeom& gzmesh)
+rm::OptixScenePtr to_rm(
+    const msgs::MeshGeom& gzmesh)
 {
     rm::OptixScenePtr ret;
     std::string filename = gzmesh.filename();
@@ -108,16 +129,6 @@ rm::OptixScenePtr to_rm(const msgs::MeshGeom& gzmesh)
     if(ascene->mNumMeshes > 0)
     {
         ret = rm::make_optix_scene(ascene);
-
-        rm::Vector3 scale = to_rm(gzmesh.scale());
-
-        for(auto elem : ret->geometries())
-        {
-            auto geom = elem.second;   
-            geom->setScale(geom->scale().mult_ewise(scale));
-            geom->apply();
-            geom->commit();
-        }
     }
     
     return ret;

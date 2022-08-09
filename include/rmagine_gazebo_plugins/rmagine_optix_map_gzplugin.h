@@ -51,7 +51,7 @@ private:
 
     std::unordered_map<rmagine::OptixInstPtr, VisualTransform> OptixUpdateAdded(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models,
-        const std::unordered_set<uint32_t>& added) const;
+        const std::unordered_set<uint32_t>& added);
 
     std::unordered_set<rmagine::OptixInstPtr> OptixUpdateTransformed(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models,
@@ -75,6 +75,19 @@ private:
 
     std::shared_ptr<std::shared_mutex> m_map_mutex;
     rmagine::OptixMapPtr m_map;
+
+
+    enum GeomCacheID
+    {
+        PLANE = 0,
+        BOX = 1,
+        SPHERE = 2,
+        CYLINDER = 3
+    };
+
+    // mesh cache
+    std::unordered_map<std::string, rmagine::OptixScenePtr> m_mesh_cache;
+    std::unordered_map<unsigned int, rmagine::OptixGeometryPtr> m_geom_cache;
     
 
     bool m_sensors_loaded = false;

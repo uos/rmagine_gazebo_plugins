@@ -20,6 +20,8 @@
 #include <rmagine/map/optix/OptixInstances.hpp>
 #include <rmagine/map/optix/OptixInst.hpp>
 
+#include <rmagine/map/optix/optix_shapes.h>
+
 
 using namespace std::placeholders;
 using namespace boost::algorithm;
@@ -32,12 +34,12 @@ namespace gazebo
 
 RmagineOptixMap::RmagineOptixMap()
 {
-    std::cout << "[RmagineOptixMap] Construct." << std::endl;
+    std::cout << "[RmagineOptixMap] Constructed." << std::endl;
 }
 
 RmagineOptixMap::~RmagineOptixMap()
 {
-    std::cout << "[RmagineOptixMap] Destroy." << std::endl;
+    std::cout << "[RmagineOptixMap] Destroyed." << std::endl;
 }
 
 void RmagineOptixMap::Load(
@@ -59,11 +61,12 @@ void RmagineOptixMap::Load(
     scene->setRoot(insts);
 
     m_map = std::make_shared<rm::OptixMap>(scene);
+    std::cout << "[RmagineOptixMap] Loaded." << std::endl;
 }
 
 std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpdateAdded(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models,
-    const std::unordered_set<uint32_t>& added) const
+    const std::unordered_set<uint32_t>& added)
 {
     std::unordered_map<rm::OptixInstPtr, VisualTransform> inst_to_visual;
 
@@ -114,42 +117,140 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                 {
                     msgs::Geometry gzgeom = vis.geometry();
 
-                    std::vector<rm::OptixGeometryPtr> geoms;
-
                     std::vector<rm::OptixInstPtr> insts;
 
                     if(gzgeom.has_box())
                     {
                         std::cout << "ADD BOX!" << std::endl;
-                        msgs::BoxGeom box = gzgeom.box();
-                        geoms.push_back(to_rm(box));
+
+                        msgs::BoxGeom gzbox = gzgeom.box();
+
+                        auto cache_it = m_geom_cache.find(GeomCacheID::BOX);
+
+                        rm::OptixGeometryPtr box_geom;
+
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            box_geom = cache_it->second;
+                        } else {
+                            box_geom = std::make_shared<rm::OptixCube>();
+                            box_geom->apply();
+                            box_geom->commit();
+                            m_geom_cache[GeomCacheID::BOX] = box_geom;
+                        }
+
+                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+                        mesh_inst->setGeometry(box_geom);
+                        msgs::Vector3d size = gzbox.size();
+                        rm::Vector3 rm_scale = to_rm(size);
+                        mesh_inst->setScale(rm_scale);
+                        
+                        insts.push_back(mesh_inst);
                     }
 
                     if(gzgeom.has_cylinder())
                     {
                         std::cout << "ADD CYLINDER!" << std::endl;
-                        msgs::CylinderGeom cylinder = gzgeom.cylinder();
-                        geoms.push_back(to_rm(cylinder));
+                        msgs::CylinderGeom gzcylinder = gzgeom.cylinder();
+
+                        auto cache_it = m_geom_cache.find(GeomCacheID::CYLINDER);
+
+                        rm::OptixGeometryPtr cylinder_geom;
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            cylinder_geom = cache_it->second;
+                        } else {
+                            cylinder_geom = std::make_shared<rm::OptixCylinder>(100);
+                            cylinder_geom->apply();
+                            cylinder_geom->commit();
+                            m_geom_cache[GeomCacheID::CYLINDER] = cylinder_geom;
+                        }
+
+                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+                        mesh_inst->setGeometry(cylinder_geom);
+                        float radius = gzcylinder.radius();
+                        float diameter = radius * 2.0;
+                        float height = gzcylinder.length();
+                        mesh_inst->setScale({diameter, diameter, height});
+
+                        insts.push_back(mesh_inst);
                     }
 
                     if(gzgeom.has_sphere())
                     {
                         std::cout << "ADD SPHERE!" << std::endl;
-                        msgs::SphereGeom sphere = gzgeom.sphere();
-                        geoms.push_back(to_rm(sphere));
+                        msgs::SphereGeom gzsphere = gzgeom.sphere();
+                        
+                        auto cache_it = m_geom_cache.find(GeomCacheID::SPHERE);
+
+                        rm::OptixGeometryPtr sphere_geom;
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            sphere_geom = cache_it->second;
+                        } else {
+                            sphere_geom = std::make_shared<rm::OptixSphere>(30, 30);
+                            sphere_geom->apply();
+                            sphere_geom->commit();
+                            m_geom_cache[GeomCacheID::SPHERE] = sphere_geom;
+                        }
+
+                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+                        mesh_inst->setGeometry(sphere_geom);
+                        float diameter = gzsphere.radius() * 2.0;
+                        mesh_inst->setScale({diameter, diameter, diameter});
+
+                        insts.push_back(mesh_inst);
                     }
 
                     if(gzgeom.has_plane())
                     {
                         std::cout << "ADD PLANE!" << std::endl;
-                        msgs::PlaneGeom plane = gzgeom.plane();
-                        geoms.push_back(to_rm(plane));
+                        msgs::PlaneGeom gzplane = gzgeom.plane();
+                        
+                        auto cache_it = m_geom_cache.find(GeomCacheID::PLANE);
+                        rm::OptixGeometryPtr plane_geom;
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            plane_geom = cache_it->second;
+                        } else {
+                            plane_geom = std::make_shared<rm::OptixPlane>();
+                            plane_geom->apply();
+                            plane_geom->commit();
+                            m_geom_cache[GeomCacheID::PLANE] = plane_geom;
+                        }
+
+                        msgs::Vector2d size = gzplane.size();
+
+                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+                        mesh_inst->setGeometry(plane_geom);
+
+                        rm::Vector3 scale;
+                        scale.x = size.x();
+                        scale.y = size.y();
+                        scale.z = 1.0;
+                        mesh_inst->setScale(scale);
+
+                        insts.push_back(mesh_inst);
                     }
 
                     if(gzgeom.has_mesh())
                     {
                         std::cout << "ADD MESH!" << std::endl;
-                        rm::OptixScenePtr scene = to_rm(gzgeom.mesh());
+                        msgs::MeshGeom gzmesh = gzgeom.mesh();
+                        rm::Vector3 scale = to_rm(gzmesh.scale());
+
+                        rm::OptixScenePtr scene;
+
+                        auto cache_it = m_mesh_cache.find(gzmesh.filename());
+                        if(cache_it != m_mesh_cache.end())
+                        {
+                            std::cout << "USING CACHED MODEL" << std::endl;
+                            scene = cache_it->second;
+                        } else {
+                            scene = to_rm(gzmesh);
+                            m_mesh_cache[gzmesh.filename()] = scene;
+                        }
+
                         rm::OptixGeometryPtr root = scene->getRoot();
 
                         rm::OptixInstancesPtr insts_new = std::dynamic_pointer_cast<rm::OptixInstances>(root);
@@ -157,23 +258,20 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         {
                             for(auto elem : insts_new->instances())
                             {
-                                insts.push_back(elem.second);
+                                // make a copy
+                                rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>(*elem.second);
+
+                                // apply scale
+                                inst->setScale(inst->scale().mult_ewise(scale));
+                                insts.push_back(inst);
                             }
                         } else {
-                            // single geometry
-                            geoms.push_back(root);
+                            // never change geometry
+                            rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>();
+                            inst->setGeometry(root);
+                            inst->setScale(scale);
+                            insts.push_back(inst);
                         }
-                    }
-
-                    for(auto geom : geoms)
-                    {
-                        // instanciate geometry
-                        geom->apply();
-                        geom->commit();
-
-                        rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>();
-                        inst->setGeometry(geom);
-                        insts.push_back(inst);
                     }
 
                     for(auto inst : insts)
@@ -405,15 +503,24 @@ void RmagineOptixMap::UpdateState()
     std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
     updateModelIgnores(models_new, m_model_ignores);
 
+    rm::StopWatch sw;
+    double el;
+    sw();
+
     SceneDiff diff = m_scene_state.diff(models_new, 
             m_changed_delta_trans, 
             m_changed_delta_rot, 
             m_changed_delta_scale);
+    
+    el = sw();
+    
 
     // apply changes to rmagine
     if(diff.HasChanged())
     {
         // std::cout << "UPDATE OPTIX SCENE" << std::endl;
+        // std::cout << "Computed diff in " << el << "s" << std::endl;
+        // 
         // std::cout << diff << std::endl;
 
         // count total scene changes
@@ -423,7 +530,6 @@ void RmagineOptixMap::UpdateState()
 
         if(diff.ModelAdded())
         {
-            std::cout << "1. ADD MODELS" << std::endl;
             updates_add = OptixUpdateAdded(models_new, diff.added);
             scene_changes += updates_add.size();
 
@@ -465,12 +571,19 @@ void RmagineOptixMap::UpdateState()
                 unsigned int geom_id = m_map->scene()->add(inst->geometry());
                 unsigned int inst_id = insts_old->add(inst);
             }
+            std::cout << "New map elements" << std::endl;
+            std::cout << "- geometries: " << m_map->scene()->geometries().size() << std::endl;
+            std::cout << "- instances: " << insts_old->instances().size() << std::endl;
         }
 
         if(diff.ModelChanged())
         {
             std::unordered_set<rm::OptixInstPtr> insts_to_transform;
 
+            rm::StopWatch sw;
+            double el;
+
+            sw();
             if(diff.ModelTransformed())
             {
                 insts_to_transform = OptixUpdateTransformed(models_new, diff.transformed);
@@ -488,8 +601,6 @@ void RmagineOptixMap::UpdateState()
                 inst_links_to_update = OptixUpdateJointChanges(models_new, diff.joints_changed);
             }
 
-
-
             auto meshes_to_update = get_union(insts_to_transform, insts_to_scale);
             meshes_to_update = get_union(meshes_to_update, inst_links_to_update);
 
@@ -497,6 +608,13 @@ void RmagineOptixMap::UpdateState()
             {
                 mesh_to_update->apply();
                 scene_changes++;
+            }
+
+            el = sw();
+            if(!meshes_to_update.empty())
+            {
+                // std::cout << "2. APPLY UPDATES" << std::endl;
+                //     std::cout << "- Prepare instance updates " << meshes_to_update.size() << ": " << el << "s" << std::endl;
             }
         }
 
@@ -529,13 +647,13 @@ void RmagineOptixMap::UpdateState()
                 m_map_mutex->lock();
             }
 
-            // std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
+            std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
 
-            // sw();
+            sw();
             insts_old->commit();
             m_map->scene()->commit();
-            // el = sw();
-            // std::cout << "- Scene update finished in " << el << "s" << std::endl;
+            el = sw();
+            std::cout << "- Scene update finished in " << el << "s" << std::endl;
 
             if(m_map_mutex)
             {
@@ -567,12 +685,13 @@ void RmagineOptixMap::UpdateSensors()
             if(spherical)
             {
                 std::cout << "[RmagineOptixMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
+                spherical->setLock(m_map_mutex);
                 spherical->setMap(m_map);
                 if(!m_map_mutex)
                 {
                     std::cout << "[RmagineOptixMap] no mutex " << std::endl;
                 }
-                spherical->setLock(m_map_mutex);
+                
             }
         }
         m_sensors_loaded = true;
@@ -592,10 +711,13 @@ void RmagineOptixMap::OnWorldUpdate(const common::UpdateInfo& info)
         std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
         updateModelIgnores(models_new, m_model_ignores);
 
+        
         SceneDiff diff = m_scene_state.diff(models_new, 
             m_changed_delta_trans, 
             m_changed_delta_rot, 
             m_changed_delta_scale);
+        
+        
 
         if(diff.HasChanged())
         {

@@ -186,15 +186,25 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
         Tbms[0] = to_rm(pose);
         rm::Memory<rm::Transform, rm::VRAM_CUDA> Tbms_ = Tbms;
         
+        // using ResultT = rm::Bundle<
+        //     rm::Ranges<rm::VRAM_CUDA> 
+        //     >; 
+
         if(m_pre_alloc_mem)
         {
             if(m_map_mutex)
             {
+                // std::cout << "Lock map" << std::endl;
                 m_map_mutex->lock_shared();
             }
 
-            // std::cout << "sim start" << std::endl;
+            // std::cout << "sim start " << m_ranges.size() << std::endl;
             m_sphere_sim->simulateRanges(Tbms_, m_ranges);
+            
+            // ResultT res;
+            // res.ranges.resize(m_ranges.size());
+            // m_sphere_sim->simulate(Tbms_, res);
+
             // std::cout << "sim end" << std::endl;
 
             if(m_map_mutex)
@@ -204,6 +214,7 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
 
             this->lastMeasurementTime = this->world->SimTime();
             updateScanMsg(m_ranges);
+
         } else {
             if(m_map_mutex)
             {
