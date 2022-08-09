@@ -118,7 +118,8 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                 {
                     msgs::Geometry gzgeom = vis.geometry();
 
-                    std::vector<rmagine::EmbreeGeometryPtr> geoms;
+                    std::vector<rm::EmbreeGeometryPtr> geoms;
+                    std::unordered_set<rm::EmbreeGeometryPtr> geoms_ignore_model_transform;
 
                     if(gzgeom.has_box())
                     {
@@ -157,6 +158,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                         if(geom)
                         {
                             geoms.push_back(geom);
+                            geoms_ignore_model_transform.insert(geom);
                         }
                     }
 
@@ -180,10 +182,15 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                     {
                         // Transform from instance to visual (or is it to world: TODO check)
                         auto Tiv = geom->transform();
-                        auto Tiw = Tvw * Tiv;
+                        
 
                         // Set transform from instance to world
-                        geom->setTransform(Tiw);
+                        if(geoms_ignore_model_transform.find(geom) == geoms_ignore_model_transform.end())
+                        {
+                            auto Tiw = Tvw * Tiv;
+                            geom->setTransform(Tiw);
+                        }
+                        
                         geom->apply();
                         geom->commit();
 

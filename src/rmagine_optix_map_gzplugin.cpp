@@ -118,6 +118,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                     msgs::Geometry gzgeom = vis.geometry();
 
                     std::vector<rm::OptixInstPtr> insts;
+                    std::unordered_set<rm::OptixInstPtr> insts_ignore_model_transform;
 
                     if(gzgeom.has_box())
                     {
@@ -233,6 +234,23 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         insts.push_back(mesh_inst);
                     }
 
+                    if(gzgeom.has_heightmap())
+                    {
+                        std::cout << "ADD HEIGHTMAP!" << std::endl;
+
+                        // model pose is ignored for heightmap!
+                        msgs::HeightmapGeom gzheightmap = gzgeom.heightmap();
+
+                        rm::OptixGeometryPtr geom = to_rm(gzheightmap);
+
+                        // make instance
+                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+                        mesh_inst->setGeometry(geom);
+                        
+                        insts.push_back(mesh_inst);
+                        insts_ignore_model_transform.insert(mesh_inst);
+                    }
+
                     if(gzgeom.has_mesh())
                     {
                         std::cout << "ADD MESH!" << std::endl;
@@ -277,9 +295,13 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                     for(auto inst : insts)
                     {
                         auto Tiv = inst->transform();
-                        auto Tiw = Tvw * Tiv;
-
-                        inst->setTransform(Tiw);
+                        
+                        if(insts_ignore_model_transform.find(inst) == insts_ignore_model_transform.end())
+                        {    
+                            auto Tiw = Tvw * Tiv;
+                            inst->setTransform(Tiw);
+                        }
+                        
                         inst->apply();
 
                         inst_to_visual[inst] = {key, Tiv, model_id};

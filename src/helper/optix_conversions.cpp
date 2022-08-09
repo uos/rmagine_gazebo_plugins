@@ -101,6 +101,141 @@ rmagine::OptixGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
 {
     rmagine::OptixGeometryPtr ret;
 
+    rm::Vector3 size = to_rm(heightmap.size());
+    rm::Vector3 orig = to_rm(heightmap.origin());
+
+    std::string filename = heightmap.filename();
+    if(!common::exists(filename))
+    {
+        filename = common::SystemPaths::Instance()->FindFileURI(filename);
+    }
+
+    common::HeightmapData* data 
+        = common::HeightmapDataLoader::LoadTerrainFile(filename);
+
+    if(data)
+    {
+        std::cout << "Heightmap data loaded." << std::endl;
+
+        std::cout << "Data Info: " << std::endl;
+        std::cout << "- height: " << data->GetHeight() << std::endl;
+        std::cout << "- width: " << data->GetWidth() << std::endl;
+        std::cout << "- max_elevation: " << data->GetMaxElevation() << std::endl;
+
+
+        std::vector<float> elevations;
+        // fill heights
+        int subsampling = 1; // multiplies the resulution if set
+        unsigned int vertSize = (data->GetWidth() * subsampling) - subsampling + 1;
+
+        float scale_x = heightmap.size().x() / (vertSize - 1);
+        float scale_y = heightmap.size().y() / (vertSize - 1);
+
+        ignition::math::Vector3d size, scale;
+        size.X() = heightmap.size().x();
+        size.Y() = heightmap.size().y();
+        size.Z() = heightmap.size().z();
+
+        // scale. or: size of one pixel
+        scale.X(size.X() / vertSize);
+        scale.Y(size.Y() / vertSize);
+        if(ignition::math::equal(data->GetMaxElevation(), 0.0f)) 
+        {
+            scale.Z(fabs(size.Z()));
+        } else {
+            scale.Z(fabs(size.Z()) / data->GetMaxElevation());
+        }
+
+        bool flipY = true;
+        data->FillHeightMap(subsampling, vertSize, size, scale, flipY, elevations);
+
+        std::cout << "Loaded " << elevations.size() << " elevations." << std::endl;
+        
+        rm::OptixMeshPtr mesh = std::make_shared<rm::OptixMesh>();
+
+        rm::Memory<rm::Vector3, rm::RAM> vertices(data->GetWidth() * data->GetHeight());
+
+        rm::Memory<rm::Face, rm::RAM> faces(2 * (data->GetWidth() - 1) * (data->GetHeight() - 1) );
+
+        rm::Vector3 offset = to_rm(heightmap.origin());
+
+        float half_width = size.X() / 2.0;
+        float half_height = size.Y() / 2.0;
+
+        std::cout << "Filling " << vertices.size() << " vertices..." << std::endl;
+        
+        rm::Vector3 correction = {0.0, 0.0, 0.0};
+
+        int center_vert = vertSize / 2;
+
+        // the following cannot handle higher subsampling levels yet
+        for(size_t yimg=0; yimg < vertSize; yimg++)
+        {
+            for(size_t ximg=0; ximg < vertSize; ximg++)
+            {
+                // in grid coords
+                size_t buff_id = yimg * vertSize + ximg;
+                float height = elevations[buff_id];
+
+                // grid origin is (0,0) at (ximg, yimg) = (vertSize/2, vertSize/2)
+                // example 5x5 img, image id (2,2) is grid id (0,0)
+                int xgrid = static_cast<int>(ximg) - center_vert;
+                int ygrid = static_cast<int>(yimg) - center_vert;
+
+                float xworld = static_cast<float>(xgrid) * scale_x;
+                float yworld = static_cast<float>(ygrid) * scale_y;
+
+                float zworld = elevations[buff_id];
+
+                rm::Vector3 vertex_corrected = {
+                    xworld,
+                    yworld,
+                    zworld
+                };
+
+                vertex_corrected += offset;
+
+                assert(buff_id < mesh->vertices.size());
+
+                vertices[buff_id] = vertex_corrected;
+            }
+        }
+
+        std::cout << "Filling " << faces.size() << " faces..." << std::endl;
+
+        // fill faces
+        for(size_t i=1; i<vertSize; i++)
+        {
+            for(size_t j=1; j<vertSize; j++)
+            {
+                unsigned int v0 = (i-1) * vertSize + (j-1);
+                unsigned int v1 = (i) * vertSize + (j-1);
+                unsigned int v2 = (i) * vertSize +   (j);
+                unsigned int v3 = (i-1) * vertSize +   (j);
+
+                unsigned int quad_id = (i-1) * (vertSize - 1) + (j-1);
+
+                unsigned int f0 = quad_id * 2 + 0;
+                unsigned int f1 = quad_id * 2 + 1;
+
+                // connect as in plane example
+                faces[f0] = {v1, v0, v3};
+                faces[f1] = {v3, v2, v1};
+            }
+        }
+
+        mesh->vertices = vertices;
+        mesh->faces = faces;
+
+        mesh->computeFaceNormals();
+
+        mesh->apply();
+        mesh->commit();
+
+        ret = mesh;
+        delete data;
+    }
+
     return ret;
 }
 
