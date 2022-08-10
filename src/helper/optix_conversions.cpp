@@ -18,6 +18,11 @@
 #include <rmagine/map/optix/OptixInstances.hpp>
 #include <rmagine/map/optix/OptixInst.hpp>
 
+// #include <chrono>
+// #include <thread>
+
+// using namespace std::chrono_literals;
+
 
 
 namespace rm = rmagine;
@@ -224,13 +229,24 @@ rmagine::OptixGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
             }
         }
 
+        // std::cout << "SLeep" << std::endl;
+        // std::this_thread::sleep_for(10s);
+
+        // std::cout << "Done." << std::endl;
+
+        // std::cout << "Upload to GPU" << std::endl;
         mesh->vertices = vertices;
         mesh->faces = faces;
+        
+        // std::cout << "Compute Face Normals" << std::endl;
 
         mesh->computeFaceNormals();
+        // std::cout << "Building ACC" << std::endl;
 
         mesh->apply();
         mesh->commit();
+
+        // std::cout << "Done." << std::endl;
 
         ret = mesh;
         delete data;

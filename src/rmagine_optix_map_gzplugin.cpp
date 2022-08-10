@@ -70,7 +70,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 {
     std::unordered_map<rm::OptixInstPtr, VisualTransform> inst_to_visual;
 
-
     for(auto model_id : added)
     {
         if(m_model_ignores.find(model_id) != m_model_ignores.end())
@@ -236,12 +235,16 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                     if(gzgeom.has_heightmap())
                     {
-                        std::cout << "ADD HEIGHTMAP!" << std::endl;
+                        std::cout << "LOAD HEIGHTMAP!" << std::endl;
 
                         // model pose is ignored for heightmap!
                         msgs::HeightmapGeom gzheightmap = gzgeom.heightmap();
 
                         rm::OptixGeometryPtr geom = to_rm(gzheightmap);
+                        // std::cout << "Building ACC" << std::endl;
+                        // geom->apply();
+                        // geom->commit();
+                        // std::cout << "Building ACC done." << std::endl;
 
                         // make instance
                         rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
@@ -249,6 +252,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         
                         insts.push_back(mesh_inst);
                         insts_ignore_model_transform.insert(mesh_inst);
+                        std::cout << "Done." << std::endl;
                     }
 
                     if(gzgeom.has_mesh())
@@ -435,7 +439,6 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
                 {
                     unsigned int inst_id = insts_global->get(inst);
                     msgs::Vector3d vis_scale = vis.scale();
-                    // rm::Vector Svl = to_rm(vis_scale);
 
                     inst->setScale(model_scale);
                     insts_to_scale.insert(inst);
@@ -540,7 +543,7 @@ void RmagineOptixMap::UpdateState()
     // apply changes to rmagine
     if(diff.HasChanged())
     {
-        // std::cout << "UPDATE OPTIX SCENE" << std::endl;
+        std::cout << "UPDATE OPTIX SCENE" << std::endl;
         // std::cout << "Computed diff in " << el << "s" << std::endl;
         // 
         // std::cout << diff << std::endl;
@@ -563,7 +566,6 @@ void RmagineOptixMap::UpdateState()
                 uint32_t model_id = elem.second.model_id;
 
                 // TODO
-
                 if(m_visual_to_geoms.find(key) == m_visual_to_geoms.end())
                 {
                     m_visual_to_geoms[key] = {};
@@ -738,8 +740,6 @@ void RmagineOptixMap::OnWorldUpdate(const common::UpdateInfo& info)
             m_changed_delta_trans, 
             m_changed_delta_rot, 
             m_changed_delta_scale);
-        
-        
 
         if(diff.HasChanged())
         {

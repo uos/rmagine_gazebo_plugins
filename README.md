@@ -12,14 +12,14 @@ Requirements: Rmagine - library
 Use command line Arguments of Gazebo to load additional shared libraries:
 
 ```bash
-gazebo -s librmagine_embree_spherical_gzregister.so
+gazebo -s librmagine_embree_sensors_gzregister.so
 ```
 
 or in launch file
 
 ```xml
 <node name="gazebo" pkg="gazebo_ros" type="gzserver" 
-    args="-s librmagine_embree_spherical_gzregister.so ...">
+    args="-s librmagine_embree_sensors_gzregister.so ...">
 ...
 </node>
 ```
