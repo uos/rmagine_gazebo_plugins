@@ -9,19 +9,19 @@ namespace gazebo
 {
 
 
-rmagine::OptixGeometryPtr to_rm(const msgs::PlaneGeom& plane);
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::PlaneGeom& plane);
 
 // rmagine::OptixGeometryPtr to_rm(const msgs::BoxGeom& box);
 
-rmagine::OptixInstPtr to_rm(const msgs::BoxGeom& box);
+rmagine::OptixInstPtr to_rm_optix(const msgs::BoxGeom& box);
 
-rmagine::OptixGeometryPtr to_rm(const msgs::SphereGeom& sphere);
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::SphereGeom& sphere);
 
-rmagine::OptixGeometryPtr to_rm(const msgs::CylinderGeom& cylinder);
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::CylinderGeom& cylinder);
 
-rmagine::OptixGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap);
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap);
 
-rmagine::OptixScenePtr to_rm(const msgs::MeshGeom& gzmesh);
+rmagine::OptixScenePtr to_rm_optix(const msgs::MeshGeom& gzmesh);
 
 } // namespace gazebo
 

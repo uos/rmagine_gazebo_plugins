@@ -19,8 +19,9 @@ namespace rm = rmagine;
 namespace gazebo
 {
 
-rmagine::EmbreeGeometryPtr to_rm(const msgs::PlaneGeom& plane)
+rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::PlaneGeom& plane)
 {
+    std::cout << "[RmagineEmbreeMap - to_rm(plane)]" << std::endl;
     msgs::Vector2d size = plane.size();
     // TODO: use normal
     msgs::Vector3d normal = plane.normal();
@@ -36,8 +37,9 @@ rmagine::EmbreeGeometryPtr to_rm(const msgs::PlaneGeom& plane)
     return mesh;   
 }
 
-rmagine::EmbreeGeometryPtr to_rm(const msgs::BoxGeom& box)
+rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::BoxGeom& box)
 {
+    std::cout << "[RmagineEmbreeMap - to_rm(box)]" << std::endl;
     msgs::Vector3d size = box.size();
 
     // fill embree mesh
@@ -49,7 +51,7 @@ rmagine::EmbreeGeometryPtr to_rm(const msgs::BoxGeom& box)
     return mesh;
 }
 
-rmagine::EmbreeGeometryPtr to_rm(const msgs::SphereGeom& sphere)
+rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::SphereGeom& sphere)
 {
     rm::EmbreeSpherePtr mesh = std::make_shared<rm::EmbreeSphere>(30, 30);
 
@@ -60,7 +62,7 @@ rmagine::EmbreeGeometryPtr to_rm(const msgs::SphereGeom& sphere)
     return mesh;
 }
 
-rmagine::EmbreeGeometryPtr to_rm(const msgs::CylinderGeom& cylinder)
+rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::CylinderGeom& cylinder)
 {
     rm::EmbreeCylinderPtr mesh = std::make_shared<rm::EmbreeCylinder>(100);
     float radius = cylinder.radius();
@@ -72,7 +74,7 @@ rmagine::EmbreeGeometryPtr to_rm(const msgs::CylinderGeom& cylinder)
     return mesh;
 }
 
-rmagine::EmbreeGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
+rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
 {
     rmagine::EmbreeGeometryPtr ret;
 
@@ -223,8 +225,9 @@ rmagine::EmbreeGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
     return ret;
 }
 
-rmagine::EmbreeScenePtr to_rm(const msgs::MeshGeom& gzmesh)
+rmagine::EmbreeScenePtr to_rm_embree(const msgs::MeshGeom& gzmesh)
 {
+    std::cout << "[RmagineEmbreeMap - to_rm(gzmesh)]" << std::endl;
     rmagine::EmbreeScenePtr scene;
     std::string filename = gzmesh.filename();
 
@@ -233,7 +236,7 @@ rmagine::EmbreeScenePtr to_rm(const msgs::MeshGeom& gzmesh)
         filename = common::SystemPaths::Instance()->FindFileURI(gzmesh.filename());
     }
 
-    std::cout << "Loading mesh from file " << filename << std::endl;
+    std::cout << "[RmagineEmbreeMap - to_rm(gzmesh)] Loading mesh from file " << filename << std::endl;
 
     rm::AssimpIO io;
     const aiScene* ascene = io.ReadFile(filename, 0);

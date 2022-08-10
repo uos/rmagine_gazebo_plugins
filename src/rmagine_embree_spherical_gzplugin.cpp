@@ -5,6 +5,8 @@
 #include <iostream>
 #include <boost/algorithm/string/replace.hpp>
 
+#include <rmagine/noise/noise.h>
+
 using namespace std::placeholders;
 
 namespace gazebo
@@ -104,6 +106,24 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     if(rayElem->HasElement("noise"))
     {
         // has noise
+        sdf::ElementPtr noiseElem = rayElem->GetElement("noise");
+
+        std::string noise_type = noiseElem->Get<std::string>("type");
+        if(noise_type == "gaussian")
+        {
+            m_noise_type = NoiseType::GAUSSIAN;
+            
+            if(noiseElem->HasElement("mean"))
+            {
+                m_noise_mean = noiseElem->Get<float>("mean");
+            }
+
+            m_noise_stddev = noiseElem->Get<float>("stddev");
+        } else {
+            std::cout << "[RmagineEmbreeSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
+        }
+        
+        
     }
 
     this->parentEntity = this->world->EntityByName(this->ParentName());
@@ -182,7 +202,6 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
 {   
     if(m_sphere_sim)
     {
-
         IGN_PROFILE("RmagineEmbreeSpherical::UpdateImpl");
         IGN_PROFILE_BEGIN("Update");
 
@@ -196,36 +215,31 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
             {
                 m_map_mutex->lock_shared();
             }
-
-            // std::cout << "sim start" << std::endl;
             m_sphere_sim->simulateRanges(Tbms, m_ranges);
-            // std::cout << "sim end" << std::endl;
-
             if(m_map_mutex)
             {
                 m_map_mutex->unlock_shared();
             }
-
-            this->lastMeasurementTime = this->world->SimTime();
-            updateScanMsg(m_ranges);
         } else {
             if(m_map_mutex)
             {
                 m_map_mutex->lock_shared();
             }
-
-            // std::cout << "sim start" << std::endl;
-            auto ranges = m_sphere_sim->simulateRanges(Tbms);
-            // std::cout << "sim end" << std::endl;
-
+            m_ranges = m_sphere_sim->simulateRanges(Tbms);
             if(m_map_mutex)
             {
                 m_map_mutex->unlock_shared();
             }
-
-            this->lastMeasurementTime = this->world->SimTime();
-            updateScanMsg(ranges);
         }
+
+        // apply noise
+        if(m_noise_type == NoiseType::GAUSSIAN)
+        {
+            rm::GaussianNoise(m_noise_mean, m_noise_stddev).apply(m_ranges);
+        }
+        this->lastMeasurementTime = this->world->SimTime();
+        updateScanMsg(m_ranges);
+
         IGN_PROFILE_END();
 
         // std::cout << "[RmagineEmbreeSpherical] Simulated " << m_ranges.size() << " ranges" << std::endl;

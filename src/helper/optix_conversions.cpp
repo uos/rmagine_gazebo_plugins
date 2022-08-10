@@ -30,7 +30,7 @@ namespace rm = rmagine;
 namespace gazebo
 {
 
-rmagine::OptixGeometryPtr to_rm(const msgs::PlaneGeom& plane)
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::PlaneGeom& plane)
 {
     msgs::Vector2d size = plane.size();
     // TODO: use normal
@@ -61,7 +61,7 @@ rmagine::OptixGeometryPtr to_rm(const msgs::PlaneGeom& plane)
 //     return mesh;
 // }
 
-rmagine::OptixInstPtr to_rm(const msgs::BoxGeom& box)
+rmagine::OptixInstPtr to_rm_optix(const msgs::BoxGeom& box)
 {
     // make basic mesh
     rm::OptixCubePtr mesh = std::make_shared<rm::OptixCube>();
@@ -79,7 +79,7 @@ rmagine::OptixInstPtr to_rm(const msgs::BoxGeom& box)
     return mesh_inst;
 }
 
-rmagine::OptixGeometryPtr to_rm(const msgs::SphereGeom& sphere)
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::SphereGeom& sphere)
 {
     rm::OptixSpherePtr mesh = std::make_shared<rm::OptixSphere>(30, 30);
 
@@ -90,7 +90,7 @@ rmagine::OptixGeometryPtr to_rm(const msgs::SphereGeom& sphere)
     return mesh;
 }
 
-rmagine::OptixGeometryPtr to_rm(const msgs::CylinderGeom& cylinder)
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::CylinderGeom& cylinder)
 {
     rm::OptixCylinderPtr mesh = std::make_shared<rm::OptixCylinder>(100);
     float radius = cylinder.radius();
@@ -102,7 +102,7 @@ rmagine::OptixGeometryPtr to_rm(const msgs::CylinderGeom& cylinder)
     return mesh;
 }
 
-rmagine::OptixGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap)
 {
     rmagine::OptixGeometryPtr ret;
 
@@ -255,7 +255,7 @@ rmagine::OptixGeometryPtr to_rm(const msgs::HeightmapGeom& heightmap)
     return ret;
 }
 
-rm::OptixScenePtr to_rm(
+rm::OptixScenePtr to_rm_optix(
     const msgs::MeshGeom& gzmesh)
 {
     rm::OptixScenePtr ret;

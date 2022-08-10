@@ -78,7 +78,7 @@
         <noise>
           <type>gaussian</type>
           <mean>0.0</mean>
-          <stddev>0.01</stddev>
+          <stddev>0.05</stddev>
         </noise>
         
       </ray>
@@ -141,7 +141,7 @@
         <noise>
           <type>gaussian</type>
           <mean>0.0</mean>
-          <stddev>0.01</stddev>
+          <stddev>0.05</stddev>
         </noise>
       </ray>
 

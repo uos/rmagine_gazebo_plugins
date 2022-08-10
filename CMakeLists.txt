@@ -71,6 +71,7 @@ target_link_libraries(rmagine_gazebo_helper
   ${rmagine_LIBRARIES}
 )
 
+
 add_library(rmagine_embree_spherical_gzplugin SHARED
   src/rmagine_embree_spherical_gzplugin.cpp
 )
@@ -96,7 +97,6 @@ add_library(rmagine_embree_map_gzplugin SHARED
 )
 
 target_link_libraries(rmagine_embree_map_gzplugin 
-  rmagine_embree_spherical_gzplugin
   rmagine_gazebo_helper
   ${GAZEBO_LIBRARIES}
   ${rmagine_LIBRARIES}

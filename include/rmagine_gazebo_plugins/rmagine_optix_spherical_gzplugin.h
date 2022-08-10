@@ -16,6 +16,11 @@
 #include <shared_mutex>
 #include <memory>
 
+#include <rmagine/noise/noise.cuh>
+#include <rmagine/noise/GaussianNoiseCuda.hpp>
+#include <rmagine/noise/UniformDustNoiseCuda.hpp>
+
+
 namespace rm = rmagine;
 
 namespace gazebo
@@ -80,6 +85,8 @@ protected:
     rm::Memory<float, rm::VRAM_CUDA> m_ranges;
 
     bool m_gz_publish = false;
+
+    std::vector<rm::NoiseCudaPtr> m_noise_models;
 
 private:
 

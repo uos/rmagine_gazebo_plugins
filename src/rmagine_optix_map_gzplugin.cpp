@@ -85,7 +85,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
         physics::ModelPtr model = model_it->second;
 
         std::string model_name = model->GetName();
-        std::cout << "Add model: " << model_name << std::endl;
+        // std::cout << "Add model: " << model_name << std::endl;
 
         std::vector<physics::LinkPtr> links = model->GetLinks();
         for(physics::LinkPtr link : links)
@@ -240,7 +240,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         // model pose is ignored for heightmap!
                         msgs::HeightmapGeom gzheightmap = gzgeom.heightmap();
 
-                        rm::OptixGeometryPtr geom = to_rm(gzheightmap);
+                        rm::OptixGeometryPtr geom = to_rm_optix(gzheightmap);
                         // std::cout << "Building ACC" << std::endl;
                         // geom->apply();
                         // geom->commit();
@@ -257,7 +257,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                     if(gzgeom.has_mesh())
                     {
-                        std::cout << "ADD MESH!" << std::endl;
+                        // std::cout << "ADD MESH!" << std::endl;
                         msgs::MeshGeom gzmesh = gzgeom.mesh();
                         rm::Vector3 scale = to_rm(gzmesh.scale());
 
@@ -266,10 +266,10 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         auto cache_it = m_mesh_cache.find(gzmesh.filename());
                         if(cache_it != m_mesh_cache.end())
                         {
-                            std::cout << "USING CACHED MODEL" << std::endl;
+                            // std::cout << "USING CACHED MODEL" << std::endl;
                             scene = cache_it->second;
                         } else {
-                            scene = to_rm(gzmesh);
+                            scene = to_rm_optix(gzmesh);
                             m_mesh_cache[gzmesh.filename()] = scene;
                         }
 
@@ -543,7 +543,7 @@ void RmagineOptixMap::UpdateState()
     // apply changes to rmagine
     if(diff.HasChanged())
     {
-        std::cout << "UPDATE OPTIX SCENE" << std::endl;
+        // std::cout << "UPDATE OPTIX SCENE" << std::endl;
         // std::cout << "Computed diff in " << el << "s" << std::endl;
         // 
         // std::cout << diff << std::endl;
@@ -595,9 +595,9 @@ void RmagineOptixMap::UpdateState()
                 unsigned int geom_id = m_map->scene()->add(inst->geometry());
                 unsigned int inst_id = insts_old->add(inst);
             }
-            std::cout << "New map elements" << std::endl;
-            std::cout << "- geometries: " << m_map->scene()->geometries().size() << std::endl;
-            std::cout << "- instances: " << insts_old->instances().size() << std::endl;
+            // std::cout << "New map elements" << std::endl;
+            // std::cout << "- geometries: " << m_map->scene()->geometries().size() << std::endl;
+            // std::cout << "- instances: " << insts_old->instances().size() << std::endl;
         }
 
         if(diff.ModelChanged())

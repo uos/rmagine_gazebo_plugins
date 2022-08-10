@@ -5,6 +5,8 @@
 #include <iostream>
 #include <boost/algorithm/string/replace.hpp>
 
+
+
 using namespace std::placeholders;
 
 namespace gazebo
@@ -101,6 +103,55 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
     if(rayElem->HasElement("noise"))
     {
         // has noise
+        rm::NoiseCuda::Options opt = {};
+        opt.estimated_memory_size = m_sensor_model.size();
+
+        sdf::ElementPtr noiseElem = rayElem->GetElement("noise");
+
+        while(noiseElem)
+        {
+            std::string noise_type = noiseElem->Get<std::string>("type");
+            if(noise_type == "gaussian")
+            {
+                std::cout << "LOAD GAUSSIAN NOISE" << std::endl;
+                float mean = 0.0;
+                if(noiseElem->HasElement("mean"))
+                {
+                    mean = noiseElem->Get<float>("mean");
+                }
+
+                float stddev = noiseElem->Get<float>("stddev");
+
+                rm::NoiseCudaPtr gaussian_noise = std::make_shared<rm::GaussianNoiseCuda>(
+                    mean,
+                    stddev,
+                    opt
+                );
+
+                m_noise_models.push_back(gaussian_noise);
+
+            } else if(noise_type == "uniform_dust") {
+                
+                std::cout << "LOAD UNIFORM DUST" << std::endl;
+                float hit_prob = noiseElem->Get<float>("hit_prob");
+                float return_prob = noiseElem->Get<float>("return_prob");
+
+                rm::NoiseCudaPtr uniform_dust_noise = std::make_shared<rm::UniformDustNoiseCuda>(
+                    hit_prob,
+                    return_prob,
+                    opt
+                );
+
+                m_noise_models.push_back(uniform_dust_noise);
+
+            } else {
+                std::cout << "[RmagineOptixSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
+            }
+
+            noiseElem = noiseElem->GetNextElement("noise");
+        }
+
+        
     }
 
     this->parentEntity = this->world->EntityByName(this->ParentName());
@@ -185,53 +236,43 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
         rm::Memory<rm::Transform> Tbms(1);
         Tbms[0] = to_rm(pose);
         rm::Memory<rm::Transform, rm::VRAM_CUDA> Tbms_ = Tbms;
-        
-        // using ResultT = rm::Bundle<
-        //     rm::Ranges<rm::VRAM_CUDA> 
-        //     >; 
 
         if(m_pre_alloc_mem)
         {
             if(m_map_mutex)
             {
-                // std::cout << "Lock map" << std::endl;
                 m_map_mutex->lock_shared();
             }
 
-            // std::cout << "sim start " << m_ranges.size() << std::endl;
             m_sphere_sim->simulateRanges(Tbms_, m_ranges);
             
-            // ResultT res;
-            // res.ranges.resize(m_ranges.size());
-            // m_sphere_sim->simulate(Tbms_, res);
-
-            // std::cout << "sim end" << std::endl;
-
             if(m_map_mutex)
             {
                 m_map_mutex->unlock_shared();
             }
-
-            this->lastMeasurementTime = this->world->SimTime();
-            updateScanMsg(m_ranges);
-
         } else {
             if(m_map_mutex)
             {
                 m_map_mutex->lock_shared();
             }
 
-            // std::cout << "sim start" << std::endl;
-            auto ranges = m_sphere_sim->simulateRanges(Tbms_);
-
+            m_ranges = m_sphere_sim->simulateRanges(Tbms_);
+            
             if(m_map_mutex)
             {
                 m_map_mutex->unlock_shared();
             }
-
-            this->lastMeasurementTime = this->world->SimTime();
-            updateScanMsg(ranges);
         }
+
+        // apply noise
+        
+        for(auto noise_model : m_noise_models)
+        {
+            noise_model->apply(m_ranges);
+        }
+
+        this->lastMeasurementTime = this->world->SimTime();
+        updateScanMsg(m_ranges);
         IGN_PROFILE_END();
 
         // std::cout << "[RmagineOptixSpherical] Simulated " << m_ranges.size() << " ranges" << std::endl;

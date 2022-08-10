@@ -107,7 +107,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                 if(Svl.x > 1.001 || Svl.y > 1.001 || Svl.z > 1.001
                     || Svl.x < 0.999 || Svl.y < 0.999 || Svl.z < 0.999)
                 {
-                    std::cout << "WARNING: Scale from visual to link currently unused but it seems to be set to " << Svl << std::endl; 
+                    std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] WARNING: Scale from visual to link currently unused but it seems to be set to " << Svl << std::endl; 
                 }
 
                 rm::Transform Tvl = to_rm(vis_pose);
@@ -123,38 +123,38 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                     if(gzgeom.has_box())
                     {
-                        std::cout << "ADD BOX!" << std::endl;
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD BOX!" << std::endl;
                         msgs::BoxGeom box = gzgeom.box();
-                        geoms.push_back(to_rm(box));
+                        geoms.push_back(to_rm_embree(box));
                     }
 
                     if(gzgeom.has_cylinder())
                     {
-                        std::cout << "ADD CYLINDER!" << std::endl;
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD CYLINDER!" << std::endl;
                         msgs::CylinderGeom cylinder = gzgeom.cylinder();
-                        geoms.push_back(to_rm(cylinder));
+                        geoms.push_back(to_rm_embree(cylinder));
                     }
 
                     if(gzgeom.has_sphere())
                     {
-                        std::cout << "ADD SPHERE!" << std::endl;
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD SPHERE!" << std::endl;
                         msgs::SphereGeom sphere = gzgeom.sphere();
-                        geoms.push_back(to_rm(sphere));
+                        geoms.push_back(to_rm_embree(sphere));
                     }
 
                     if(gzgeom.has_plane())
                     {
-                        std::cout << "ADD PLANE!" << std::endl;
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD PLANE!" << std::endl;
                         msgs::PlaneGeom plane = gzgeom.plane();
-                        geoms.push_back(to_rm(plane));
+                        geoms.push_back(to_rm_embree(plane));
                     }
 
                     if(gzgeom.has_heightmap())
                     {
-                        std::cout << "ADD HEIGHTMAP!" << std::endl;
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD HEIGHTMAP!" << std::endl;
                         // std::cout << "- " << gzgeom.
 
-                        rm::EmbreeGeometryPtr geom = to_rm(gzgeom.heightmap());
+                        rm::EmbreeGeometryPtr geom = to_rm_embree(gzgeom.heightmap());
                         if(geom)
                         {
                             geoms.push_back(geom);
@@ -164,11 +164,11 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                     if(gzgeom.has_mesh())
                     {
-                        std::cout << "ADD MESH..." << std::endl;
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD MESH..." << std::endl;
                         msgs::MeshGeom gzmesh = gzgeom.mesh();
-                        rm::EmbreeScenePtr mesh_scene = to_rm(gzmesh);
-                        std::cout << "- sub instances: " << mesh_scene->count<rm::EmbreeInstance>() << std::endl;
-                        std::cout << "- sub meshes: " << mesh_scene->count<rm::EmbreeMesh>() << std::endl;
+                        rm::EmbreeScenePtr mesh_scene = to_rm_embree(gzmesh);
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub instances: " << mesh_scene->count<rm::EmbreeInstance>() << std::endl;
+                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub meshes: " << mesh_scene->count<rm::EmbreeMesh>() << std::endl;
                         
                         for(auto elem : mesh_scene->geometries())
                         {
@@ -353,53 +353,10 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
 
                         geom->setScale(model_scale);
 
-                        // if(vis.has_geometry())
-                        // {
-                        //     msgs::Geometry gzgeom = vis.geometry();
-                        //     if(gzgeom.has_box())
-                        //     {
-                        //         // msgs::BoxGeom box = gzgeom.box();
-                        //         // auto box_size = box.size();
-                        //         // rm::Vector3 box_scale = to_rm(box_size);
-
-                        //         // std::cout << "- box scale: " << box_scale << std::endl;
-                        //         // std::cout << "- box size: " << model_scale << std::endl;
-
-                        //         geom->setScale(model_scale);
-                        //     }
-
-                        //     if(gzgeom.has_sphere())
-                        //     {
-                        //         // msgs::SphereGeom sphere = gzgeom.sphere();
-                        //         // float diameter = sphere.radius() * 2.0;
-                        //         // rm::Vector3 sphere_scale = {diameter, diameter, diameter};
-
-                        //         // std::cout << "- sphere scale: " << sphere_scale << std::endl;
-                        //         // std::cout << "- sphere size: " << model_scale << std::endl;
-
-                        //         geom->setScale(model_scale);
-                        //     }
-
-                        //     if(gzgeom.has_cylinder())
-                        //     {
-                        //         // msgs::CylinderGeom cylinder = gzgeom.cylinder();
-
-                        //         // float radius = cylinder.radius();
-                        //         // float diameter = radius * 2.0;
-                        //         // float height = cylinder.length();
-
-                        //         // rm::Vector3 cylinder_scale = {diameter, diameter, height};
-
-                        //         // std::cout << "- cylinder scale: " << cylinder_scale << std::endl;
-                        //         // std::cout << "- cylinder size: " << model_scale << std::endl;
-                        //         geom->setScale(model_scale);
-                        //     }
-                        // }
-
                         meshes_to_scale.insert(geom);
                     } else {
-                        std::cout << "WARNING mesh seems to be lost somewhere." << std::endl; 
-                        std::cout << "- key: " << key << std::endl;
+                        std::cout << "[RmagineEmbreeMap] WARNING mesh seems to be lost somewhere." << std::endl; 
+                        std::cout << "[RmagineEmbreeMap] - key: " << key << std::endl;
                     }
                 }
             }
@@ -445,8 +402,8 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                     auto mesh_vis_it = m_visual_to_geoms.find(key);
                     if(mesh_vis_it == m_visual_to_geoms.end())
                     {
-                        std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
-                        std::cout << "- key: " << key << std::endl;
+                        std::cout << "[RmagineEmbreeMap] WARNING mesh to update not found in embree. Skipping." << std::endl;
+                        std::cout << "[RmagineEmbreeMap] - key: " << key << std::endl;
                         continue;
                     }
 
@@ -477,15 +434,15 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                             mesh_links_to_update.insert(geom);
 
                         } else {
-                            std::cout << "WARNING: visual not in mesh set. But it should." << std::endl;
-                            std::cout << "- key: " << key << std::endl;
+                            std::cout << "[RmagineEmbreeMap] WARNING: visual not in mesh set. But it should." << std::endl;
+                            std::cout << "[RmagineEmbreeMap] - key: " << key << std::endl;
                         }
                     }
                 }
 
                 // TODO: link->GetChildJointsLinks() for all other visuals to update
             } else {
-                std::cout << "WARNING: Could not find link " << link_name << " of model " << model->GetName() << std::endl; 
+                std::cout << "[RmagineEmbreeMap] WARNING: Could not find link " << link_name << " of model " << model->GetName() << std::endl; 
             }
         }
     }
@@ -509,8 +466,9 @@ void RmagineEmbreeMap::UpdateState()
     // apply changes to rmagine
     if(diff.HasChanged())
     {
+        
         // TODO! translate gazebo models to embree map instances
-        // std::cout << "SCENE HAS CHANGED" << std::endl;
+        std::cout << "[RmagineEmbreeMap] SCENE HAS CHANGED" << std::endl;
         // std::cout << diff << std::endl;
 
         size_t scene_changes = 0;
@@ -520,7 +478,7 @@ void RmagineEmbreeMap::UpdateState()
         // Insert new meshes
         if(diff.ModelAdded())
         {
-            std::cout << "1. ADD MODELS" << std::endl;
+            std::cout << "[RmagineEmbreeMap] 1. ADD MODELS" << std::endl;
             updates_add = EmbreeUpdateAdded(models_new, diff.added);
             scene_changes += updates_add.size();
 
@@ -597,8 +555,8 @@ void RmagineEmbreeMap::UpdateState()
 
                 if(!meshes_to_scale.empty())
                 {
-                    std::cout << "2.2. APPLY SCALINGS" << std::endl;
-                    std::cout << "- Prepare meshes scalings " << meshes_to_scale.size() << ": " << el << " ms" << std::endl;
+                    std::cout << "[RmagineEmbreeMap] 2.2. APPLY SCALINGS" << std::endl;
+                    std::cout << "[RmagineEmbreeMap] - Prepare meshes scalings " << meshes_to_scale.size() << ": " << el << " ms" << std::endl;
                 }
             }
 
@@ -613,8 +571,8 @@ void RmagineEmbreeMap::UpdateState()
 
                 if(!mesh_links_to_update.empty())
                 {
-                    std::cout << "2.3. APPLY JOINT UPDATES" << std::endl;
-                    std::cout << "- Prepare meshes joint updates " << mesh_links_to_update.size() << ": " << el << " ms" << std::endl;
+                    std::cout << "[RmagineEmbreeMap] 2.3. APPLY JOINT UPDATES" << std::endl;
+                    std::cout << "[RmagineEmbreeMap] - Prepare meshes joint updates " << mesh_links_to_update.size() << ": " << el << " ms" << std::endl;
                 }
             }
 
