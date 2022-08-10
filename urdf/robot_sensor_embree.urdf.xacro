@@ -1,0 +1,165 @@
+<?xml version="1.0"?>
+<robot
+  xmlns:xacro="http://ros.org/wiki/xacro"
+  xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+  xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+  xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+  name="robot_sensor">
+
+<xacro:property name="M_PI" value="3.14159265359"/>
+
+<link name="base_footprint">
+</link>
+
+<link name="base_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <geometry>
+      <box size="0.4 0.3 0.2"/>
+    </geometry>
+    <material name="silver" >
+      <color rgba="0.5 0.5 0.5 1" />
+    </material>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <geometry>
+      <box size="0.4 0.3 0.2"/>
+    </geometry>
+  </collision>
+  <inertial>
+      <mass value="1.0" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="${0.0833333 * 1.0 * (0.3*0.3 + 0.2*0.2)}" ixy="0.0" ixz="0.0"
+        iyy="${0.0833333 * 1.0 * (0.4*0.4 + 0.2*0.2)}" iyz="0.0"
+        izz="${0.0833333 * 1.0 * (0.4*0.4 + 0.3*0.3)}" />
+    </inertial>
+</link>
+
+<joint name="base_to_bf_joint" type="fixed">
+  <parent link="base_footprint" />
+  <child link="base_link" />
+  <origin xyz="0 0 0.1" />
+</joint>
+
+
+<!-- 2D LASER -->
+<link name="laser2d">
+</link>
+
+<joint name="laser2d_to_base_joint" type="fixed">
+  <parent link="base_link" />
+  <child link="laser2d" />
+  <origin xyz="0 0 0.2" />
+</joint>
+
+<gazebo reference="laser2d">
+    <sensor type="rmagine_embree_spherical" name="laser2d">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>60</update_rate>
+      <visualize>false</visualize>
+      <pre_alloc_mem>true</pre_alloc_mem>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <min_angle>${-M_PI}</min_angle>
+            <increment>${1.0 * M_PI / 180.0}</increment>
+            <samples>360</samples>
+          </horizontal>
+        </scan>
+
+        <range>
+          <min>0.0</min>
+          <max>10.0</max>
+        </range>
+
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+        
+      </ray>
+
+      <plugin name="rmagine_ros_laser2d" filename="librmagine_embree_ros_gzplugin.so">
+          <frame>laser2d</frame>
+          <outputs>
+            <output name="scan">
+              <msg>sensor_msgs/LaserScan</msg>
+              <topic>laser2d/scan</topic>
+            </output>
+
+            <output name="pcl">
+              <msg>sensor_msgs/PointCloud</msg>
+              <topic>laser2d/pcl</topic>
+            </output>
+          </outputs>
+      </plugin>
+    </sensor>
+</gazebo>
+
+
+<!-- 3D LASER -->
+<link name="laser3d">
+</link>
+
+<joint name="laser3d_to_base_joint" type="fixed">
+  <parent link="base_link" />
+  <child link="laser3d" />
+  <origin xyz="0 0 1.0" />
+</joint>
+
+<gazebo reference="laser3d">
+    <sensor type="rmagine_embree_spherical" name="laser3d">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>60</update_rate>
+      <visualize>false</visualize>
+      <pre_alloc_mem>true</pre_alloc_mem>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <min_angle>${-M_PI}</min_angle>
+            <increment>${1.0 * M_PI / 180.0}</increment>
+            <samples>360</samples>
+          </horizontal>
+          <vertical>
+            <min_angle>${-60.0 * M_PI / 180.0}</min_angle>
+            <increment>${1.0 * M_PI / 180.0}</increment>
+            <samples>120</samples>
+          </vertical>
+        </scan>
+
+        <range>
+          <min>0.0</min>
+          <max>80.0</max>
+        </range>
+
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+
+      <plugin name="rmagine_ros_laser3d" filename="librmagine_embree_ros_gzplugin.so">
+          <frame>laser3d</frame>
+          <outputs>
+            <output name="pcl">
+              <msg>sensor_msgs/PointCloud</msg>
+              <topic>laser3d/pcl</topic>
+            </output>
+
+            <output name="pcl2">
+              <msg>sensor_msgs/PointCloud2</msg>
+              <topic>laser3d/pcl2</topic>
+            </output>
+          </outputs>
+      </plugin>
+    </sensor>
+</gazebo>
+
+</robot>

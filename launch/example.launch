@@ -1,6 +1,7 @@
 <?xml version="1.0" ?> 
 <launch>
 
+    <arg name="rmagine" default="embree" />
     <arg name="world" default="$(find rmagine_gazebo_plugins)/worlds/test.world"/>
     <arg name="paused" default="false"/>
     <arg name="use_sim_time" default="true"/>
@@ -58,8 +59,14 @@
         <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false" output="screen" args="$(arg command_arg3)"/>
     </group>
 
-  <!-- upload robot -->
-    <param name="robot_description" command="$(find xacro)/xacro '$(find rmagine_gazebo_plugins)/urdf/robot_sensor.urdf.xacro'" />
+    <!-- upload robot -->
+    <group if="$(eval arg('rmagine') == 'embree')">
+        <param name="robot_description" command="$(find xacro)/xacro '$(find rmagine_gazebo_plugins)/urdf/robot_sensor_embree.urdf.xacro'" />
+    </group>
+
+    <group if="$(eval arg('rmagine') == 'optix')">
+        <param name="robot_description" command="$(find xacro)/xacro '$(find rmagine_gazebo_plugins)/urdf/robot_sensor_optix.urdf.xacro'" />
+    </group>
 
     <!-- push robot_description to factory and spawn robot in gazebo -->
     <node name="spawn_robot_model" pkg="gazebo_ros" type="spawn_model"
@@ -74,5 +81,5 @@
         <param name="publish_frequency" type="double" value="100.0" />
         <param name="tf_prefix" type="string" value="" />
     </node>
-    
+
 </launch>

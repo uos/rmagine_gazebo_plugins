@@ -112,8 +112,8 @@
     </population>
 
     <!-- Embree Map Plugin -->
-    <!-- <plugin name='rmagine_embree_map' filename='librmagine_embree_map_gzplugin.so'>
-    </plugin> -->
+    <plugin name='rmagine_embree_map' filename='librmagine_embree_map_gzplugin.so'>
+    </plugin>
 
     <!-- Optix Map Plugin -->
     <plugin name='rmagine_optix_map' filename='librmagine_optix_map_gzplugin.so'>
