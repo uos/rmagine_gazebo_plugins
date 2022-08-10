@@ -7,7 +7,6 @@
 #include <gazebo/sensors/sensors.hh>
 #include <rmagine_gazebo_plugins/rmagine_optix_spherical_gzplugin.h>
 
-#include <rmagine/noise/noise.h>
 #include <rmagine/math/types.h>
 #include <rmagine/types/MemoryCuda.hpp>
 #include <rmagine/types/sensor_models.h>

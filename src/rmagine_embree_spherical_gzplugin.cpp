@@ -5,7 +5,9 @@
 #include <iostream>
 #include <boost/algorithm/string/replace.hpp>
 
-#include <rmagine/noise/noise.h>
+#include <rmagine/noise/GaussianNoise.hpp>
+#include <rmagine/noise/UniformDustNoise.hpp>
+
 
 using namespace std::placeholders;
 
@@ -106,22 +108,54 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     if(rayElem->HasElement("noise"))
     {
         // has noise
+        rm::Noise::Options opt = {};
+
         sdf::ElementPtr noiseElem = rayElem->GetElement("noise");
 
-        std::string noise_type = noiseElem->Get<std::string>("type");
-        if(noise_type == "gaussian")
+        while(noiseElem)
         {
-            m_noise_type = NoiseType::GAUSSIAN;
-            
-            if(noiseElem->HasElement("mean"))
+            std::string noise_type = noiseElem->Get<std::string>("type");
+            if(noise_type == "gaussian")
             {
-                m_noise_mean = noiseElem->Get<float>("mean");
+                
+                float mean = 0.0;
+                if(noiseElem->HasElement("mean"))
+                {
+                    mean = noiseElem->Get<float>("mean");
+                }
+
+                float stddev = noiseElem->Get<float>("stddev");
+
+                std::cout << "[RmagineEmbreeSpherical] init gaussian noise " << mean << ", " << stddev << std::endl;
+
+                rm::NoisePtr gaussian_noise = std::make_shared<rm::GaussianNoise>(
+                    mean,
+                    stddev,
+                    opt
+                );
+
+                m_noise_models.push_back(gaussian_noise);
+            } else if(noise_type == "uniform_dust") {
+                std::cout << "[RmagineEmbreeSpherical] init uniform dust noise" << std::endl;
+
+                float hit_prob = noiseElem->Get<float>("hit_prob");
+                float return_prob = noiseElem->Get<float>("return_prob");
+
+                rm::NoisePtr uniform_dust_noise = std::make_shared<rm::UniformDustNoise>(
+                    hit_prob,
+                    return_prob,
+                    opt
+                );
+
+                m_noise_models.push_back(uniform_dust_noise);
+            } else {
+                std::cout << "[RmagineEmbreeSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
             }
 
-            m_noise_stddev = noiseElem->Get<float>("stddev");
-        } else {
-            std::cout << "[RmagineEmbreeSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
+            noiseElem = noiseElem->GetNextElement("noise");
         }
+
+        
         
         
     }
@@ -233,10 +267,11 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
         }
 
         // apply noise
-        if(m_noise_type == NoiseType::GAUSSIAN)
+        for(auto noise_model : m_noise_models)
         {
-            rm::GaussianNoise(m_noise_mean, m_noise_stddev).apply(m_ranges);
+            noise_model->apply(m_ranges);
         }
+
         this->lastMeasurementTime = this->world->SimTime();
         updateScanMsg(m_ranges);
 

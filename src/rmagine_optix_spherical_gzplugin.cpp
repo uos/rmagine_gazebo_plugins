@@ -5,6 +5,9 @@
 #include <iostream>
 #include <boost/algorithm/string/replace.hpp>
 
+#include <rmagine/noise/GaussianNoiseCuda.hpp>
+#include <rmagine/noise/UniformDustNoiseCuda.hpp>
+
 
 
 using namespace std::placeholders;
@@ -113,7 +116,7 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
             std::string noise_type = noiseElem->Get<std::string>("type");
             if(noise_type == "gaussian")
             {
-                std::cout << "LOAD GAUSSIAN NOISE" << std::endl;
+                std::cout << "[RmagineOptixSpherical] init gaussian noise" << std::endl;
                 float mean = 0.0;
                 if(noiseElem->HasElement("mean"))
                 {
@@ -131,8 +134,7 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
                 m_noise_models.push_back(gaussian_noise);
 
             } else if(noise_type == "uniform_dust") {
-                
-                std::cout << "LOAD UNIFORM DUST" << std::endl;
+                std::cout << "[RmagineOptixSpherical] init uniform dust noise" << std::endl;
                 float hit_prob = noiseElem->Get<float>("hit_prob");
                 float return_prob = noiseElem->Get<float>("return_prob");
 
@@ -265,7 +267,6 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
         }
 
         // apply noise
-        
         for(auto noise_model : m_noise_models)
         {
             noise_model->apply(m_ranges);

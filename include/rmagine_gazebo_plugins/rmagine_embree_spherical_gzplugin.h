@@ -6,15 +6,18 @@
 #include <gazebo/gazebo.hh>
 #include <gazebo/sensors/RaySensor.hh>
 
-#include <rmagine/noise/noise.h>
 #include <rmagine/math/types.h>
 #include <rmagine/types/Memory.hpp>
 #include <rmagine/types/sensor_models.h>
 #include <rmagine/simulation/SphereSimulatorEmbree.hpp>
 
+
+#include <rmagine/noise/Noise.hpp>
+
 #include <mutex>
 #include <shared_mutex>
 #include <memory>
+
 
 namespace rm = rmagine;
 
@@ -81,14 +84,7 @@ protected:
 
     bool m_gz_publish = false;
 
-    enum NoiseType {
-        NONE = 0,
-        GAUSSIAN = 1
-    };
-
-    NoiseType m_noise_type = NoiseType::NONE;
-    float m_noise_stddev = 0.0;
-    float m_noise_mean = 0.0;
+    std::vector<rm::NoisePtr> m_noise_models;
 
 private:
 

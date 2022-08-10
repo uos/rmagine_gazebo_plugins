@@ -6,7 +6,6 @@
 #include <gazebo/gazebo.hh>
 #include <gazebo/sensors/RaySensor.hh>
 
-#include <rmagine/noise/noise.h>
 #include <rmagine/math/types.h>
 #include <rmagine/types/MemoryCuda.hpp>
 #include <rmagine/types/sensor_models.h>
@@ -16,9 +15,7 @@
 #include <shared_mutex>
 #include <memory>
 
-#include <rmagine/noise/noise.cuh>
-#include <rmagine/noise/GaussianNoiseCuda.hpp>
-#include <rmagine/noise/UniformDustNoiseCuda.hpp>
+#include <rmagine/noise/NoiseCuda.hpp>
 
 
 namespace rm = rmagine;
