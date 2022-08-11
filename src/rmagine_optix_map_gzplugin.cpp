@@ -7,6 +7,7 @@
 
 #include <gazebo/sensors/SensorsIface.hh>
 #include <gazebo/sensors/SensorManager.hh>
+#include <gazebo/common/Console.hh>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
@@ -34,12 +35,12 @@ namespace gazebo
 
 RmagineOptixMap::RmagineOptixMap()
 {
-    std::cout << "[RmagineOptixMap] Constructed." << std::endl;
+    gzlog << "[RmagineOptixMap] Constructed." << std::endl;
 }
 
 RmagineOptixMap::~RmagineOptixMap()
 {
-    std::cout << "[RmagineOptixMap] Destroyed." << std::endl;
+    gzlog << "[RmagineOptixMap] Destroyed." << std::endl;
 }
 
 void RmagineOptixMap::Load(
@@ -61,7 +62,7 @@ void RmagineOptixMap::Load(
     scene->setRoot(insts);
 
     m_map = std::make_shared<rm::OptixMap>(scene);
-    std::cout << "[RmagineOptixMap] Loaded." << std::endl;
+    gzlog << "[RmagineOptixMap] Loaded." << std::endl;
 }
 
 std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpdateAdded(
@@ -105,7 +106,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                 if(Svl.x > 1.001 || Svl.y > 1.001 || Svl.z > 1.001
                     || Svl.x < 0.999 || Svl.y < 0.999 || Svl.z < 0.999)
                 {
-                    std::cout << "WARNING: Scale from visual to link currently unused but it seems to be set to " << Svl << std::endl; 
+                    gzwarn << "[RmagineOptixMap] WARNING: Scale from visual to link currently unused but it seems to be set to " << Svl << std::endl; 
                 }
 
                 rm::Transform Tvl = to_rm(vis_pose);
@@ -121,8 +122,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                     if(gzgeom.has_box())
                     {
-                        std::cout << "ADD BOX!" << std::endl;
-
                         msgs::BoxGeom gzbox = gzgeom.box();
 
                         auto cache_it = m_geom_cache.find(GeomCacheID::BOX);
@@ -150,7 +149,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                     if(gzgeom.has_cylinder())
                     {
-                        std::cout << "ADD CYLINDER!" << std::endl;
                         msgs::CylinderGeom gzcylinder = gzgeom.cylinder();
 
                         auto cache_it = m_geom_cache.find(GeomCacheID::CYLINDER);
@@ -178,7 +176,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                     if(gzgeom.has_sphere())
                     {
-                        std::cout << "ADD SPHERE!" << std::endl;
                         msgs::SphereGeom gzsphere = gzgeom.sphere();
                         
                         auto cache_it = m_geom_cache.find(GeomCacheID::SPHERE);
@@ -204,7 +201,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                     if(gzgeom.has_plane())
                     {
-                        std::cout << "ADD PLANE!" << std::endl;
                         msgs::PlaneGeom gzplane = gzgeom.plane();
                         
                         auto cache_it = m_geom_cache.find(GeomCacheID::PLANE);
@@ -235,29 +231,25 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                     if(gzgeom.has_heightmap())
                     {
-                        std::cout << "LOAD HEIGHTMAP!" << std::endl;
-
                         // model pose is ignored for heightmap!
                         msgs::HeightmapGeom gzheightmap = gzgeom.heightmap();
 
                         rm::OptixGeometryPtr geom = to_rm_optix(gzheightmap);
-                        // std::cout << "Building ACC" << std::endl;
-                        // geom->apply();
-                        // geom->commit();
-                        // std::cout << "Building ACC done." << std::endl;
 
-                        // make instance
-                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-                        mesh_inst->setGeometry(geom);
-                        
-                        insts.push_back(mesh_inst);
-                        insts_ignore_model_transform.insert(mesh_inst);
-                        std::cout << "Done." << std::endl;
+                        if(geom)
+                        {
+                            rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+                            mesh_inst->setGeometry(geom);
+                            
+                            insts.push_back(mesh_inst);
+                            insts_ignore_model_transform.insert(mesh_inst);
+                        } else {
+                            gzwarn << "[RmagineOptixMap] Could not load heightmap!" << std::endl;  
+                        }
                     }
 
                     if(gzgeom.has_mesh())
                     {
-                        // std::cout << "ADD MESH!" << std::endl;
                         msgs::MeshGeom gzmesh = gzgeom.mesh();
                         rm::Vector3 scale = to_rm(gzmesh.scale());
 
@@ -266,33 +258,50 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         auto cache_it = m_mesh_cache.find(gzmesh.filename());
                         if(cache_it != m_mesh_cache.end())
                         {
-                            // std::cout << "USING CACHED MODEL" << std::endl;
                             scene = cache_it->second;
                         } else {
-                            scene = to_rm_optix(gzmesh);
-                            m_mesh_cache[gzmesh.filename()] = scene;
+                            
+                            for(auto loader_it = m_mesh_loader.begin(); loader_it != m_mesh_loader.end() && !scene; ++loader_it)
+                            {
+                                if(*loader_it == MeshLoading::INTERNAL)
+                                {
+                                    scene = to_rm_optix_assimp(gzmesh);
+                                } else if(*loader_it == MeshLoading::GAZEBO) {
+                                    scene = to_rm_optix_gazebo(gzmesh);
+                                }
+                            }
+
+                            if(scene)
+                            {
+                                m_mesh_cache[gzmesh.filename()] = scene;
+                            }
                         }
 
-                        rm::OptixGeometryPtr root = scene->getRoot();
-
-                        rm::OptixInstancesPtr insts_new = std::dynamic_pointer_cast<rm::OptixInstances>(root);
-                        if(insts_new)
+                        if(scene)
                         {
-                            for(auto elem : insts_new->instances())
-                            {
-                                // make a copy
-                                rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>(*elem.second);
+                            rm::OptixGeometryPtr root = scene->getRoot();
 
-                                // apply scale
-                                inst->setScale(inst->scale().mult_ewise(scale));
+                            rm::OptixInstancesPtr insts_new = std::dynamic_pointer_cast<rm::OptixInstances>(root);
+                            if(insts_new)
+                            {
+                                for(auto elem : insts_new->instances())
+                                {
+                                    // make a copy
+                                    rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>(*elem.second);
+
+                                    // apply scale
+                                    inst->setScale(inst->scale().mult_ewise(scale));
+                                    insts.push_back(inst);
+                                }
+                            } else {
+                                // never change geometry
+                                rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>();
+                                inst->setGeometry(root);
+                                inst->setScale(scale);
                                 insts.push_back(inst);
                             }
                         } else {
-                            // never change geometry
-                            rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>();
-                            inst->setGeometry(root);
-                            inst->setScale(scale);
-                            insts.push_back(inst);
+                            std::cout << "[RmagineOptixMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
                         }
                     }
 
@@ -307,7 +316,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         }
                         
                         inst->apply();
-
                         inst_to_visual[inst] = {key, Tiv, model_id};
                     }
                 }
@@ -360,8 +368,8 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateTransformed(
                 auto mesh_vis_it = m_visual_to_geoms.find(key);
                 if(mesh_vis_it == m_visual_to_geoms.end())
                 {
-                    std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
-                    std::cout << "- key: " << key << std::endl;
+                    gzwarn << "[RmagineOptixMap] WARNING mesh to update not found in embree. Skipping." << std::endl;
+                    gzwarn << "- key: " << key << std::endl;
                     continue;
                 }
 
@@ -430,8 +438,8 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
                 auto mesh_vis_it = m_visual_to_geoms.find(key);
                 if(mesh_vis_it == m_visual_to_geoms.end())
                 {
-                    std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
-                    std::cout << "- key: " << key << std::endl;
+                    gzwarn << "[RmagineOptixMap] WARNING mesh to update not found in embree. Skipping." << std::endl;
+                    gzwarn << "[RmagineOptixMap] - key: " << key << std::endl;
                     continue;
                 }
 
@@ -490,8 +498,8 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
 
                     if(mesh_vis_it == m_visual_to_geoms.end())
                     {
-                        std::cout << "WARNING mesh to update not found in optix. Skipping." << std::endl;
-                        std::cout << "- key: " << key << std::endl;
+                        gzwarn << "[RmagineOptixMap] WARNING mesh to update not found in optix. Skipping." << std::endl;
+                        gzwarn << "[RmagineOptixMap] - key: " << key << std::endl;
                         continue;
                     }
 
@@ -513,7 +521,7 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
                     }
                 }
             } else {
-                std::cout << "WARNING: Could not find link " << link_name << " of model " << model->GetName() << std::endl; 
+                gzwarn << "[RmagineOptixMap] WARNING: Could not find link " << link_name << " of model " << model->GetName() << std::endl; 
             }
         }
     }
@@ -595,9 +603,9 @@ void RmagineOptixMap::UpdateState()
                 unsigned int geom_id = m_map->scene()->add(inst->geometry());
                 unsigned int inst_id = insts_old->add(inst);
             }
-            // std::cout << "New map elements" << std::endl;
-            // std::cout << "- geometries: " << m_map->scene()->geometries().size() << std::endl;
-            // std::cout << "- instances: " << insts_old->instances().size() << std::endl;
+            gzlog << "[RmagineOptixMap] New map elements" << std::endl;
+            gzlog << "[RmagineOptixMap] - geometries: " << m_map->scene()->geometries().size() << std::endl;
+            gzlog << "[RmagineOptixMap] - instances: " << insts_old->instances().size() << std::endl;
         }
 
         if(diff.ModelChanged())
@@ -671,13 +679,13 @@ void RmagineOptixMap::UpdateState()
                 m_map_mutex->lock();
             }
 
-            std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
+            // std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
 
             sw();
             insts_old->commit();
             m_map->scene()->commit();
             el = sw();
-            std::cout << "- Scene update finished in " << el << "s" << std::endl;
+            // std::cout << "- Scene update finished in " << el << "s" << std::endl;
 
             if(m_map_mutex)
             {
@@ -690,7 +698,7 @@ void RmagineOptixMap::UpdateState()
 
     if(!m_sensors_loaded)
     {
-        std::cout << "Reload sensors!" << std::endl;
+        // std::cout << "Reload sensors!" << std::endl;
     }
 }
 
@@ -708,12 +716,12 @@ void RmagineOptixMap::UpdateSensors()
 
             if(spherical)
             {
-                std::cout << "[RmagineOptixMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
+                gzlog << "[RmagineOptixMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
                 spherical->setLock(m_map_mutex);
                 spherical->setMap(m_map);
                 if(!m_map_mutex)
                 {
-                    std::cout << "[RmagineOptixMap] no mutex " << std::endl;
+                    gzwarn << "[RmagineOptixMap] no mutex " << std::endl;
                 }
                 
             }

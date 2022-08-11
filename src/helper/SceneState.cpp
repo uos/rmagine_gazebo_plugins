@@ -2,38 +2,11 @@
 #include <iostream>
 
 #include <gazebo/physics/physics.hh>
+#include <gazebo/common/Console.hh>
 
 
 namespace gazebo
 {
-
-// SceneState::SceneState(
-//     const std::unordered_map<uint32_t, physics::ModelPtr>& models)
-// :m_models(models)
-// {
-//     for(auto elem : models)
-//     {
-//         uint32_t model_id = elem.first;
-//         physics::ModelPtr model = elem.second;
-
-//         m_models[model_id] = model;
-//         m_poses[model_id] = model->RelativePose();
-//         m_scales[model_id] = model->Scale();
-
-//         // add all joints
-//         for(auto joint : model->GetJoints())
-//         {
-//             physics::LinkPtr child_link = joint->GetJointLink(0);
-//             if(child_link)
-//             {
-//                 m_model_link_poses[model_id][child_link->GetName()] = child_link->RelativePose();
-//                 std::cout << "Register jointed link " << child_link->GetScopedName() << " for futher update checks" << std::endl;
-//             } else {
-//                 std::cout << "Could not get child link of joint '" << joint->GetScopedName() << "'" << std::endl;
-//             }
-//         }
-//     }
-// }
 
 SceneDiff SceneState::diff(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models, 
@@ -116,9 +89,9 @@ bool SceneState::update(
                 if(child_link)
                 {
                     m_model_link_poses[add_id][child_link->GetName()] = child_link->RelativePose();
-                    std::cout << "Register jointed link " << child_link->GetScopedName() << " for futher update checks" << std::endl;
+                    gzlog << "[SceneState] Register jointed link " << child_link->GetScopedName() << " for futher update checks" << std::endl;
                 } else {
-                    std::cout << "Could not get child link of joint '" << joint->GetScopedName() << "'" << std::endl;
+                    gzwarn << "[SceneState] Could not get child link of joint '" << joint->GetScopedName() << "'" << std::endl;
                 }
             }
         }

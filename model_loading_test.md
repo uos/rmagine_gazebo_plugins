@@ -7,7 +7,7 @@ Apartment: yes
 
 Apollo 15 Landing Site: no
 
-Arm Part: no
+Arm Part: yes
 
 Arrow (red): no (no rendering)
 
@@ -40,3 +40,14 @@ Bus: yes
 Cabinet: yes
 
 Cafe: yes (but glass is not transparent in simulations)
+
+Car Wheel: yes
+
+Cardboard box: yes
+
+Cart: - : yes
+
+
+
+
+

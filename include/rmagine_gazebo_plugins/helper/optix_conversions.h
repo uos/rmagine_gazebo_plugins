@@ -21,7 +21,12 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::CylinderGeom& cylinder);
 
 rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap);
 
+
 rmagine::OptixScenePtr to_rm_optix(const msgs::MeshGeom& gzmesh);
+
+rmagine::OptixScenePtr to_rm_optix_gazebo(const msgs::MeshGeom& gzmesh);
+
+rmagine::OptixScenePtr to_rm_optix_assimp(const msgs::MeshGeom& gzmesh);
 
 } // namespace gazebo
 

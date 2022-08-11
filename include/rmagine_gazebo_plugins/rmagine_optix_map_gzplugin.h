@@ -73,6 +73,22 @@ private:
     sdf::ElementPtr m_sdf;
     event::ConnectionPtr m_world_update_conn;
 
+
+    // params changed by sdf
+    enum MeshLoading {
+        INTERNAL = 0,
+        GAZEBO = 1
+    };
+
+    double m_changed_delta_trans = 0.001; // meter
+    double m_changed_delta_rot = 0.001; // radian
+    double m_changed_delta_scale = 0.001;
+
+    std::vector<MeshLoading> m_mesh_loader = {GAZEBO, INTERNAL};
+    
+    // MeshLoading m_mesh_loading_type = MeshLoading::GAZEBO_ONLY;
+
+
     std::shared_ptr<std::shared_mutex> m_map_mutex;
     rmagine::OptixMapPtr m_map;
 
@@ -92,9 +108,7 @@ private:
 
     bool m_sensors_loaded = false;
 
-    double m_changed_delta_trans = 0.001; // meter
-    double m_changed_delta_rot = 0.001; // radian
-    double m_changed_delta_scale = 0.001;
+    
 
     std::unordered_set<uint32_t> m_model_ignores;
     std::unordered_set<uint32_t> m_link_ignores;

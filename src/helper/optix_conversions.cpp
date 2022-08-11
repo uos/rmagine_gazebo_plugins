@@ -12,11 +12,19 @@
 #include <gazebo/common/CommonIface.hh>
 #include <gazebo/common/HeightmapData.hh>
 
+
+#include <gazebo/common/MeshManager.hh>
+#include <gazebo/common/Mesh.hh>
+
+#include <gazebo/common/Console.hh>
+
+
 #include <iostream>
 
 
 #include <rmagine/map/optix/OptixInstances.hpp>
 #include <rmagine/map/optix/OptixInst.hpp>
+#include <rmagine/map/optix/OptixMesh.hpp>
 
 // #include <chrono>
 // #include <thread>
@@ -120,12 +128,12 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap)
 
     if(data)
     {
-        std::cout << "Heightmap data loaded." << std::endl;
+        gzlog << "[RmagineOptixMap] Heightmap data loaded." << std::endl;
 
-        std::cout << "Data Info: " << std::endl;
-        std::cout << "- height: " << data->GetHeight() << std::endl;
-        std::cout << "- width: " << data->GetWidth() << std::endl;
-        std::cout << "- max_elevation: " << data->GetMaxElevation() << std::endl;
+        gzlog << "[RmagineOptixMap] Data Info: " << std::endl;
+        gzlog << "[RmagineOptixMap] - height: " << data->GetHeight() << std::endl;
+        gzlog << "[RmagineOptixMap] - width: " << data->GetWidth() << std::endl;
+        gzlog << "[RmagineOptixMap] - max_elevation: " << data->GetMaxElevation() << std::endl;
 
 
         std::vector<float> elevations;
@@ -154,7 +162,7 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap)
         bool flipY = true;
         data->FillHeightMap(subsampling, vertSize, size, scale, flipY, elevations);
 
-        std::cout << "Loaded " << elevations.size() << " elevations." << std::endl;
+        gzlog << "[RmagineOptixMap] Loaded " << elevations.size() << " elevations." << std::endl;
         
         rm::OptixMeshPtr mesh = std::make_shared<rm::OptixMesh>();
 
@@ -167,7 +175,7 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap)
         float half_width = size.X() / 2.0;
         float half_height = size.Y() / 2.0;
 
-        std::cout << "Filling " << vertices.size() << " vertices..." << std::endl;
+        gzlog << "[RmagineOptixMap] Filling " << vertices.size() << " vertices..." << std::endl;
         
         rm::Vector3 correction = {0.0, 0.0, 0.0};
 
@@ -206,7 +214,7 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap)
             }
         }
 
-        std::cout << "Filling " << faces.size() << " faces..." << std::endl;
+        gzlog << "[RmagineOptixMap] Filling " << faces.size() << " faces..." << std::endl;
 
         // fill faces
         for(size_t i=1; i<vertSize; i++)
@@ -229,24 +237,13 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap)
             }
         }
 
-        // std::cout << "SLeep" << std::endl;
-        // std::this_thread::sleep_for(10s);
-
-        // std::cout << "Done." << std::endl;
-
-        // std::cout << "Upload to GPU" << std::endl;
         mesh->vertices = vertices;
         mesh->faces = faces;
-        
-        // std::cout << "Compute Face Normals" << std::endl;
 
         mesh->computeFaceNormals();
-        // std::cout << "Building ACC" << std::endl;
 
         mesh->apply();
         mesh->commit();
-
-        // std::cout << "Done." << std::endl;
 
         ret = mesh;
         delete data;
@@ -256,7 +253,133 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::HeightmapGeom& heightmap)
 }
 
 rm::OptixScenePtr to_rm_optix(
+    const common::Mesh* gzmesh)
+{
+    rm::OptixScenePtr ret = std::make_shared<rm::OptixScene>();
+    
+    gzlog << "[RmagineOptixMap] GAZEBO mesh loaded: " << std::endl;
+    gzlog << "[RmagineOptixMap] - name: " << gzmesh->GetName() << std::endl;
+    gzlog << "[RmagineOptixMap] - vertices: " << gzmesh->GetVertexCount() << std::endl;
+    gzlog << "[RmagineOptixMap] - normals: " << gzmesh->GetNormalCount() << std::endl;
+    gzlog << "[RmagineOptixMap] - indices: " << gzmesh->GetIndexCount() << std::endl;
+    gzlog << "[RmagineOptixMap] - min, max: " << to_rm(gzmesh->Min()) << ", " << to_rm(gzmesh->Max()) << std::endl;
+    gzlog << "[RmagineOptixMap] - materials: " << gzmesh->GetMaterialCount() << std::endl;
+    gzlog << "[RmagineOptixMap] - sub meshes: " << gzmesh->GetSubMeshCount() << std::endl;
+
+
+
+    for(size_t i = 0; i < gzmesh->GetSubMeshCount(); i++)
+    {
+        const common::SubMesh* gzsubmesh = gzmesh->GetSubMesh(i);
+        gzlog << "[RmagineOptixMap ]SUBMESH " << i << std::endl;
+        gzlog << "[RmagineOptixMap] -- name: " << gzsubmesh->GetName() << std::endl; 
+        gzlog << "[RmagineOptixMap] -- vertices: " << gzsubmesh->GetVertexCount() << std::endl;
+        gzlog << "[RmagineOptixMap] -- normals: " << gzsubmesh->GetNormalCount() << std::endl;
+        gzlog << "[RmagineOptixMap] -- indices: " << gzsubmesh->GetIndexCount() << std::endl;
+        gzlog << "[RmagineOptixMap] -- faces (indices/3): " << gzsubmesh->GetIndexCount() / 3 << std::endl;
+        gzlog << "[RmagineOptixMap] -- tex coords: " << gzsubmesh->GetTexCoordCount() << std::endl;
+        gzlog << "[RmagineOptixMap] -- node assignments: " << gzsubmesh->GetNodeAssignmentsCount() << std::endl;
+        gzlog << "[RmagineOptixMap] -- mat index: " << gzsubmesh->GetMaterialIndex() << std::endl;
+        gzlog << "[RmagineOptixMap] -- min, max: " << to_rm(gzsubmesh->Min()) << ", " << to_rm(gzsubmesh->Max()) << std::endl;
+    
+        if(gzsubmesh->GetPrimitiveType() == common::SubMesh::PrimitiveType::TRIANGLES)
+        {
+            rm::OptixMeshPtr mesh = std::make_shared<rm::OptixMesh>();
+
+            // COPY VERTICES
+            rm::Memory<rm::Point, rm::RAM> vertices_cpu(gzsubmesh->GetVertexCount());
+            for(size_t i=0; i<vertices_cpu.size(); i++)
+            {
+                vertices_cpu[i] = to_rm(gzsubmesh->Vertex(i));
+            }
+            mesh->vertices = vertices_cpu;
+
+            // COPY FACES
+            rm::Memory<rm::Face, rm::RAM> faces_cpu(gzsubmesh->GetIndexCount() / 3);
+            for(size_t i=0; i<faces_cpu.size(); i++)
+            {
+                faces_cpu[i] = {
+                    gzsubmesh->GetIndex(i * 3 + 0),
+                    gzsubmesh->GetIndex(i * 3 + 1),
+                    gzsubmesh->GetIndex(i * 3 + 2)
+                };
+            }
+            mesh->faces = faces_cpu;
+
+            // COPY VERTEX NORMALS IF AVAILABLE
+            if(gzsubmesh->GetNormalCount())
+            {
+                rm::Memory<rm::Vector, rm::RAM> vertex_normals_cpu(gzsubmesh->GetNormalCount());
+                for(size_t i=0; i<vertex_normals_cpu.size(); i++)
+                {
+                    vertex_normals_cpu[i] = to_rm(gzsubmesh->Normal(i));
+                }
+                mesh->vertex_normals = vertex_normals_cpu;
+            }
+
+
+            mesh->name = gzsubmesh->GetName();
+            mesh->computeFaceNormals();
+            mesh->apply();
+            mesh->commit();
+
+            ret->add(mesh);
+        } else {
+            static std::unordered_map<common::SubMesh::PrimitiveType, std::string> prim_strings {
+                { common::SubMesh::PrimitiveType::POINTS, "POINTS" },
+                { common::SubMesh::PrimitiveType::LINES, "LINES" },
+                { common::SubMesh::PrimitiveType::LINESTRIPS, "LINESTRIPS" },
+                { common::SubMesh::PrimitiveType::TRIANGLES, "TRIANGLES" },
+                { common::SubMesh::PrimitiveType::TRIFANS, "TRIFANS" },
+                { common::SubMesh::PrimitiveType::TRISTRIPS, "TRISTRIPS" },
+            };
+
+            gzwarn << "[RmagineOptixMap] Mesh to Optix - Primitive type not implemented: [" << prim_strings[gzsubmesh->GetPrimitiveType()] << "]" << std::endl;
+        }
+    }
+
+    auto meshes = ret->geometries();
+    if(meshes.size() == 0)
+    {
+        gzwarn << "[RmagineOptixMap] Mesh to Optix - no meshes constructed." << std::endl;
+        ret.reset();
+    } else {
+        // make one instance per mesh
+        rm::OptixInstancesPtr insts = std::make_shared<rm::OptixInstances>();
+
+        for(auto elem : meshes)
+        {
+            rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+            mesh_inst->setGeometry(elem.second);
+            mesh_inst->name = elem.second->name;
+            mesh_inst->apply();
+            insts->add(mesh_inst);
+        }
+        
+        insts->name = gzmesh->GetName();
+        insts->commit();
+
+        ret->name = gzmesh->GetName();
+        ret->setRoot(insts);
+    }
+
+    return ret;
+}
+
+
+
+rm::OptixScenePtr to_rm_optix(
     const msgs::MeshGeom& gzmesh)
+{
+    rm::OptixScenePtr ret = to_rm_optix_assimp(gzmesh);
+    if(!ret)
+    {
+        ret = to_rm_optix_gazebo(gzmesh);
+    }
+    return ret;
+}
+
+rmagine::OptixScenePtr to_rm_optix_gazebo(const msgs::MeshGeom& gzmesh)
 {
     rm::OptixScenePtr ret;
     std::string filename = gzmesh.filename();
@@ -266,20 +389,55 @@ rm::OptixScenePtr to_rm_optix(
         filename = common::SystemPaths::Instance()->FindFileURI(gzmesh.filename());
     }
 
-    std::cout << "Loading mesh from file " << filename << std::endl;
+    gzlog << "[RmagineOptixMap] Gazebo Import: Loading mesh from file " << filename << std::endl;
 
-    rm::AssimpIO io;
-    const aiScene* ascene = io.ReadFile(filename, 0);
-    if(!ascene)
+    common::MeshManager *meshManager = common::MeshManager::Instance();
+
+    const common::Mesh* mesh = meshManager->GetMesh(filename);
+
+    if(!mesh)
     {
-        std::cout << "WARNING could not load mesh from " << filename << std::endl;
-        std::cerr << io.Importer::GetErrorString() << std::endl;
-        return ret;
+        mesh = meshManager->Load(filename);
+        if(!mesh)
+        {
+            gzerr << "[RmagineOptixMap] Gazebo Import: MeshManager failed to GetMesh and Load. Mesh file [" << filename << "]" << std::endl;
+            return ret;
+        }
     }
 
-    if(ascene->mNumMeshes > 0)
+    // mesh is set
+    ret = to_rm_optix(mesh);
+
+    return ret;
+}
+
+rmagine::OptixScenePtr to_rm_optix_assimp(const msgs::MeshGeom& gzmesh)
+{
+    rm::OptixScenePtr ret;
+    std::string filename = gzmesh.filename();
+
+    if(!common::exists(gzmesh.filename()))
     {
-        ret = rm::make_optix_scene(ascene);
+        filename = common::SystemPaths::Instance()->FindFileURI(gzmesh.filename());
+    }
+
+    gzlog << "[RmagineOptixMap] Assimp Import: Loading mesh from file " << filename << std::endl;
+
+    rm::AssimpIO io;
+    const aiScene* ascene = io.ReadFile(filename, 
+        aiProcess_Triangulate);
+
+    if(ascene)
+    {
+        if(ascene->mNumMeshes > 0)
+        {
+            ret = rm::make_optix_scene(ascene);
+        } else {
+            gzwarn << "[RmagineOptixMap] WARNING Assimp Import: number of meshes == 0" << std::endl;
+        }
+    } else {
+        gzwarn << "[RmagineOptixMap] WARNING Assimp Import: could not load mesh from " << filename << std::endl;
+        gzwarn << io.Importer::GetErrorString() << std::endl;
     }
     
     return ret;
