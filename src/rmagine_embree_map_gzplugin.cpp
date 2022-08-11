@@ -175,6 +175,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                         if(mesh_scene)
                         {
+                            mesh_scene->commit();
                             // make instance
                             rm::EmbreeInstancePtr mesh_instance = std::make_shared<rm::EmbreeInstance>();
 
