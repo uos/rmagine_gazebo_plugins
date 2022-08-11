@@ -69,7 +69,7 @@ void RmagineEmbreeMap::Load(
 
 std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::EmbreeUpdateAdded(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models,
-    const std::unordered_set<uint32_t>& added) const
+    const std::unordered_set<uint32_t>& added)
 {
     std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> geom_to_visual;
 
@@ -163,19 +163,31 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                         rm::EmbreeScenePtr mesh_scene;
 
-                        for(auto loader_it = m_mesh_loader.begin(); loader_it != m_mesh_loader.end() && !mesh_scene; ++loader_it)
+                        auto cache_it = m_mesh_cache.find(gzmesh.filename());
+                        if(cache_it != m_mesh_cache.end())
                         {
-                            if(*loader_it == MeshLoading::INTERNAL)
+                            // can used cached mesh_scene
+                            mesh_scene = cache_it->second;
+                        } else {
+                            for(auto loader_it = m_mesh_loader.begin(); loader_it != m_mesh_loader.end() && !mesh_scene; ++loader_it)
                             {
-                                mesh_scene = to_rm_embree_assimp(gzmesh);
-                            } else if(*loader_it == MeshLoading::GAZEBO) {
-                                mesh_scene = to_rm_embree_gazebo(gzmesh);
+                                if(*loader_it == MeshLoading::INTERNAL)
+                                {
+                                    mesh_scene = to_rm_embree_assimp(gzmesh);
+                                } else if(*loader_it == MeshLoading::GAZEBO) {
+                                    mesh_scene = to_rm_embree_gazebo(gzmesh);
+                                }
+                            }
+
+                            if(mesh_scene)
+                            {
+                                mesh_scene->commit();
+                                m_mesh_cache[gzmesh.filename()] = mesh_scene;
                             }
                         }
-
+                        
                         if(mesh_scene)
                         {
-                            mesh_scene->commit();
                             // make instance
                             rm::EmbreeInstancePtr mesh_instance = std::make_shared<rm::EmbreeInstance>();
 
@@ -185,10 +197,6 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                             geoms.push_back(mesh_instance);
 
                             gzdbg << "ADDING Mesh Instance to vector" << std::endl;
-                            // for(auto elem : mesh_scene->geometries())
-                            // {
-                            //     geoms.push_back(elem.second);
-                            // }
                         } else {
                             gzwarn << "[RmagineEmbreeMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
                         }

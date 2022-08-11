@@ -53,7 +53,7 @@ private:
 
     std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> EmbreeUpdateAdded(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models,
-        const std::unordered_set<uint32_t>& added) const;
+        const std::unordered_set<uint32_t>& added);
 
     std::unordered_set<rm::EmbreeGeometryPtr> EmbreeUpdateTransformed(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models,
