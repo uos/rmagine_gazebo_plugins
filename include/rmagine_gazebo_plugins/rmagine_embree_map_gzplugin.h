@@ -73,18 +73,27 @@ private:
 
     physics::WorldPtr m_world;
     sdf::ElementPtr m_sdf;
-
     event::ConnectionPtr m_world_update_conn;
 
-    
+    // params changed by sdf
+    enum MeshLoading {
+        INTERNAL = 0,
+        GAZEBO = 1
+    };
+
+    double m_changed_delta_trans = 0.001; // meter
+    double m_changed_delta_rot = 0.001; // radian
+    double m_changed_delta_scale = 0.001;
+
+    std::vector<MeshLoading> m_mesh_loader = {GAZEBO, INTERNAL};
+
+
     std::shared_ptr<std::shared_mutex> m_map_mutex;
     rmagine::EmbreeMapPtr m_map;
 
     bool m_sensors_loaded = false;
 
-    double m_changed_delta_trans = 0.001; // meter
-    double m_changed_delta_rot = 0.001; // radian
-    double m_changed_delta_scale = 0.001;
+    
 
     // TODO: somehow update meshes in embree map
     // model (rel pose change)

@@ -11,6 +11,7 @@
 #include <gazebo/common/SystemPaths.hh>
 #include <gazebo/common/CommonIface.hh>
 #include <gazebo/common/HeightmapData.hh>
+#include <gazebo/common/Console.hh>
 
 
 #include <boost/algorithm/string.hpp>
@@ -166,16 +167,35 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                     {
                         std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD MESH..." << std::endl;
                         msgs::MeshGeom gzmesh = gzgeom.mesh();
-                        rm::EmbreeScenePtr mesh_scene = to_rm_embree(gzmesh);
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub instances: " << mesh_scene->count<rm::EmbreeInstance>() << std::endl;
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub meshes: " << mesh_scene->count<rm::EmbreeMesh>() << std::endl;
-                        
-                        for(auto elem : mesh_scene->geometries())
+
+                        rm::EmbreeScenePtr mesh_scene;
+
+                        for(auto loader_it = m_mesh_loader.begin(); loader_it != m_mesh_loader.end() && !mesh_scene; ++loader_it)
                         {
-                            geoms.push_back(elem.second);
+                            if(*loader_it == MeshLoading::INTERNAL)
+                            {
+                                std::cout << "[RmagineEmbreeMap] Assimp mesh loading" << std::endl;
+                                mesh_scene = to_rm_embree_assimp(gzmesh);
+                            } else if(*loader_it == MeshLoading::GAZEBO) {
+                                std::cout << "[RmagineEmbreeMap] Gazebo mesh loading" << std::endl;
+                                mesh_scene = to_rm_embree_gazebo(gzmesh);
+                                std::cout << "[RmagineEmbreeMap] Gazebo mesh loading done." <<  std::endl;
+                            }
                         }
-                        // integrate submeshes into global scene
-                        // for(auto elem : mesh_)
+
+                        if(mesh_scene)
+                        {
+                            // rm::EmbreeScenePtr mesh_scene = to_rm_embree(gzmesh);
+                            std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub instances: " << mesh_scene->count<rm::EmbreeInstance>() << std::endl;
+                            std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub meshes: " << mesh_scene->count<rm::EmbreeMesh>() << std::endl;
+                            
+                            for(auto elem : mesh_scene->geometries())
+                            {
+                                geoms.push_back(elem.second);
+                            }
+                        } else {
+                            std::cout << "[RmagineEmbreeMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
+                        }
                     }
 
                     for(auto geom : geoms)
@@ -468,7 +488,7 @@ void RmagineEmbreeMap::UpdateState()
     {
         
         // TODO! translate gazebo models to embree map instances
-        std::cout << "[RmagineEmbreeMap] SCENE HAS CHANGED" << std::endl;
+        // std::cout << "[RmagineEmbreeMap] SCENE HAS CHANGED" << std::endl;
         // std::cout << diff << std::endl;
 
         size_t scene_changes = 0;
@@ -511,18 +531,26 @@ void RmagineEmbreeMap::UpdateState()
             // std::cout << "1. models added." << std::endl;
         }
 
-        // apply updates add to map (locked)
-        if(m_map_mutex)
+        
+        if(updates_add.size() > 0)
         {
-            m_map_mutex->lock();
-        }
-        for(auto elem : updates_add)
-        {
-            unsigned int geom_id = m_map->scene->add(elem.first);
-        }
-        if(m_map_mutex)
-        {
-            m_map_mutex->unlock();
+            // apply updates add to map (locked)
+            if(m_map_mutex)
+            {
+                m_map_mutex->lock();
+            }
+            for(auto elem : updates_add)
+            {
+                unsigned int geom_id = m_map->scene->add(elem.first);
+            }
+            if(m_map_mutex)
+            {
+                m_map_mutex->unlock();
+            }
+
+            gzdbg << "[RmagineEmbreeMap] New map elements" << std::endl;
+            gzdbg << "[RmagineEmbreeMap] - geometries: " << m_map->meshes.size() << std::endl;
+            gzdbg << "[RmagineEmbreeMap] - instances: " << m_map->scene->geometries().size() << std::endl;
         }
 
         if(diff.ModelChanged())
@@ -553,11 +581,11 @@ void RmagineEmbreeMap::UpdateState()
                 meshes_to_scale = EmbreeUpdateScaled(models_new, diff.scaled);
                 el = sw();
 
-                if(!meshes_to_scale.empty())
-                {
-                    std::cout << "[RmagineEmbreeMap] 2.2. APPLY SCALINGS" << std::endl;
-                    std::cout << "[RmagineEmbreeMap] - Prepare meshes scalings " << meshes_to_scale.size() << ": " << el << " ms" << std::endl;
-                }
+                // if(!meshes_to_scale.empty())
+                // {
+                //     gzdbg << "[RmagineEmbreeMap] 2.2. APPLY SCALINGS" << std::endl;
+                //     gzdbg << "[RmagineEmbreeMap] - Prepare meshes scalings " << meshes_to_scale.size() << ": " << el << " ms" << std::endl;
+                // }
             }
 
             std::unordered_set<rm::EmbreeGeometryPtr> mesh_links_to_update;
@@ -569,11 +597,11 @@ void RmagineEmbreeMap::UpdateState()
                 mesh_links_to_update = EmbreeUpdateJointChanges(models_new, diff.joints_changed);
                 el = sw();
 
-                if(!mesh_links_to_update.empty())
-                {
-                    std::cout << "[RmagineEmbreeMap] 2.3. APPLY JOINT UPDATES" << std::endl;
-                    std::cout << "[RmagineEmbreeMap] - Prepare meshes joint updates " << mesh_links_to_update.size() << ": " << el << " ms" << std::endl;
-                }
+                // if(!mesh_links_to_update.empty())
+                // {
+                //     gzdbg << "[RmagineEmbreeMap] 2.3. APPLY JOINT UPDATES" << std::endl;
+                //     gzdbg << "[RmagineEmbreeMap] - Prepare meshes joint updates " << mesh_links_to_update.size() << ": " << el << " ms" << std::endl;
+                // }
             }
 
             // mutex?
@@ -661,7 +689,7 @@ void RmagineEmbreeMap::UpdateState()
 
     if(!m_sensors_loaded)
     {
-        std::cout << "Reload sensors!" << std::endl;
+        // std::cout << "Reload sensors!" << std::endl;
     }
 }
 

@@ -28,7 +28,11 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::CylinderGeom& cylinder);
 
 rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap);
 
-rmagine::EmbreeScenePtr to_rm_embree(const msgs::MeshGeom& gzmesh);
+// rmagine::EmbreeScenePtr to_rm_embree(const msgs::MeshGeom& gzmesh);
+
+rmagine::EmbreeScenePtr to_rm_embree_gazebo(const msgs::MeshGeom& gzmesh);
+
+rmagine::EmbreeScenePtr to_rm_embree_assimp(const msgs::MeshGeom& gzmesh);
 
 } // namespace gazebo
 

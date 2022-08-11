@@ -86,8 +86,6 @@ private:
 
     std::vector<MeshLoading> m_mesh_loader = {GAZEBO, INTERNAL};
     
-    // MeshLoading m_mesh_loading_type = MeshLoading::GAZEBO_ONLY;
-
 
     std::shared_ptr<std::shared_mutex> m_map_mutex;
     rmagine::OptixMapPtr m_map;

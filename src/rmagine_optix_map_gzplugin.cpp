@@ -300,8 +300,9 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                                 inst->setScale(scale);
                                 insts.push_back(inst);
                             }
+
                         } else {
-                            std::cout << "[RmagineOptixMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
+                            gzwarn << "[RmagineOptixMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
                         }
                     }
 
@@ -603,9 +604,9 @@ void RmagineOptixMap::UpdateState()
                 unsigned int geom_id = m_map->scene()->add(inst->geometry());
                 unsigned int inst_id = insts_old->add(inst);
             }
-            gzlog << "[RmagineOptixMap] New map elements" << std::endl;
-            gzlog << "[RmagineOptixMap] - geometries: " << m_map->scene()->geometries().size() << std::endl;
-            gzlog << "[RmagineOptixMap] - instances: " << insts_old->instances().size() << std::endl;
+            gzdbg << "[RmagineOptixMap] New map elements" << std::endl;
+            gzdbg << "[RmagineOptixMap] - geometries: " << m_map->scene()->geometries().size() << std::endl;
+            gzdbg << "[RmagineOptixMap] - instances: " << insts_old->instances().size() << std::endl;
         }
 
         if(diff.ModelChanged())

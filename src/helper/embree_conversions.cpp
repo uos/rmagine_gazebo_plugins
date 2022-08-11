@@ -5,11 +5,18 @@
 #include <rmagine/math/types.h>
 #include <rmagine/map/AssimpIO.hpp>
 #include <rmagine/map/embree/embree_shapes.h>
+#include <rmagine/util/prints.h>
+
 
 #include <gazebo/common/URI.hh>
 #include <gazebo/common/SystemPaths.hh>
 #include <gazebo/common/CommonIface.hh>
 #include <gazebo/common/HeightmapData.hh>
+
+#include <gazebo/common/MeshManager.hh>
+#include <gazebo/common/Mesh.hh>
+
+#include <gazebo/common/Console.hh>
 
 #include <iostream>
 
@@ -225,7 +232,7 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
     return ret;
 }
 
-rmagine::EmbreeScenePtr to_rm_embree(const msgs::MeshGeom& gzmesh)
+rmagine::EmbreeScenePtr to_rm_embree_assimp(const msgs::MeshGeom& gzmesh)
 {
     std::cout << "[RmagineEmbreeMap - to_rm(gzmesh)]" << std::endl;
     rmagine::EmbreeScenePtr scene;
@@ -250,16 +257,162 @@ rmagine::EmbreeScenePtr to_rm_embree(const msgs::MeshGeom& gzmesh)
     if(ascene->mNumMeshes > 0)
     {
         scene = rm::make_embree_scene(ascene);
-        // scale every geometry?
-        rm::Vector3 scale = to_rm(gzmesh.scale());
-        for(auto elem : scene->geometries())
+
+        if(scene)
         {
-            auto geom = elem.second;   
-            geom->setScale(geom->scale().mult_ewise(scale));
+            // scale every geometry?
+            rm::Vector3 scale = to_rm(gzmesh.scale());
+            for(auto elem : scene->geometries())
+            {
+                auto geom = elem.second;   
+                geom->setScale(geom->scale().mult_ewise(scale));
+            }
+        } else {
+            gzwarn << "WARNING Assimp Import: make_embree_scene failed." << std::endl;
         }
+    } else {
+        gzwarn << "WARNING Assimp Import: number of meshes == 0" << std::endl;
     }
     
     return scene;
+}
+
+rm::EmbreeScenePtr to_rm_embree(
+    const common::Mesh* gzmesh)
+{
+    rm::EmbreeScenePtr ret = std::make_shared<rm::EmbreeScene>();
+
+    gzdbg << "GAZEBO mesh loaded: " << std::endl;
+    gzdbg << "- name: " << gzmesh->GetName() << std::endl;
+    gzdbg << "- vertices: " << gzmesh->GetVertexCount() << std::endl;
+    gzdbg << "- normals: " << gzmesh->GetNormalCount() << std::endl;
+    gzdbg << "- indices: " << gzmesh->GetIndexCount() << std::endl;
+    gzdbg << "- min, max: " << to_rm(gzmesh->Min()) << ", " << to_rm(gzmesh->Max()) << std::endl;
+    gzdbg << "- materials: " << gzmesh->GetMaterialCount() << std::endl;
+    gzdbg << "- sub meshes: " << gzmesh->GetSubMeshCount() << std::endl;
+
+
+    for(size_t i = 0; i < gzmesh->GetSubMeshCount(); i++)
+    {
+        const common::SubMesh* gzsubmesh = gzmesh->GetSubMesh(i);
+        gzdbg << "SUBMESH " << i << std::endl;
+        gzdbg << "-- name: " << gzsubmesh->GetName() << std::endl; 
+        gzdbg << "-- vertices: " << gzsubmesh->GetVertexCount() << std::endl;
+        gzdbg << "-- normals: " << gzsubmesh->GetNormalCount() << std::endl;
+        gzdbg << "-- indices: " << gzsubmesh->GetIndexCount() << std::endl;
+        gzdbg << "-- faces (indices/3): " << gzsubmesh->GetIndexCount() / 3 << std::endl;
+        gzdbg << "-- tex coords: " << gzsubmesh->GetTexCoordCount() << std::endl;
+        gzdbg << "-- node assignments: " << gzsubmesh->GetNodeAssignmentsCount() << std::endl;
+        gzdbg << "-- mat index: " << gzsubmesh->GetMaterialIndex() << std::endl;
+        gzdbg << "-- min, max: " << to_rm(gzsubmesh->Min()) << ", " << to_rm(gzsubmesh->Max()) << std::endl;
+    
+        if(gzsubmesh->GetPrimitiveType() == common::SubMesh::PrimitiveType::TRIANGLES)
+        {
+
+            rm::EmbreeMeshPtr mesh = std::make_shared<rm::EmbreeMesh>(
+                gzsubmesh->GetVertexCount(), 
+                gzsubmesh->GetIndexCount() / 3);
+
+            // TODO fill
+            gzdbg << "Converting vertices" << std::endl;
+            for(size_t i=0; i<mesh->vertices.size(); i++)
+            {
+                mesh->vertices[i] = to_rm(gzsubmesh->Vertex(i));
+            }
+
+            gzdbg << "Converting faces" << std::endl;
+            for(size_t i=0; i<mesh->Nfaces; i++)
+            {
+                mesh->faces[i] = {
+                    gzsubmesh->GetIndex(i * 3 + 0),
+                    gzsubmesh->GetIndex(i * 3 + 1),
+                    gzsubmesh->GetIndex(i * 3 + 2)
+                };
+            }
+
+            // COPY VERTEX NORMALS IF AVAILABLE
+            if(gzsubmesh->GetNormalCount())
+            {
+                gzdbg << "Converting vertex normals" << std::endl;
+                mesh->vertex_normals.resize(gzsubmesh->GetNormalCount());
+                for(size_t i=0; i<mesh->vertex_normals.size(); i++)
+                {
+                    mesh->vertex_normals[i] = to_rm(gzsubmesh->Normal(i));
+                }
+            }
+
+            gzdbg << "Compute face normals" << std::endl;
+            mesh->computeFaceNormals();
+
+            gzdbg << "Build acceleration structures" << std::endl;
+            mesh->apply();
+            mesh->commit();
+
+            gzdbg << "Add to scene" << std::endl;
+            ret->add(mesh);
+        } else {
+            static std::unordered_map<common::SubMesh::PrimitiveType, std::string> prim_strings {
+                { common::SubMesh::PrimitiveType::POINTS, "POINTS" },
+                { common::SubMesh::PrimitiveType::LINES, "LINES" },
+                { common::SubMesh::PrimitiveType::LINESTRIPS, "LINESTRIPS" },
+                { common::SubMesh::PrimitiveType::TRIANGLES, "TRIANGLES" },
+                { common::SubMesh::PrimitiveType::TRIFANS, "TRIFANS" },
+                { common::SubMesh::PrimitiveType::TRISTRIPS, "TRISTRIPS" },
+            };
+
+            gzwarn << "Mesh to Embree - Primitive type not implemented: [" << prim_strings[gzsubmesh->GetPrimitiveType()] << "]" << std::endl;
+        }
+    }
+
+    return ret;
+}
+
+rmagine::EmbreeScenePtr to_rm_embree_gazebo(const msgs::MeshGeom& gzmesh)
+{
+    gzdbg << "load mesh with gazebo " << std::endl;
+    rmagine::EmbreeScenePtr ret;
+
+    std::string filename = gzmesh.filename();
+
+    if(!common::exists(gzmesh.filename()))
+    {
+        filename = common::SystemPaths::Instance()->FindFileURI(gzmesh.filename());
+    }
+
+    gzdbg << "Gazebo Import: Loading mesh from file " << filename << std::endl;
+
+    common::MeshManager *meshManager = common::MeshManager::Instance();
+
+    const common::Mesh* mesh = meshManager->GetMesh(filename);
+
+    if(!mesh)
+    {
+        mesh = meshManager->Load(filename);
+        if(!mesh)
+        {
+            gzerr << "Gazebo Import: MeshManager failed to GetMesh and Load. Mesh file [" << filename << "]" << std::endl;
+            return ret;
+        }
+    }
+
+    // mesh is set
+    ret = to_rm_embree(mesh);
+
+    if(ret)
+    {
+        // scale every geometry?
+        rm::Vector3 scale = to_rm(gzmesh.scale());
+        for(auto elem : ret->geometries())
+        {
+            auto geom = elem.second;   
+            geom->setScale(geom->scale().mult_ewise(scale));
+            geom->apply();
+        }
+    } else {
+        gzwarn << "WARNING Gazebo Import: to_rm_embree(common::Mesh*) failed." << std::endl;
+    }
+
+    return ret;
 }
 
 } // namespace gazebo

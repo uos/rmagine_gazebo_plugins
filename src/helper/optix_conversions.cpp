@@ -3,35 +3,26 @@
 #include "rmagine_gazebo_plugins/helper/conversions.h"
 
 #include <rmagine/math/types.h>
+#include <rmagine/util/prints.h>
+
 #include <rmagine/map/AssimpIO.hpp>
 #include <rmagine/map/optix/optix_shapes.h>
-#include <rmagine/util/prints.h>
+#include <rmagine/map/optix/OptixInstances.hpp>
+#include <rmagine/map/optix/OptixInst.hpp>
+#include <rmagine/map/optix/OptixMesh.hpp>
+
 
 #include <gazebo/common/URI.hh>
 #include <gazebo/common/SystemPaths.hh>
 #include <gazebo/common/CommonIface.hh>
 #include <gazebo/common/HeightmapData.hh>
 
-
 #include <gazebo/common/MeshManager.hh>
 #include <gazebo/common/Mesh.hh>
 
 #include <gazebo/common/Console.hh>
 
-
 #include <iostream>
-
-
-#include <rmagine/map/optix/OptixInstances.hpp>
-#include <rmagine/map/optix/OptixInst.hpp>
-#include <rmagine/map/optix/OptixMesh.hpp>
-
-// #include <chrono>
-// #include <thread>
-
-// using namespace std::chrono_literals;
-
-
 
 namespace rm = rmagine;
 
@@ -317,13 +308,13 @@ rm::OptixScenePtr to_rm_optix(
                 mesh->vertex_normals = vertex_normals_cpu;
             }
 
-
             mesh->name = gzsubmesh->GetName();
             mesh->computeFaceNormals();
             mesh->apply();
             mesh->commit();
 
             ret->add(mesh);
+
         } else {
             static std::unordered_map<common::SubMesh::PrimitiveType, std::string> prim_strings {
                 { common::SubMesh::PrimitiveType::POINTS, "POINTS" },
@@ -363,19 +354,6 @@ rm::OptixScenePtr to_rm_optix(
         ret->setRoot(insts);
     }
 
-    return ret;
-}
-
-
-
-rm::OptixScenePtr to_rm_optix(
-    const msgs::MeshGeom& gzmesh)
-{
-    rm::OptixScenePtr ret = to_rm_optix_assimp(gzmesh);
-    if(!ret)
-    {
-        ret = to_rm_optix_gazebo(gzmesh);
-    }
     return ret;
 }
 
