@@ -28,7 +28,6 @@ namespace gazebo
 
 rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::PlaneGeom& plane)
 {
-    std::cout << "[RmagineEmbreeMap - to_rm(plane)]" << std::endl;
     msgs::Vector2d size = plane.size();
     // TODO: use normal
     msgs::Vector3d normal = plane.normal();
@@ -46,7 +45,6 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::PlaneGeom& plane)
 
 rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::BoxGeom& box)
 {
-    std::cout << "[RmagineEmbreeMap - to_rm(box)]" << std::endl;
     msgs::Vector3d size = box.size();
 
     // fill embree mesh
@@ -102,12 +100,12 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
 
     if(data)
     {
-        std::cout << "Heightmap data loaded." << std::endl;
+        gzdbg << "Heightmap data loaded." << std::endl;
 
-        std::cout << "Data Info: " << std::endl;
-        std::cout << "- height: " << data->GetHeight() << std::endl;
-        std::cout << "- width: " << data->GetWidth() << std::endl;
-        std::cout << "- max_elevation: " << data->GetMaxElevation() << std::endl;
+        gzdbg << "Data Info: " << std::endl;
+        gzdbg << "- height: " << data->GetHeight() << std::endl;
+        gzdbg << "- width: " << data->GetWidth() << std::endl;
+        gzdbg << "- max_elevation: " << data->GetMaxElevation() << std::endl;
 
         std::vector<float> elevations;
         // fill heights
@@ -135,7 +133,7 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
         bool flipY = true;
         data->FillHeightMap(subsampling, vertSize, size, scale, flipY, elevations);
 
-        std::cout << "Loaded " << elevations.size() << " elevations." << std::endl;
+        gzdbg << "Loaded " << elevations.size() << " elevations." << std::endl;
         
         // NEXT: make mesh
         // - we need one vertex per elevation
@@ -153,7 +151,7 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
         float half_width = size.X() / 2.0;
         float half_height = size.Y() / 2.0;
 
-        std::cout << "Filling " << mesh->vertices.size() << " vertices..." << std::endl;
+        gzdbg << "Filling " << mesh->vertices.size() << " vertices..." << std::endl;
         
         rm::Vector3 correction = {0.0, 0.0, 0.0};
 
@@ -195,7 +193,7 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
             }
         }
 
-        std::cout << "Filling " << mesh->Nfaces << " faces..." << std::endl;
+        gzdbg << "Filling " << mesh->Nfaces << " faces..." << std::endl;
         // fill faces
         for(size_t i=1; i<vertSize; i++)
         {
@@ -226,7 +224,7 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
         delete data;
 
     } else {
-        std::cout << "Could not load " << filename << " with common::HeightmapDataLoader" << std::endl;
+        gzwarn << "Could not load " << filename << " with common::HeightmapDataLoader" << std::endl;
     }
 
     return ret;
@@ -234,7 +232,6 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
 
 rmagine::EmbreeScenePtr to_rm_embree_assimp(const msgs::MeshGeom& gzmesh)
 {
-    std::cout << "[RmagineEmbreeMap - to_rm(gzmesh)]" << std::endl;
     rmagine::EmbreeScenePtr scene;
     std::string filename = gzmesh.filename();
 
@@ -243,14 +240,14 @@ rmagine::EmbreeScenePtr to_rm_embree_assimp(const msgs::MeshGeom& gzmesh)
         filename = common::SystemPaths::Instance()->FindFileURI(gzmesh.filename());
     }
 
-    std::cout << "[RmagineEmbreeMap - to_rm(gzmesh)] Loading mesh from file " << filename << std::endl;
+    gzdbg << "Assimp Loader: Loading mesh from file " << filename << std::endl;
 
     rm::AssimpIO io;
     const aiScene* ascene = io.ReadFile(filename, 0);
     if(!ascene)
     {
-        std::cout << "WARNING could not load mesh from " << filename << std::endl;
-        std::cerr << io.Importer::GetErrorString() << std::endl;
+        gzwarn << "WARNING could not load mesh from " << filename << std::endl;
+        gzwarn << io.Importer::GetErrorString() << std::endl;
         return scene;
     }
 

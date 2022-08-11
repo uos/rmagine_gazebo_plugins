@@ -37,12 +37,12 @@ namespace gazebo
 
 RmagineEmbreeMap::RmagineEmbreeMap()
 {
-    std::cout << "[RmagineEmbreeMap] Constructed." << std::endl;
+    gzdbg << "[RmagineEmbreeMap] Constructed." << std::endl;
 }
 
 RmagineEmbreeMap::~RmagineEmbreeMap()
 {
-    std::cout << "[RmagineEmbreeMap] Destroyed." << std::endl;
+    gzdbg << "[RmagineEmbreeMap] Destroyed." << std::endl;
 }
 
 void RmagineEmbreeMap::Load(
@@ -64,7 +64,7 @@ void RmagineEmbreeMap::Load(
     m_map->scene->setQuality(RTC_BUILD_QUALITY_LOW);
     m_map->scene->setFlags(RTC_SCENE_FLAG_DYNAMIC);
 
-    std::cout << "[RmagineEmbreeMap] Loaded." << std::endl;
+    gzdbg << "[RmagineEmbreeMap] Loaded." << std::endl;
 }
 
 std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::EmbreeUpdateAdded(
@@ -108,7 +108,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                 if(Svl.x > 1.001 || Svl.y > 1.001 || Svl.z > 1.001
                     || Svl.x < 0.999 || Svl.y < 0.999 || Svl.z < 0.999)
                 {
-                    std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] WARNING: Scale from visual to link currently unused but it seems to be set to " << Svl << std::endl; 
+                    gzwarn << "[RmagineEmbreeMap - EmbreeUpdateAdded()] WARNING: Scale from visual to link currently unused but it seems to be set to " << Svl << std::endl; 
                 }
 
                 rm::Transform Tvl = to_rm(vis_pose);
@@ -124,37 +124,31 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                     if(gzgeom.has_box())
                     {
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD BOX!" << std::endl;
                         msgs::BoxGeom box = gzgeom.box();
                         geoms.push_back(to_rm_embree(box));
                     }
 
                     if(gzgeom.has_cylinder())
                     {
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD CYLINDER!" << std::endl;
                         msgs::CylinderGeom cylinder = gzgeom.cylinder();
-                        geoms.push_back(to_rm_embree(cylinder));
+                        rm::EmbreeGeometryPtr geom = to_rm_embree(cylinder);
+                        geoms.push_back(geom);
                     }
 
                     if(gzgeom.has_sphere())
                     {
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD SPHERE!" << std::endl;
                         msgs::SphereGeom sphere = gzgeom.sphere();
                         geoms.push_back(to_rm_embree(sphere));
                     }
 
                     if(gzgeom.has_plane())
                     {
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD PLANE!" << std::endl;
                         msgs::PlaneGeom plane = gzgeom.plane();
                         geoms.push_back(to_rm_embree(plane));
                     }
 
                     if(gzgeom.has_heightmap())
                     {
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD HEIGHTMAP!" << std::endl;
-                        // std::cout << "- " << gzgeom.
-
                         rm::EmbreeGeometryPtr geom = to_rm_embree(gzgeom.heightmap());
                         if(geom)
                         {
@@ -165,7 +159,6 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                     if(gzgeom.has_mesh())
                     {
-                        std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] ADD MESH..." << std::endl;
                         msgs::MeshGeom gzmesh = gzgeom.mesh();
 
                         rm::EmbreeScenePtr mesh_scene;
@@ -174,27 +167,29 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                         {
                             if(*loader_it == MeshLoading::INTERNAL)
                             {
-                                std::cout << "[RmagineEmbreeMap] Assimp mesh loading" << std::endl;
                                 mesh_scene = to_rm_embree_assimp(gzmesh);
                             } else if(*loader_it == MeshLoading::GAZEBO) {
-                                std::cout << "[RmagineEmbreeMap] Gazebo mesh loading" << std::endl;
                                 mesh_scene = to_rm_embree_gazebo(gzmesh);
-                                std::cout << "[RmagineEmbreeMap] Gazebo mesh loading done." <<  std::endl;
                             }
                         }
 
                         if(mesh_scene)
                         {
-                            // rm::EmbreeScenePtr mesh_scene = to_rm_embree(gzmesh);
-                            std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub instances: " << mesh_scene->count<rm::EmbreeInstance>() << std::endl;
-                            std::cout << "[RmagineEmbreeMap - EmbreeUpdateAdded()] - sub meshes: " << mesh_scene->count<rm::EmbreeMesh>() << std::endl;
-                            
-                            for(auto elem : mesh_scene->geometries())
-                            {
-                                geoms.push_back(elem.second);
-                            }
+                            // make instance
+                            rm::EmbreeInstancePtr mesh_instance = std::make_shared<rm::EmbreeInstance>();
+
+                            // mesh_instance->name = mesh_scene;
+                            mesh_instance->set(mesh_scene);
+                            mesh_instance->apply();
+                            geoms.push_back(mesh_instance);
+
+                            gzdbg << "ADDING Mesh Instance to vector" << std::endl;
+                            // for(auto elem : mesh_scene->geometries())
+                            // {
+                            //     geoms.push_back(elem.second);
+                            // }
                         } else {
-                            std::cout << "[RmagineEmbreeMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
+                            gzwarn << "[RmagineEmbreeMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
                         }
                     }
 
@@ -202,7 +197,6 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                     {
                         // Transform from instance to visual (or is it to world: TODO check)
                         auto Tiv = geom->transform();
-                        
 
                         // Set transform from instance to world
                         if(geoms_ignore_model_transform.find(geom) == geoms_ignore_model_transform.end())
@@ -263,8 +257,8 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
                 auto mesh_vis_it = m_visual_to_geoms.find(key);
                 if(mesh_vis_it == m_visual_to_geoms.end())
                 {
-                    std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
-                    std::cout << "- key: " << key << std::endl;
+                    gzwarn << "WARNING mesh to update not found in embree. Skipping." << std::endl;
+                    gzwarn << "- key: " << key << std::endl;
                     continue;
                 }
 
@@ -275,10 +269,7 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
                     {
                         // exists in scene
                         unsigned int geom_id = *geom_id_opt;
-                        // std::cout << "Found visual to transform" << std::endl;
-                        // std::cout << "- key: " << key << std::endl;
-                        // std::cout << "- id: " << geom_id << std::endl;
-
+                        
                         ignition::math::Pose3d link_world_pose = link->WorldPose();
                         msgs::Pose vis_pose = vis.pose();
 
@@ -294,8 +285,8 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
                         meshes_to_transform.insert(geom);
 
                     } else {
-                        std::cout << "WARNING: visual not in mesh set. But it should." << std::endl;
-                        std::cout << "- key: " << key << std::endl;
+                        gzwarn << "WARNING: visual not in mesh set. But it should." << std::endl;
+                        gzwarn << "- key: " << key << std::endl;
                     }
                 }
             }
@@ -343,8 +334,8 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
                 auto mesh_vis_it = m_visual_to_geoms.find(key);
                 if(mesh_vis_it == m_visual_to_geoms.end())
                 {
-                    std::cout << "WARNING mesh to update not found in embree. Skipping." << std::endl;
-                    std::cout << "- key: " << key << std::endl;
+                    gzwarn << "WARNING mesh to update not found in embree. Skipping." << std::endl;
+                    gzwarn << "- key: " << key << std::endl;
                     continue;
                 }
 
@@ -357,26 +348,18 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
                     {
                         // exists in scene
                         unsigned int geom_id = *geom_id_opt;
-                        // std::cout << "Found visual to scale" << std::endl;
-                        // std::cout << "- key: " << key << std::endl;
-                        // std::cout << "- id: " << geom_id << std::endl;
 
                         msgs::Vector3d vis_scale = vis.scale();
 
                         // convert to rmagine
                         rm::Vector Svl = to_rm(vis_scale);
 
-                        // std::cout << "- mesh scale old: " << geom->scale() << std::endl;
-                        // std::cout << "- model scale: " << model_scale << std::endl;
-                        // std::cout << "- visual scale: " << Svl << std::endl;
-                        // std::cout << "- transform: " << Tvw << std::endl;
-
                         geom->setScale(model_scale);
 
                         meshes_to_scale.insert(geom);
                     } else {
-                        std::cout << "[RmagineEmbreeMap] WARNING mesh seems to be lost somewhere." << std::endl; 
-                        std::cout << "[RmagineEmbreeMap] - key: " << key << std::endl;
+                        gzwarn << "[RmagineEmbreeMap] WARNING mesh seems to be lost somewhere." << std::endl; 
+                        gzwarn << "[RmagineEmbreeMap] - key: " << key << std::endl;
                     }
                 }
             }
@@ -422,8 +405,8 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                     auto mesh_vis_it = m_visual_to_geoms.find(key);
                     if(mesh_vis_it == m_visual_to_geoms.end())
                     {
-                        std::cout << "[RmagineEmbreeMap] WARNING mesh to update not found in embree. Skipping." << std::endl;
-                        std::cout << "[RmagineEmbreeMap] - key: " << key << std::endl;
+                        gzwarn << "[RmagineEmbreeMap] WARNING mesh to update not found in embree. Skipping." << std::endl;
+                        gzwarn << "[RmagineEmbreeMap] - key: " << key << std::endl;
                         continue;
                     }
 
@@ -434,10 +417,6 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                         {
                             // exists in scene
                             unsigned int geom_id = *geom_id_opt;
-                            // std::cout << "Found joint visual to transform" << std::endl;
-                            // std::cout << "- key: " << key << std::endl;
-                            // std::cout << "- id: " << geom_id << std::endl;
-
 
                             ignition::math::Pose3d link_world_pose = link->WorldPose();
                             msgs::Pose vis_pose = vis.pose();
@@ -447,22 +426,21 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                             rm::Transform Tvl = to_rm(vis_pose);
 
                             rm::Transform Tvw = Tlw * Tvl;
-                            // std::cout << "- transform: " << Tvw << std::endl;
 
                             auto Tiv = m_geom_to_visual[geom].T;
                             geom->setTransform(Tvw * Tiv);
                             mesh_links_to_update.insert(geom);
 
                         } else {
-                            std::cout << "[RmagineEmbreeMap] WARNING: visual not in mesh set. But it should." << std::endl;
-                            std::cout << "[RmagineEmbreeMap] - key: " << key << std::endl;
+                            gzwarn << "[RmagineEmbreeMap] WARNING: visual not in mesh set. But it should." << std::endl;
+                            gzwarn << "[RmagineEmbreeMap] - key: " << key << std::endl;
                         }
                     }
                 }
 
                 // TODO: link->GetChildJointsLinks() for all other visuals to update
             } else {
-                std::cout << "[RmagineEmbreeMap] WARNING: Could not find link " << link_name << " of model " << model->GetName() << std::endl; 
+                gzwarn << "[RmagineEmbreeMap] WARNING: Could not find link " << link_name << " of model " << model->GetName() << std::endl; 
             }
         }
     }
@@ -498,7 +476,6 @@ void RmagineEmbreeMap::UpdateState()
         // Insert new meshes
         if(diff.ModelAdded())
         {
-            std::cout << "[RmagineEmbreeMap] 1. ADD MODELS" << std::endl;
             updates_add = EmbreeUpdateAdded(models_new, diff.added);
             scene_changes += updates_add.size();
 
@@ -508,6 +485,31 @@ void RmagineEmbreeMap::UpdateState()
                 std::string key = elem.second.name;
                 rm::Transform T = elem.second.T;
                 uint32_t model_id = elem.second.model_id;
+
+
+                // update mesh buffer in map
+                rm::EmbreeMeshPtr mesh = std::dynamic_pointer_cast<rm::EmbreeMesh>(geom);
+                if(mesh)
+                {
+                    m_map->meshes.insert(mesh);
+                } else {
+                    rm::EmbreeInstancePtr inst = std::dynamic_pointer_cast<rm::EmbreeInstance>(geom);
+
+                    if(inst)
+                    {
+                        for(auto elem : inst->scene()->geometries())
+                        {
+                            rm::EmbreeMeshPtr tmp = std::dynamic_pointer_cast<rm::EmbreeMesh>(elem.second);
+                            if(tmp)
+                            {
+                                m_map->meshes.insert(tmp);
+                            } else {
+                                gzwarn << "Instance element is not a mesh: " << elem.first << std::endl;
+                            }
+                        }
+                    }
+                }
+
 
                 // create global double connection between visual and embree geometries
                 if(m_visual_to_geoms.find(key) == m_visual_to_geoms.end())
@@ -551,6 +553,8 @@ void RmagineEmbreeMap::UpdateState()
             gzdbg << "[RmagineEmbreeMap] New map elements" << std::endl;
             gzdbg << "[RmagineEmbreeMap] - geometries: " << m_map->meshes.size() << std::endl;
             gzdbg << "[RmagineEmbreeMap] - instances: " << m_map->scene->geometries().size() << std::endl;
+            gzdbg << "[RmagineEmbreeMap] --- meshes: " << m_map->scene->count<rm::EmbreeMesh>() << std::endl;
+            gzdbg << "[RmagineEmbreeMap] --- instances: " << m_map->scene->count<rm::EmbreeInstance>() << std::endl;
         }
 
         if(diff.ModelChanged())
@@ -708,13 +712,13 @@ void RmagineEmbreeMap::UpdateSensors()
 
             if(spherical)
             {
-                std::cout << "[RmagineEmbreeMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
-                spherical->setMap(m_map);
+                gzdbg << "[RmagineEmbreeMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
                 if(!m_map_mutex)
                 {
-                    std::cout << "[RmagineEmbreeMap] no mutex " << std::endl;
+                    gzwarn << "[RmagineEmbreeMap] no mutex " << std::endl;
                 }
                 spherical->setLock(m_map_mutex);
+                spherical->setMap(m_map);
             }
         }
         m_sensors_loaded = true;

@@ -91,6 +91,19 @@ private:
     std::shared_ptr<std::shared_mutex> m_map_mutex;
     rmagine::EmbreeMapPtr m_map;
 
+    enum GeomCacheID
+    {
+        PLANE = 0,
+        BOX = 1,
+        SPHERE = 2,
+        CYLINDER = 3
+    };
+
+    // mesh cache
+    std::unordered_map<GeomCacheID, rmagine::EmbreeGeometryPtr> m_geom_cache;
+    std::unordered_map<std::string, rmagine::EmbreeScenePtr> m_mesh_cache;
+
+
     bool m_sensors_loaded = false;
 
     

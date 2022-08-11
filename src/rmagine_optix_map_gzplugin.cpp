@@ -35,12 +35,12 @@ namespace gazebo
 
 RmagineOptixMap::RmagineOptixMap()
 {
-    gzlog << "[RmagineOptixMap] Constructed." << std::endl;
+    gzdbg << "[RmagineOptixMap] Constructed." << std::endl;
 }
 
 RmagineOptixMap::~RmagineOptixMap()
 {
-    gzlog << "[RmagineOptixMap] Destroyed." << std::endl;
+    gzdbg << "[RmagineOptixMap] Destroyed." << std::endl;
 }
 
 void RmagineOptixMap::Load(
@@ -62,7 +62,7 @@ void RmagineOptixMap::Load(
     scene->setRoot(insts);
 
     m_map = std::make_shared<rm::OptixMap>(scene);
-    gzlog << "[RmagineOptixMap] Loaded." << std::endl;
+    gzdbg << "[RmagineOptixMap] Loaded." << std::endl;
 }
 
 std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpdateAdded(
@@ -717,7 +717,7 @@ void RmagineOptixMap::UpdateSensors()
 
             if(spherical)
             {
-                gzlog << "[RmagineOptixMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
+                gzdbg << "[RmagineOptixMap] Found Rmagine spherical sensor " << spherical->ScopedName() << std::endl;
                 spherical->setLock(m_map_mutex);
                 spherical->setMap(m_map);
                 if(!m_map_mutex)
