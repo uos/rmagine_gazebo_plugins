@@ -53,7 +53,7 @@
   <origin xyz="0 0 0.2" />
 </joint>
 
-<gazebo reference="laser2d">
+<!-- <gazebo reference="laser2d">
     <sensor type="rmagine_embree_spherical" name="laser2d">
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
@@ -98,7 +98,7 @@
           </outputs>
       </plugin>
     </sensor>
-</gazebo>
+</gazebo> -->
 
 
 <!-- 3D LASER -->
@@ -128,8 +128,8 @@
           </horizontal>
           <vertical>
             <min_angle>${-60.0 * M_PI / 180.0}</min_angle>
-            <increment>${1.0 * M_PI / 180.0}</increment>
-            <samples>120</samples>
+            <increment>${2.0 * M_PI / 180.0}</increment>
+            <samples>60</samples>
           </vertical>
         </scan>
 
@@ -138,7 +138,7 @@
           <max>80.0</max>
         </range>
 
-        <noise>
+        <!-- <noise>
           <type>gaussian</type>
           <mean>0.0</mean>
           <stddev>0.01</stddev>
@@ -148,7 +148,7 @@
           <type>uniform_dust</type>
           <hit_prob>0.000001</hit_prob>
           <return_prob>0.85</return_prob>
-        </noise>
+        </noise> -->
       </ray>
 
       <plugin name="rmagine_ros_laser3d" filename="librmagine_embree_ros_gzplugin.so">

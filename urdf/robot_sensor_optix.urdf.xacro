@@ -53,7 +53,7 @@
   <origin xyz="0 0 0.2" />
 </joint>
 
-<gazebo reference="laser2d">
+<!-- <gazebo reference="laser2d">
     <sensor type="rmagine_optix_spherical" name="laser2d">
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
@@ -98,7 +98,7 @@
           </outputs>
       </plugin>
     </sensor>
-</gazebo>
+</gazebo> -->
 
 
 <!-- 3D LASER -->
@@ -128,8 +128,8 @@
           </horizontal>
           <vertical>
             <min_angle>${-90.0 * M_PI / 180.0}</min_angle>
-            <increment>${0.2 * M_PI / 180.0}</increment>
-            <samples>500</samples>
+            <increment>${1.0 * M_PI / 180.0}</increment>
+            <samples>180</samples>
           </vertical>
         </scan>
 
@@ -138,7 +138,7 @@
           <max>80.0</max>
         </range>
         
-        <noise>
+        <!-- <noise>
           <type>gaussian</type>
           <mean>0.0</mean>
           <stddev>0.01</stddev>
@@ -148,7 +148,7 @@
           <type>uniform_dust</type>
           <hit_prob>0.000001</hit_prob>
           <return_prob>0.85</return_prob>
-        </noise>
+        </noise> -->
 
       </ray>
 

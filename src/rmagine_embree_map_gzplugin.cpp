@@ -776,9 +776,9 @@ void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
 
     // map update runs at ~150fps
     // world update frequencies can be changed in world file (ode settings)
-    gzdbg << "Frequencies: " << std::endl;
-    gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << m_world_update_freq << std::endl;
-    gzdbg << "- Map Update:   " << std::fixed << std::setprecision(1) << m_map_update_freq << std::endl;
+    // gzdbg << "Frequencies: " << std::endl;
+    // gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << m_world_update_freq << std::endl;
+    // gzdbg << "- Map Update:   " << std::fixed << std::setprecision(1) << m_map_update_freq << std::endl;
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineEmbreeMap)
