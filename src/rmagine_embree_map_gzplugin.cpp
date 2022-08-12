@@ -463,6 +463,7 @@ void RmagineEmbreeMap::UpdateState(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new,
     const SceneDiff& diff)
 {
+    updateModelIgnores(models_new, m_model_ignores);
 
     // apply changes to rmagine
     if(diff.HasChanged())
@@ -512,7 +513,6 @@ void RmagineEmbreeMap::UpdateState(
                         }
                     }
                 }
-
 
                 // create global double connection between visual and embree geometries
                 if(m_visual_to_geoms.find(key) == m_visual_to_geoms.end())
@@ -734,7 +734,6 @@ void RmagineEmbreeMap::UpdateState()
     // std::cout << "UpdateState" << std::endl;
     std::vector<physics::ModelPtr> models = m_world->Models();
     std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
-    updateModelIgnores(models_new, m_model_ignores);
 
     SceneDiff diff = m_scene_state.diff(models_new, 
             m_changed_delta_trans, 
@@ -747,38 +746,44 @@ void RmagineEmbreeMap::UpdateState()
 
 void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
 {
-    if(!m_updater_thread.valid() 
-        || m_updater_thread.wait_for(0ms) == std::future_status::ready)
+    double world_freq = 1.0 / m_sw_world_update();
+
+    rm::StopWatch sw_idle;
+    std::vector<double> timings;
+    rm::StopWatch sw_timings;
+
+    sw_idle();
+    sw_timings();
+    if(!m_updater_thread_running)
     {
-        // TODO: dont compute this twice!
-        std::vector<physics::ModelPtr> models = m_world->Models();
-        std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
-        updateModelIgnores(models_new, m_model_ignores);
-
-        SceneDiff diff = m_scene_state.diff(models_new, 
-            m_changed_delta_trans,
-            m_changed_delta_rot,
-            m_changed_delta_scale);
-
-        if(diff.HasChanged())
-        {
-            m_updater_thread = std::async(std::launch::async, [this, models_new, diff] {
-                    UpdateState(models_new, diff);
-                    UpdateSensors();
-                    double freq = 1.0 / m_sw_map_update();
-                    m_map_update_freq = 0.9 * m_map_update_freq + 0.1 * freq;
-                });
-        }
+        m_updater_thread_running = true;
+        timings.push_back(sw_timings());
+        
+        m_updater_thread = std::thread([this](){
+            UpdateState();
+            UpdateSensors();
+            m_updater_thread_running = false;
+        });
+        m_updater_thread.detach();
+        timings.push_back(sw_timings());
     }
 
-    double freq = 1.0 / m_sw_world_update();
-    m_world_update_freq = 0.9 * m_world_update_freq + 0.1 * freq;
+    double idle_freq = 1.0 / sw_idle();
 
-    // map update runs at ~150fps
-    // world update frequencies can be changed in world file (ode settings)
-    // gzdbg << "Frequencies: " << std::endl;
-    // gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << m_world_update_freq << std::endl;
-    // gzdbg << "- Map Update:   " << std::fixed << std::setprecision(1) << m_map_update_freq << std::endl;
+    if(idle_freq < world_freq)
+    {
+        gzwarn << "OnWorldUpdate function takes too long" << std::endl;
+        // world update frequencies can be changed in world file (ode settings)
+        gzdbg << "Frequencies: " << std::endl;
+        gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << world_freq << std::endl;
+        gzdbg << "- Idle:         " << std::fixed << std::setprecision(1) << idle_freq << std::endl;
+        
+        for(auto timing : timings)
+        {
+            gzdbg << timing << ", ";
+        }
+        gzdbg << std::endl;
+    }
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineEmbreeMap)

@@ -733,31 +733,70 @@ void RmagineOptixMap::UpdateSensors()
 
 void RmagineOptixMap::OnWorldUpdate(const common::UpdateInfo& info)
 {
-    // UpdateState();
-    // UpdateSensors();
+    double world_freq = 1.0 / m_sw_world_update();
 
-    if(!m_updater_thread.valid() 
-    || m_updater_thread.wait_for(0ms) == std::future_status::ready)
+    rm::StopWatch sw_idle;
+    std::vector<double> timings;
+    rm::StopWatch sw_timings;
+
+
+    sw_idle();
+    sw_timings();
+    if(!m_updater_thread_running)
     {
-        // TODO: dont compute this twice!
-        std::vector<physics::ModelPtr> models = m_world->Models();
-        std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
-        updateModelIgnores(models_new, m_model_ignores);
+        m_updater_thread_running = true;
+        timings.push_back(sw_timings());
+        
+        m_updater_thread = std::thread([this](){
+            UpdateState();
+            UpdateSensors();
+            m_updater_thread_running = false;
+        });
+        m_updater_thread.detach();
+        timings.push_back(sw_timings());
+    }
+
+
+    double idle_freq = 1.0 / sw_idle();
+
+    if(idle_freq < world_freq)
+    {
+        gzwarn << "OnWorldUpdate function takes too long" << std::endl;
+        // world update frequencies can be changed in world file (ode settings)
+        gzdbg << "Frequencies: " << std::endl;
+        gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << world_freq << std::endl;
+        gzdbg << "- Idle:         " << std::fixed << std::setprecision(1) << idle_freq << std::endl;
+        
+        for(auto timing : timings)
+        {
+            gzdbg << timing << ", ";
+        }
+        gzdbg << std::endl;
+    }
+
+
+    // if(!m_updater_thread.valid() 
+    // || m_updater_thread.wait_for(0ms) == std::future_status::ready)
+    // {
+    //     // TODO: dont compute this twice!
+    //     std::vector<physics::ModelPtr> models = m_world->Models();
+    //     std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
+    //     updateModelIgnores(models_new, m_model_ignores);
 
         
-        SceneDiff diff = m_scene_state.diff(models_new, 
-            m_changed_delta_trans, 
-            m_changed_delta_rot, 
-            m_changed_delta_scale);
+    //     SceneDiff diff = m_scene_state.diff(models_new, 
+    //         m_changed_delta_trans, 
+    //         m_changed_delta_rot, 
+    //         m_changed_delta_scale);
 
-        if(diff.HasChanged())
-        {
-            m_updater_thread = std::async(std::launch::async, [this] {
-                    UpdateState();
-                    UpdateSensors();
-                });
-        }
-    }
+    //     if(diff.HasChanged())
+    //     {
+    //         m_updater_thread = std::async(std::launch::async, [this] {
+    //                 UpdateState();
+    //                 UpdateSensors();
+    //             });
+    //     }
+    // }
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineOptixMap)

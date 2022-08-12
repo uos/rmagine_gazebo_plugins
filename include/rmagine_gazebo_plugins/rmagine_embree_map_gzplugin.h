@@ -115,9 +115,6 @@ private:
     rmagine::StopWatch m_sw_world_update;
     double m_world_update_freq = 0.0;
 
-    rmagine::StopWatch m_sw_map_update;
-    double m_map_update_freq = 0.0;
-
     // TODO: somehow update meshes in embree map
     // model (rel pose change)
     // - link1 (rel pose change?)
@@ -136,7 +133,9 @@ private:
 
     SceneState m_scene_state;
 
-    std::future<void> m_updater_thread;
+    
+    std::thread m_updater_thread;
+    bool m_updater_thread_running = false;
 };
 
 } // namespace gazebo

@@ -25,6 +25,7 @@
 
 // rmagine
 #include <rmagine/map/OptixMap.hpp>
+#include <rmagine/util/StopWatch.hpp>
 
 
 namespace gazebo
@@ -106,6 +107,9 @@ private:
 
     bool m_sensors_loaded = false;
 
+    rmagine::StopWatch m_sw_world_update;
+    double m_world_update_freq = 0.0;
+
     
 
     std::unordered_set<uint32_t> m_model_ignores;
@@ -120,7 +124,9 @@ private:
 
     SceneState m_scene_state;
 
-    std::future<void> m_updater_thread;
+
+    std::thread m_updater_thread;
+    bool m_updater_thread_running = false;
 };
 
 } // namespace gazebo
