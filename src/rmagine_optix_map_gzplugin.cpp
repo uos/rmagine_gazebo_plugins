@@ -773,30 +773,6 @@ void RmagineOptixMap::OnWorldUpdate(const common::UpdateInfo& info)
         }
         gzdbg << std::endl;
     }
-
-
-    // if(!m_updater_thread.valid() 
-    // || m_updater_thread.wait_for(0ms) == std::future_status::ready)
-    // {
-    //     // TODO: dont compute this twice!
-    //     std::vector<physics::ModelPtr> models = m_world->Models();
-    //     std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
-    //     updateModelIgnores(models_new, m_model_ignores);
-
-        
-    //     SceneDiff diff = m_scene_state.diff(models_new, 
-    //         m_changed_delta_trans, 
-    //         m_changed_delta_rot, 
-    //         m_changed_delta_scale);
-
-    //     if(diff.HasChanged())
-    //     {
-    //         m_updater_thread = std::async(std::launch::async, [this] {
-    //                 UpdateState();
-    //                 UpdateSensors();
-    //             });
-    //     }
-    // }
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineOptixMap)
