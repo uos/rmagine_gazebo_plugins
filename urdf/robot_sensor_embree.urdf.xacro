@@ -138,6 +138,13 @@
           <max>80.0</max>
         </range>
 
+        <noise>
+          <type>rel_gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+          <range_exp>1.5</range_exp>
+        </noise>
+
         <!-- <noise>
           <type>gaussian</type>
           <mean>0.0</mean>

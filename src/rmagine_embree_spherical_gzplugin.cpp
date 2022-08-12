@@ -7,6 +7,7 @@
 
 #include <rmagine/noise/GaussianNoise.hpp>
 #include <rmagine/noise/UniformDustNoise.hpp>
+#include <rmagine/noise/RelGaussianNoise.hpp>
 
 
 using namespace std::placeholders;
@@ -109,6 +110,7 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     {
         // has noise
         rm::Noise::Options opt = {};
+        opt.max_range = m_sensor_model.range.max;
 
         sdf::ElementPtr noiseElem = rayElem->GetElement("noise");
 
@@ -148,6 +150,30 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
                 );
 
                 m_noise_models.push_back(uniform_dust_noise);
+
+            } else if(noise_type == "rel_gaussian") {
+                float mean = 0.0;
+                float range_exp = 1.0;
+                float stddev = noiseElem->Get<float>("stddev");
+
+                if(noiseElem->HasElement("mean"))
+                {
+                    mean = noiseElem->Get<float>("mean");
+                }
+
+                if(noiseElem->HasElement("range_exp"))
+                {
+                    range_exp = noiseElem->Get<float>("range_exp");
+                }
+
+                rm::NoisePtr gaussian_noise = std::make_shared<rm::RelGaussianNoise>(
+                    mean,
+                    stddev,
+                    range_exp,
+                    opt
+                );
+
+                m_noise_models.push_back(gaussian_noise);
             } else {
                 std::cout << "[RmagineEmbreeSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
             }
