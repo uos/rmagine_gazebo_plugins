@@ -25,6 +25,8 @@
 #include <iostream>
 #include <chrono>
 
+#include <iomanip>
+
 using namespace std::placeholders;
 using namespace boost::algorithm;
 using namespace std::chrono_literals;
@@ -457,18 +459,10 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
     return mesh_links_to_update;
 }
 
-void RmagineEmbreeMap::UpdateState()
+void RmagineEmbreeMap::UpdateState(
+    const std::unordered_map<uint32_t, physics::ModelPtr>& models_new,
+    const SceneDiff& diff)
 {
-    
-    // std::cout << "UpdateState" << std::endl;
-    std::vector<physics::ModelPtr> models = m_world->Models();
-    std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
-    updateModelIgnores(models_new, m_model_ignores);
-
-    SceneDiff diff = m_scene_state.diff(models_new, 
-            m_changed_delta_trans, 
-            m_changed_delta_rot, 
-            m_changed_delta_scale);
 
     // apply changes to rmagine
     if(diff.HasChanged())
@@ -734,10 +728,27 @@ void RmagineEmbreeMap::UpdateSensors()
     }
 }
 
+void RmagineEmbreeMap::UpdateState()
+{
+    
+    // std::cout << "UpdateState" << std::endl;
+    std::vector<physics::ModelPtr> models = m_world->Models();
+    std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
+    updateModelIgnores(models_new, m_model_ignores);
+
+    SceneDiff diff = m_scene_state.diff(models_new, 
+            m_changed_delta_trans, 
+            m_changed_delta_rot, 
+            m_changed_delta_scale);
+
+    UpdateState(models_new, diff);
+
+}
+
 void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
 {
     if(!m_updater_thread.valid() 
-    || m_updater_thread.wait_for(0ms) == std::future_status::ready)
+        || m_updater_thread.wait_for(0ms) == std::future_status::ready)
     {
         // TODO: dont compute this twice!
         std::vector<physics::ModelPtr> models = m_world->Models();
@@ -745,18 +756,29 @@ void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
         updateModelIgnores(models_new, m_model_ignores);
 
         SceneDiff diff = m_scene_state.diff(models_new, 
-            m_changed_delta_trans, 
-            m_changed_delta_rot, 
+            m_changed_delta_trans,
+            m_changed_delta_rot,
             m_changed_delta_scale);
 
         if(diff.HasChanged())
         {
-            m_updater_thread = std::async(std::launch::async, [this] {
-                    UpdateState();
+            m_updater_thread = std::async(std::launch::async, [this, models_new, diff] {
+                    UpdateState(models_new, diff);
                     UpdateSensors();
+                    double freq = 1.0 / m_sw_map_update();
+                    m_map_update_freq = 0.9 * m_map_update_freq + 0.1 * freq;
                 });
         }
     }
+
+    double freq = 1.0 / m_sw_world_update();
+    m_world_update_freq = 0.9 * m_world_update_freq + 0.1 * freq;
+
+    // map update runs at ~150fps
+    // world update frequencies can be changed in world file (ode settings)
+    gzdbg << "Frequencies: " << std::endl;
+    gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << m_world_update_freq << std::endl;
+    gzdbg << "- Map Update:   " << std::fixed << std::setprecision(1) << m_map_update_freq << std::endl;
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineEmbreeMap)

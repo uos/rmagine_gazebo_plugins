@@ -30,6 +30,8 @@
 #include <rmagine/map/EmbreeMap.hpp>
 #include <rmagine/simulation/SphereSimulatorEmbree.hpp>
 
+#include <rmagine/util/StopWatch.hpp>
+
 namespace gazebo
 {
 struct VisualTransform 
@@ -67,6 +69,10 @@ private:
         const std::unordered_map<uint32_t, physics::ModelPtr>& models,
         const std::unordered_map<uint32_t, std::unordered_set<std::string> >& joints_changed);
 
+
+    void UpdateState(const std::unordered_map<uint32_t, physics::ModelPtr>& models_new,
+        const SceneDiff& diff);
+
     void UpdateState();
 
     void UpdateSensors();
@@ -84,6 +90,7 @@ private:
     double m_changed_delta_trans = 0.001; // meter
     double m_changed_delta_rot = 0.001; // radian
     double m_changed_delta_scale = 0.001;
+    double m_limit_update_rate = 60.0;
 
     std::vector<MeshLoading> m_mesh_loader = {GAZEBO, INTERNAL};
 
@@ -103,16 +110,18 @@ private:
     std::unordered_map<GeomCacheID, rmagine::EmbreeGeometryPtr> m_geom_cache;
     std::unordered_map<std::string, rmagine::EmbreeScenePtr> m_mesh_cache;
 
-
     bool m_sensors_loaded = false;
 
-    
+    rmagine::StopWatch m_sw_world_update;
+    double m_world_update_freq = 0.0;
+
+    rmagine::StopWatch m_sw_map_update;
+    double m_map_update_freq = 0.0;
 
     // TODO: somehow update meshes in embree map
     // model (rel pose change)
     // - link1 (rel pose change?)
     // - link2
-    
     
     
     std::unordered_set<uint32_t> m_model_ignores;
