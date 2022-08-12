@@ -111,7 +111,7 @@
         <delta_trans>0.001</delta_trans>
         <delta_rot>0.001</delta_rot>
         <delta_scale>0.001</delta_scale>
-        <rate_limit>200</rate_limit>
+        <rate_limit>500</rate_limit>
       </update>
     </plugin>
 
