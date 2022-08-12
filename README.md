@@ -196,7 +196,23 @@ As in world-files, ignores can be added to URDF files:
 
 2. Ignore a link (TODO)
 
-### 5. ROS Adapter
+### 5. Noise
+
+
+
+## ROS Adapter
+
+This plugin generates ROS-messages of the simulated data and writes them to specified ROS-topics.
+The following ROS-Adapter are available dependend on your sensor type:
+
+
+`librmagine_optix_ros_gzplugin.so`
+- sensor types: `rmagine_optix_spherical`
+
+`librmagine_embree_ros_gzplugin.so`
+- sensor types: `rmagine_embree_spherical`
+
+
 
 Supported `output` messages are:
 - `sensor_msgs/LaserScan`
