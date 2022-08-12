@@ -49,9 +49,8 @@ public:
 
 protected:
     virtual void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf);
-    
-    void OnWorldUpdate(const common::UpdateInfo& info);
 private:
+    void parseParams(sdf::ElementPtr sdf);
 
     std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> EmbreeUpdateAdded(
         const std::unordered_map<uint32_t, physics::ModelPtr>& models,
@@ -79,7 +78,6 @@ private:
 
     physics::WorldPtr m_world;
     sdf::ElementPtr m_sdf;
-    event::ConnectionPtr m_world_update_conn;
 
     // params changed by sdf
     enum MeshLoading {
@@ -90,7 +88,7 @@ private:
     double m_changed_delta_trans = 0.001; // meter
     double m_changed_delta_rot = 0.001; // radian
     double m_changed_delta_scale = 0.001;
-    double m_limit_update_rate = 60.0;
+    double m_update_rate_limit = 200.0;
 
     std::vector<MeshLoading> m_mesh_loader = {GAZEBO, INTERNAL};
 
@@ -135,7 +133,7 @@ private:
 
     
     std::thread m_updater_thread;
-    bool m_updater_thread_running = false;
+    bool m_stop_updater_thread = false;
 };
 
 } // namespace gazebo

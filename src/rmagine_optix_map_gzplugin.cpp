@@ -40,6 +40,11 @@ RmagineOptixMap::RmagineOptixMap()
 
 RmagineOptixMap::~RmagineOptixMap()
 {
+    if(m_updater_thread.joinable())
+    {
+        m_stop_updater_thread = true;
+        m_updater_thread.join();
+    }
     gzdbg << "[RmagineOptixMap] Destroyed." << std::endl;
 }
 
@@ -51,9 +56,7 @@ void RmagineOptixMap::Load(
     m_world = _world;
     m_sdf = _sdf;
 
-    m_world_update_conn = event::Events::ConnectWorldUpdateBegin(
-        std::bind(&RmagineOptixMap::OnWorldUpdate, this, std::placeholders::_1)
-    );
+    parseParams(_sdf);
 
     // create empty map
     rm::OptixScenePtr scene = std::make_shared<rm::OptixScene>();
@@ -62,7 +65,64 @@ void RmagineOptixMap::Load(
     scene->setRoot(insts);
 
     m_map = std::make_shared<rm::OptixMap>(scene);
+
+
+    gzdbg << "Starting updater thread." << std::endl;
+
+    m_updater_thread = std::thread([this]()
+    {
+        gzdbg << "Updater thread started." << std::endl;
+        rm::StopWatch sw;
+        double el;
+        // minimum duration for one loop
+        double el_min = 1.0 / m_update_rate_limit;
+        
+        while(!m_stop_updater_thread)
+        {
+            sw();
+            UpdateState();
+            UpdateSensors();
+            el = sw();
+
+            double el_left = el_min - el;
+            if(el_left > 0.0)
+            {
+                std::this_thread::sleep_for(std::chrono::duration<double>(el_left));
+            }
+        }
+        m_stop_updater_thread = false;
+        gzdbg << "Updater thread terminated." << std::endl;
+    });
+
     gzdbg << "[RmagineOptixMap] Loaded." << std::endl;
+}
+
+void RmagineOptixMap::parseParams(sdf::ElementPtr sdf)
+{
+    if(sdf->HasElement("update"))
+    {
+        sdf::ElementPtr updateElem = sdf->GetElement("update");
+    
+        if(updateElem->HasElement("rate_limit"))
+        {
+            m_update_rate_limit = updateElem->Get<double>("rate_limit");
+        }
+
+        if(updateElem->HasElement("delta_trans"))
+        {
+            m_changed_delta_trans = updateElem->Get<double>("delta_trans");
+        }
+
+        if(updateElem->HasElement("delta_rot"))
+        {
+            m_changed_delta_rot = updateElem->Get<double>("delta_rot");
+        }
+
+        if(updateElem->HasElement("delta_scale"))
+        {
+            m_changed_delta_scale = updateElem->Get<double>("delta_scale");
+        }
+    }
 }
 
 std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpdateAdded(
@@ -728,50 +788,6 @@ void RmagineOptixMap::UpdateSensors()
             }
         }
         m_sensors_loaded = true;
-    }
-}
-
-void RmagineOptixMap::OnWorldUpdate(const common::UpdateInfo& info)
-{
-    double world_freq = 1.0 / m_sw_world_update();
-
-    rm::StopWatch sw_idle;
-    std::vector<double> timings;
-    rm::StopWatch sw_timings;
-
-
-    sw_idle();
-    sw_timings();
-    if(!m_updater_thread_running)
-    {
-        m_updater_thread_running = true;
-        timings.push_back(sw_timings());
-        
-        m_updater_thread = std::thread([this](){
-            UpdateState();
-            UpdateSensors();
-            m_updater_thread_running = false;
-        });
-        m_updater_thread.detach();
-        timings.push_back(sw_timings());
-    }
-
-
-    double idle_freq = 1.0 / sw_idle();
-
-    if(idle_freq < world_freq)
-    {
-        gzwarn << "OnWorldUpdate function takes too long" << std::endl;
-        // world update frequencies can be changed in world file (ode settings)
-        gzdbg << "Frequencies: " << std::endl;
-        gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << world_freq << std::endl;
-        gzdbg << "- Idle:         " << std::fixed << std::setprecision(1) << idle_freq << std::endl;
-        
-        for(auto timing : timings)
-        {
-            gzdbg << timing << ", ";
-        }
-        gzdbg << std::endl;
     }
 }
 

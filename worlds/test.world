@@ -8,8 +8,8 @@
     </scene>
     <physics type='ode'>
       <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>500</real_time_update_rate>
-      <max_step_size>0.002</max_step_size>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
     </physics>
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
@@ -95,14 +95,24 @@
       <static>1</static>
     </model>
 
-    
-
     <!-- Embree Map Plugin -->
     <plugin name='rmagine_embree_map' filename='librmagine_embree_map_gzplugin.so'>
+      <update>
+        <delta_trans>0.001</delta_trans>
+        <delta_rot>0.001</delta_rot>
+        <delta_scale>0.001</delta_scale>
+        <rate_limit>200</rate_limit>
+      </update>
     </plugin>
 
     <!-- Optix Map Plugin -->
     <plugin name='rmagine_optix_map' filename='librmagine_optix_map_gzplugin.so'>
+      <update>
+        <delta_trans>0.001</delta_trans>
+        <delta_rot>0.001</delta_rot>
+        <delta_scale>0.001</delta_scale>
+        <rate_limit>200</rate_limit>
+      </update>
     </plugin>
 
   </world>

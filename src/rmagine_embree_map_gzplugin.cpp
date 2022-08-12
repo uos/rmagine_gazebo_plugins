@@ -44,6 +44,11 @@ RmagineEmbreeMap::RmagineEmbreeMap()
 
 RmagineEmbreeMap::~RmagineEmbreeMap()
 {
+    if(m_updater_thread.joinable())
+    {
+        m_stop_updater_thread = true;
+        m_updater_thread.join();
+    }
     gzdbg << "[RmagineEmbreeMap] Destroyed." << std::endl;
 }
 
@@ -55,9 +60,7 @@ void RmagineEmbreeMap::Load(
     m_world = _world;
     m_sdf = _sdf;
 
-    m_world_update_conn = event::Events::ConnectWorldUpdateBegin(
-        std::bind(&RmagineEmbreeMap::OnWorldUpdate, this, std::placeholders::_1)
-    );
+    parseParams(_sdf);
     
     // create empty map
     m_map = std::make_shared<rm::EmbreeMap>();
@@ -66,7 +69,62 @@ void RmagineEmbreeMap::Load(
     m_map->scene->setQuality(RTC_BUILD_QUALITY_LOW);
     m_map->scene->setFlags(RTC_SCENE_FLAG_DYNAMIC);
 
+    gzdbg << "[RmagineEmbreeMap] Starting updater thread." << std::endl;
+
+    m_updater_thread = std::thread([this](){
+        gzdbg << "Updater thread started." << std::endl;
+        rm::StopWatch sw;
+        double el;
+        
+        // minimum duration for one loop
+        double el_min = 1.0 / m_update_rate_limit;
+
+        while(!m_stop_updater_thread)
+        {
+            sw();
+            UpdateState();
+            UpdateSensors();
+            el = sw();
+            
+            double el_left = el_min - el;
+            if(el_left > 0.0)
+            {
+                std::this_thread::sleep_for(std::chrono::duration<double>(el_left));
+            }
+        }
+        m_stop_updater_thread = false;
+        gzdbg << "Updater thread terminated." << std::endl;
+    });
+
     gzdbg << "[RmagineEmbreeMap] Loaded." << std::endl;
+}
+
+void RmagineEmbreeMap::parseParams(sdf::ElementPtr sdf)
+{
+    if(sdf->HasElement("update"))
+    {
+        sdf::ElementPtr updateElem = sdf->GetElement("update");
+    
+        if(updateElem->HasElement("rate_limit"))
+        {
+            m_update_rate_limit = updateElem->Get<double>("rate_limit");
+        }
+
+        if(updateElem->HasElement("delta_trans"))
+        {
+            m_changed_delta_trans = updateElem->Get<double>("delta_trans");
+        }
+
+        if(updateElem->HasElement("delta_rot"))
+        {
+            m_changed_delta_rot = updateElem->Get<double>("delta_rot");
+        }
+
+        if(updateElem->HasElement("delta_scale"))
+        {
+            m_changed_delta_scale = updateElem->Get<double>("delta_scale");
+        }
+    }
 }
 
 std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::EmbreeUpdateAdded(
@@ -730,7 +788,6 @@ void RmagineEmbreeMap::UpdateSensors()
 
 void RmagineEmbreeMap::UpdateState()
 {
-    
     // std::cout << "UpdateState" << std::endl;
     std::vector<physics::ModelPtr> models = m_world->Models();
     std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
@@ -741,49 +798,6 @@ void RmagineEmbreeMap::UpdateState()
             m_changed_delta_scale);
 
     UpdateState(models_new, diff);
-
-}
-
-void RmagineEmbreeMap::OnWorldUpdate(const common::UpdateInfo& info)
-{
-    double world_freq = 1.0 / m_sw_world_update();
-
-    rm::StopWatch sw_idle;
-    std::vector<double> timings;
-    rm::StopWatch sw_timings;
-
-    sw_idle();
-    sw_timings();
-    if(!m_updater_thread_running)
-    {
-        m_updater_thread_running = true;
-        timings.push_back(sw_timings());
-        
-        m_updater_thread = std::thread([this](){
-            UpdateState();
-            UpdateSensors();
-            m_updater_thread_running = false;
-        });
-        m_updater_thread.detach();
-        timings.push_back(sw_timings());
-    }
-
-    double idle_freq = 1.0 / sw_idle();
-
-    if(idle_freq < world_freq)
-    {
-        gzwarn << "OnWorldUpdate function takes too long" << std::endl;
-        // world update frequencies can be changed in world file (ode settings)
-        gzdbg << "Frequencies: " << std::endl;
-        gzdbg << "- World Update: " << std::fixed << std::setprecision(1) << world_freq << std::endl;
-        gzdbg << "- Idle:         " << std::fixed << std::setprecision(1) << idle_freq << std::endl;
-        
-        for(auto timing : timings)
-        {
-            gzdbg << timing << ", ";
-        }
-        gzdbg << std::endl;
-    }
 }
 
 GZ_REGISTER_WORLD_PLUGIN(RmagineEmbreeMap)
