@@ -7,6 +7,7 @@
 
 #include <rmagine/noise/GaussianNoiseCuda.hpp>
 #include <rmagine/noise/UniformDustNoiseCuda.hpp>
+#include <rmagine/noise/RelGaussianNoiseCuda.hpp>
 
 
 
@@ -108,6 +109,7 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
         // has noise
         rm::NoiseCuda::Options opt = {};
         opt.estimated_memory_size = m_sensor_model.size();
+        opt.max_range = m_sensor_model.range.max;
 
         sdf::ElementPtr noiseElem = rayElem->GetElement("noise");
 
@@ -146,6 +148,29 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
 
                 m_noise_models.push_back(uniform_dust_noise);
 
+            } else if(noise_type == "rel_gaussian") {
+                float mean = 0.0;
+                float range_exp = 1.0;
+                float stddev = noiseElem->Get<float>("stddev");
+
+                if(noiseElem->HasElement("mean"))
+                {
+                    mean = noiseElem->Get<float>("mean");
+                }
+
+                if(noiseElem->HasElement("range_exp"))
+                {
+                    range_exp = noiseElem->Get<float>("range_exp");
+                }
+
+                rm::NoiseCudaPtr gaussian_noise = std::make_shared<rm::RelGaussianNoiseCuda>(
+                    mean,
+                    stddev,
+                    range_exp,
+                    opt
+                );
+
+                m_noise_models.push_back(gaussian_noise);
             } else {
                 std::cout << "[RmagineOptixSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
             }
