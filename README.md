@@ -198,6 +198,89 @@ As in world-files, ignores can be added to URDF files:
 
 ### 5. Noise
 
+Currently noise models are implemented as preprocessing steps directly on the simulated ranges data. Any of the following noise models can be chained to generate complex combined noise models.
+
+1. Gaussian Noise
+
+Apply gaussian noise $N(\mu, \sigma)$ to simulated ranges.
+
+| Parameter |  Description  |
+|:---------:|:-------------:|
+| `mean` | Mean $\mu$ of normal distributed noise |
+| `stddev` | standard deviation $\sigma$ of normal distributed noise |
+
+Example:
+
+```xml
+<noise>
+  <type>gaussian</type>
+  <mean>0.0</mean>
+  <stddev>0.01</stddev>
+</noise>
+```
+
+2. Relative Gaussian Noise
+
+Apply gaussian noise $N(\mu, \sigma_r)$ to simulated ranges. Here, the standard deviation varies depending on distance.
+
+
+| Parameter |  Description  |
+|:---------:|:-------------:|
+| `mean` | Mean $\mu$ of normal distributed noise |
+| `stddev` | standard deviation $\sigma$ of normal distributed noise |
+| `range_exp` | range exponent $c$ to compute range based stddev: $ \sigma_r = \sigma \cdot r^{c} $ |
+
+
+Example:
+
+```xml
+<noise>
+  <type>rel_gaussian</type>
+  <mean>0.0</mean>
+  <stddev>0.002</stddev>
+  <range_exp>1.0</range_exp>
+</noise>
+```
+
+3. Uniform Dust Noise
+
+Apply uniform dust noise to simulated ranges. Assuming some small particles could be hit by the range sensor that are not modeled in by the scene, use this noise type. 
+
+Parameters:
+
+| Parameter |  Description  |
+|:---------:|:-------------:|
+| `hit_prob` | Probability of a ray hitting a particle in one meter free space. |
+| `return_prob` | Probability of a ray hitting dust returns to sender depending on particle distance |
+
+Example:
+
+```xml
+<noise>
+  <type>uniform_dust</type>
+  <hit_prob>0.0000001</hit_prob>
+  <return_prob>0.5</return_prob>
+</noise> 
+```
+
+
+** Noise Chaining **
+
+Example of using the gaussian model first and the uniform dust model second:
+
+```xml
+<noise>
+  <type>gaussian</type>
+  <mean>0.0</mean>
+  <stddev>0.002</stddev>
+</noise>
+
+<noise>
+  <type>uniform_dust</type>
+  <hit_prob>0.0000001</hit_prob>
+  <return_prob>0.5</return_prob>
+</noise> 
+```
 
 
 ## ROS Adapter
