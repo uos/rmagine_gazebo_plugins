@@ -91,8 +91,6 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     Base::Load(world_name);
     std::cout << "[RmagineEmbreeSpherical] Load " << std::endl;
 
-    
-
     GZ_ASSERT(this->world != nullptr,
       "RaySensor did not get a valid World pointer");
 

@@ -1,6 +1,8 @@
 # rmagine_gazebo_plugins
 
 
+![rmagine_gazebo_plugins_img](./img/rmagine_gazebo_plugin_teaser.png)
+
 
 ## Example
 
