@@ -619,52 +619,24 @@ void RmagineEmbreeMap::UpdateState(
         {
             // gzdbg << "Models changed!" << std::endl;
             // std::cout << "SCENE CHANGED!" << std::endl;
-
-            // std::cout << "2. UPDATE SCENE - prepare" << std::endl;
             std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_transform;
             // Transform existing meshes
             if(diff.ModelTransformed())
             {
-                // std::cout << "2.1. APPLY TRANSFORMATIONS" << std::endl;
-                rm::StopWatch sw;
-                double el;
-                sw();
+                // 2.1. APPLY TRANSFORMATIONS
                 meshes_to_transform = EmbreeUpdateTransformed(models_new, diff.transformed);
-                el = sw();
-                // std::cout << "- Prepare meshes transforms: " << el << " ms" << std::endl;
             }
 
             std::unordered_set<rm::EmbreeGeometryPtr> meshes_to_scale;
             if(diff.ModelScaled())
             {
-                
-                rm::StopWatch sw;
-                double el;
-                sw();
                 meshes_to_scale = EmbreeUpdateScaled(models_new, diff.scaled);
-                el = sw();
-
-                // if(!meshes_to_scale.empty())
-                // {
-                //     gzdbg << "[RmagineEmbreeMap] 2.2. APPLY SCALINGS" << std::endl;
-                //     gzdbg << "[RmagineEmbreeMap] - Prepare meshes scalings " << meshes_to_scale.size() << ": " << el << " ms" << std::endl;
-                // }
             }
 
             std::unordered_set<rm::EmbreeGeometryPtr> mesh_links_to_update;
             if(diff.ModelJointsChanged())
             {
-                rm::StopWatch sw;
-                double el;
-                sw();
                 mesh_links_to_update = EmbreeUpdateJointChanges(models_new, diff.joints_changed);
-                el = sw();
-
-                // if(!mesh_links_to_update.empty())
-                // {
-                //     gzdbg << "[RmagineEmbreeMap] 2.3. APPLY JOINT UPDATES" << std::endl;
-                //     gzdbg << "[RmagineEmbreeMap] - Prepare meshes joint updates " << mesh_links_to_update.size() << ": " << el << " ms" << std::endl;
-                // }
             }
 
             // mutex?
@@ -757,8 +729,8 @@ void RmagineEmbreeMap::UpdateState(
 
         if(scene_changes > 0)
         {
-            rm::StopWatch sw;
-            double el;
+            // rm::StopWatch sw;
+            // double el;
             
             if(m_map_mutex)
             {
@@ -767,9 +739,9 @@ void RmagineEmbreeMap::UpdateState(
 
             // std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
 
-            sw();
+            // sw();
             m_map->scene->commit();
-            el = sw();
+            // el = sw();
             // std::cout << "- Scene update finished in " << el << "s" << std::endl;
             
             if(m_map_mutex)
@@ -784,11 +756,6 @@ void RmagineEmbreeMap::UpdateState(
     }
 
     m_sensors_loaded = !m_scene_state.update(models_new, diff);
-
-    if(!m_sensors_loaded)
-    {
-        // std::cout << "Reload sensors!" << std::endl;
-    }
 }
 
 void RmagineEmbreeMap::UpdateSensors()
