@@ -318,7 +318,7 @@ Example:
 ```
 
 
-** Noise Chaining **
+**Noise Chaining**
 
 Example of using the gaussian model first and the uniform dust model second:
 
