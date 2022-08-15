@@ -227,6 +227,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                         if(cache_it != m_mesh_cache.end())
                         {
                             // can used cached mesh_scene
+                            gzdbg << "Taking Cached mesh for " << gzmesh.filename() << std::endl;
                             mesh_scene = cache_it->second;
                         } else {
                             for(auto loader_it = m_mesh_loader.begin(); loader_it != m_mesh_loader.end() && !mesh_scene; ++loader_it)
@@ -256,7 +257,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                             mesh_instance->apply();
                             geoms.push_back(mesh_instance);
 
-                            gzdbg << "ADDING Mesh Instance to vector" << std::endl;
+                            // gzdbg << "ADDING Mesh Instance to vector" << std::endl;
                         } else {
                             gzwarn << "[RmagineEmbreeMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
                         }
@@ -541,6 +542,8 @@ void RmagineEmbreeMap::UpdateState(
             updates_add = EmbreeUpdateAdded(models_new, diff.added);
             scene_changes += updates_add.size();
 
+            gzdbg << "Added models loaded." << std::endl;
+
             for(auto elem : updates_add)
             {
                 rm::EmbreeGeometryPtr geom = elem.first;
@@ -610,16 +613,11 @@ void RmagineEmbreeMap::UpdateState(
             {
                 m_map_mutex->unlock();
             }
-
-            gzdbg << "[RmagineEmbreeMap] New map elements" << std::endl;
-            gzdbg << "[RmagineEmbreeMap] - geometries: " << m_map->meshes.size() << std::endl;
-            gzdbg << "[RmagineEmbreeMap] - instances: " << m_map->scene->geometries().size() << std::endl;
-            gzdbg << "[RmagineEmbreeMap] --- meshes: " << m_map->scene->count<rm::EmbreeMesh>() << std::endl;
-            gzdbg << "[RmagineEmbreeMap] --- instances: " << m_map->scene->count<rm::EmbreeInstance>() << std::endl;
         }
 
         if(diff.ModelChanged())
         {
+            // gzdbg << "Models changed!" << std::endl;
             // std::cout << "SCENE CHANGED!" << std::endl;
 
             // std::cout << "2. UPDATE SCENE - prepare" << std::endl;
@@ -690,6 +688,7 @@ void RmagineEmbreeMap::UpdateState(
         
         if(diff.ModelRemoved())
         {
+            // TODO: remove meshes if no one uses them anymore
             // std::cout << "3. APPLY REMOVALS" << std::endl;
             for(auto geom_id : diff.removed)
             {
@@ -698,28 +697,62 @@ void RmagineEmbreeMap::UpdateState(
                     continue;
                 }
 
-                auto geoms = m_model_meshes[geom_id];
-                // std::cout << "Remove " << geoms.size() << " geometries" << std::endl;
+                auto model_mesh_it = m_model_meshes.find(geom_id);
 
-                for(auto geom : geoms)
+                if(model_mesh_it != m_model_meshes.end())
                 {
-                    // TODO why does the remove needs the mutex?
-                    // tought that the scene->commit would commit all the changes
-                    if(m_map_mutex)
+                    // found geoms
+                    auto geoms = model_mesh_it->second;
+
+                    for(auto geom : geoms)
                     {
-                        m_map_mutex->lock();
+                        // TODO why does the remove needs the mutex?
+                        // tought that the scene->commit would commit all the changes
+                        if(m_map_mutex)
+                        {
+                            m_map_mutex->lock();
+                        }
+
+                        m_map->scene->remove(geom);
+
+                        if(m_map_mutex)
+                        {
+                            m_map_mutex->unlock();
+                        }
+
+                        scene_changes++;
+
+                        auto vis_it = m_geom_to_visual.find(geom);
+                        if(vis_it != m_geom_to_visual.end())
+                        {
+                            std::string key = vis_it->second.name;
+                            m_geom_to_visual.erase(vis_it);
+
+                            auto geom_it = m_visual_to_geoms.find(key);
+                            if(geom_it != m_visual_to_geoms.end())
+                            {
+                                // ERASE ALL GEOMETRIES AT ONCE
+                                m_visual_to_geoms.erase(geom_it);
+                            }
+                        } else {
+                            gzwarn << "WARNING: geometry (" << geom_id << ") to remove was not in m_geom_to_visual" << std::endl;
+                        }
                     }
 
-                    m_map->scene->remove(geom);
-
-                    if(m_map_mutex)
-                    {
-                        m_map_mutex->unlock();
-                    }
-
-                    scene_changes++;
+                    m_model_meshes.erase(model_mesh_it);
+                } else {
+                    gzwarn << "WARNING: Could not found geom_id " << geom_id << " in m_model_meshes." << std::endl;
                 }
             }
+        }
+
+        if(diff.ModelAdded() || diff.ModelRemoved())
+        {
+            gzdbg << "[RmagineEmbreeMap] Number of map elements changed" << std::endl;
+            gzdbg << "[RmagineEmbreeMap] - geometries: " << m_map->meshes.size() << std::endl;
+            gzdbg << "[RmagineEmbreeMap] - instances: " << m_map->scene->geometries().size() << std::endl;
+            gzdbg << "[RmagineEmbreeMap] --- meshes: " << m_map->scene->count<rm::EmbreeMesh>() << std::endl;
+            gzdbg << "[RmagineEmbreeMap] --- instances: " << m_map->scene->count<rm::EmbreeInstance>() << std::endl;
         }
 
         if(scene_changes > 0)
