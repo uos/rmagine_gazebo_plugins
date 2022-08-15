@@ -61,8 +61,13 @@
     </group>
 
     <!-- upload robot -->
-    <param name="robot_description" command="$(find xacro)/xacro '$(find rmagine_gazebo_plugins)/urdf/robot_rotating_optix.urdf.xacro'" />
-    
+    <group if="$(eval arg('rmagine') == 'embree')">
+        <param name="robot_description" command="$(find xacro)/xacro '$(find rmagine_gazebo_plugins)/urdf/robot_rotating_embree.urdf.xacro'" />
+    </group>
+
+    <group if="$(eval arg('rmagine') == 'optix')">
+        <param name="robot_description" command="$(find xacro)/xacro '$(find rmagine_gazebo_plugins)/urdf/robot_rotating_optix.urdf.xacro'" />
+    </group>
 
     <!-- push robot_description to factory and spawn robot in gazebo -->
     <node name="spawn_robot_model" pkg="gazebo_ros" type="spawn_model"

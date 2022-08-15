@@ -78,7 +78,6 @@ protected:
     rm::OptixMapPtr m_map;
     rm::SphereSimulatorOptixPtr m_sphere_sim;
 
-    bool m_pre_alloc_mem = true;
     rm::Memory<float, rm::VRAM_CUDA> m_ranges;
 
     bool m_gz_publish = false;

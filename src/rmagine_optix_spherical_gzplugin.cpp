@@ -272,31 +272,17 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
         Tbms[0] = to_rm(pose);
         rm::Memory<rm::Transform, rm::VRAM_CUDA> Tbms_ = Tbms;
 
-        if(m_pre_alloc_mem)
+        
+        if(m_map_mutex)
         {
-            if(m_map_mutex)
-            {
-                m_map_mutex->lock_shared();
-            }
+            m_map_mutex->lock_shared();
+        }
 
-            m_sphere_sim->simulateRanges(Tbms_, m_ranges);
-            
-            if(m_map_mutex)
-            {
-                m_map_mutex->unlock_shared();
-            }
-        } else {
-            if(m_map_mutex)
-            {
-                m_map_mutex->lock_shared();
-            }
-
-            m_ranges = m_sphere_sim->simulateRanges(Tbms_);
-            
-            if(m_map_mutex)
-            {
-                m_map_mutex->unlock_shared();
-            }
+        m_sphere_sim->simulateRanges(Tbms_, m_ranges);
+        
+        if(m_map_mutex)
+        {
+            m_map_mutex->unlock_shared();
         }
 
         // apply noise

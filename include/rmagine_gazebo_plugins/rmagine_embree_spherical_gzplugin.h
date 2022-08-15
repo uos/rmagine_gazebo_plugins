@@ -79,7 +79,6 @@ protected:
     rm::EmbreeMapPtr m_map;
     rm::SphereSimulatorEmbreePtr m_sphere_sim;
 
-    bool m_pre_alloc_mem = true;
     rm::Memory<float, rm::RAM> m_ranges;
 
     bool m_gz_publish = false;

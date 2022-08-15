@@ -273,27 +273,15 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
         rm::Memory<rm::Transform> Tbms(1);
         Tbms[0] = to_rm(pose);
         
-        if(m_pre_alloc_mem)
+        
+        if(m_map_mutex)
         {
-            if(m_map_mutex)
-            {
-                m_map_mutex->lock_shared();
-            }
-            m_sphere_sim->simulateRanges(Tbms, m_ranges);
-            if(m_map_mutex)
-            {
-                m_map_mutex->unlock_shared();
-            }
-        } else {
-            if(m_map_mutex)
-            {
-                m_map_mutex->lock_shared();
-            }
-            m_ranges = m_sphere_sim->simulateRanges(Tbms);
-            if(m_map_mutex)
-            {
-                m_map_mutex->unlock_shared();
-            }
+            m_map_mutex->lock_shared();
+        }
+        m_sphere_sim->simulateRanges(Tbms, m_ranges);
+        if(m_map_mutex)
+        {
+            m_map_mutex->unlock_shared();
         }
 
         // apply noise

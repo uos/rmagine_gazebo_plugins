@@ -81,9 +81,7 @@
     <sensor type="rmagine_optix_spherical" name="laser3d">
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
-      <update_rate>30</update_rate>
-      <visualize>false</visualize>
-      <pre_alloc_mem>true</pre_alloc_mem>
+      <update_rate>20</update_rate>
 
       <ray>
         <scan>
