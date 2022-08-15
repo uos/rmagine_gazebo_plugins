@@ -9,6 +9,8 @@
 #include <rmagine/noise/UniformDustNoise.hpp>
 #include <rmagine/noise/RelGaussianNoise.hpp>
 
+#include <gazebo/common/Console.hh>
+
 
 using namespace std::placeholders;
 
@@ -34,7 +36,7 @@ static rm::Transform to_rm(const ignition::math::Pose3d& pose)
 
 static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
 {
-    std::cout << "[RmagineEmbreeSpherical] fetching parameters from sdf" << std::endl;
+    gzdbg << "[RmagineEmbreeSpherical] fetching parameters from sdf" << std::endl;
 
     sdf::ElementPtr scanElem = rayElem->GetElement("scan");
 
@@ -78,19 +80,18 @@ static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
 RmagineEmbreeSpherical::RmagineEmbreeSpherical()
 :Base(sensors::RAY) // if sensor is base class: Base(sensors::RAY)
 {
-    std::cout << "[RmagineEmbreeSpherical] Construct" << std::endl;
+    gzdbg << "[RmagineEmbreeSpherical] Construct" << std::endl;
 }
 
 RmagineEmbreeSpherical::~RmagineEmbreeSpherical()
 {
-    std::cout << "[RmagineEmbreeSpherical] Destroy" << std::endl;
+    gzdbg << "[RmagineEmbreeSpherical] Destroy" << std::endl;
 }
 
 void RmagineEmbreeSpherical::Load(const std::string& world_name)
 {
     Base::Load(world_name);
-    std::cout << "[RmagineEmbreeSpherical] Load " << std::endl;
-
+    
     GZ_ASSERT(this->world != nullptr,
       "RaySensor did not get a valid World pointer");
 
@@ -117,7 +118,8 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
             std::string noise_type = noiseElem->Get<std::string>("type");
             if(noise_type == "gaussian")
             {
-                
+                gzdbg << "[RmagineEmbreeSpherical] init noise: 'gaussian'" << std::endl;
+
                 float mean = 0.0;
                 if(noiseElem->HasElement("mean"))
                 {
@@ -125,9 +127,6 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
                 }
 
                 float stddev = noiseElem->Get<float>("stddev");
-
-                std::cout << "[RmagineEmbreeSpherical] init gaussian noise " << mean << ", " << stddev << std::endl;
-
                 rm::NoisePtr gaussian_noise = std::make_shared<rm::GaussianNoise>(
                     mean,
                     stddev,
@@ -136,7 +135,7 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
 
                 m_noise_models.push_back(gaussian_noise);
             } else if(noise_type == "uniform_dust") {
-                std::cout << "[RmagineEmbreeSpherical] init uniform dust noise" << std::endl;
+                gzdbg << "[RmagineEmbreeSpherical] init noise: 'uniform_dust'" << std::endl;
 
                 float hit_prob = noiseElem->Get<float>("hit_prob");
                 float return_prob = noiseElem->Get<float>("return_prob");
@@ -150,6 +149,9 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
                 m_noise_models.push_back(uniform_dust_noise);
 
             } else if(noise_type == "rel_gaussian") {
+
+                gzdbg << "[RmagineEmbreeSpherical] init noise: 'rel_gaussian'" << std::endl;
+
                 float mean = 0.0;
                 float range_exp = 1.0;
                 float stddev = noiseElem->Get<float>("stddev");
@@ -173,15 +175,11 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
 
                 m_noise_models.push_back(gaussian_noise);
             } else {
-                std::cout << "[RmagineEmbreeSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
+                gzwarn << "[RmagineEmbreeSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
             }
 
             noiseElem = noiseElem->GetNextElement("noise");
         }
-
-        
-        
-        
     }
 
     this->parentEntity = this->world->EntityByName(this->ParentName());
@@ -192,7 +190,7 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     auto pose = Pose();
     m_Tsb = to_rm(pose);
 
-    std::cout << "[RmagineEmbreeSpherical] advertising topic " << this->Topic() << std::endl;
+    // std::cout << "[RmagineEmbreeSpherical] advertising topic " << this->Topic() << std::endl;
     
     if(m_gz_publish)
     {
@@ -201,13 +199,13 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
 
         if (!this->scanPub || !this->scanPub->HasConnections())
         {
-            std::cout << "[RmagineEmbreeSpherical] Gazebo internal publishing failed. Reason: ";
+            gzwarn << "[RmagineEmbreeSpherical] Gazebo internal publishing failed. Reason: ";
 
             if(!this->scanPub)
             {
-                std::cout << " No scanPub" << std::endl;
+                gzwarn << "- Reason: No scanPub" << std::endl;
             } else {
-                std::cout << " No connections" << std::endl;
+                gzwarn << "- Reason: No connections" << std::endl;
             }
         }
     }
@@ -248,6 +246,11 @@ void RmagineEmbreeSpherical::setMap(rm::EmbreeMapPtr map)
         m_sphere_sim->setModel(m_sensor_model);
     }
 
+    if(m_waiting_for_map)
+    {
+        std::cout << "[RmagineEmbreeSpherical] RmagineEmbreeMap found." << std::endl;
+    }
+
     m_waiting_for_map = false;
 }
 
@@ -257,9 +260,12 @@ void RmagineEmbreeSpherical::setLock(std::shared_ptr<std::shared_mutex> mutex)
 }
 
 bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
-{   
+{
     if(m_sphere_sim)
     {
+        
+
+
         IGN_PROFILE("RmagineEmbreeSpherical::UpdateImpl");
         IGN_PROFILE_BEGIN("Update");
 
@@ -310,7 +316,7 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
             {
                 this->scanPub->Publish(this->laserMsg);
             } else {
-                 std::cout << "[RmagineEmbreeSpherical] Publishing failed. " << std::endl;
+                gzwarn << "[RmagineEmbreeSpherical] Publishing failed. " << std::endl;
             }
             IGN_PROFILE_END();
         }
@@ -319,7 +325,7 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
     } else {
         if(!m_waiting_for_map)
         {
-            std::cout << "[RmagineEmbreeSpherical] waiting for RmagineEmbreeMap..." << std::endl;
+            gzdbg << "[RmagineEmbreeSpherical] waiting for RmagineEmbreeMap..." << std::endl;
             m_waiting_for_map = true;
         }
     }

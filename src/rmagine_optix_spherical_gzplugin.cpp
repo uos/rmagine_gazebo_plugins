@@ -9,6 +9,7 @@
 #include <rmagine/noise/UniformDustNoiseCuda.hpp>
 #include <rmagine/noise/RelGaussianNoiseCuda.hpp>
 
+#include <gazebo/common/Console.hh>
 
 
 using namespace std::placeholders;
@@ -35,7 +36,7 @@ static rm::Transform to_rm(const ignition::math::Pose3d& pose)
 
 static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
 {
-    std::cout << "[RmagineOptixSpherical] fetching parameters from sdf" << std::endl;
+    gzdbg << "[RmagineOptixSpherical] fetching parameters from sdf" << std::endl;
 
     sdf::ElementPtr scanElem = rayElem->GetElement("scan");
 
@@ -77,19 +78,17 @@ static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
 RmagineOptixSpherical::RmagineOptixSpherical()
 :Base(sensors::RAY) // if sensor is base class: Base(sensors::RAY)
 {
-    std::cout << "[RmagineOptixSpherical] Construct" << std::endl;
+    gzdbg << "[RmagineOptixSpherical] Construct" << std::endl;
 }
 
 RmagineOptixSpherical::~RmagineOptixSpherical()
 {
-    std::cout << "[RmagineOptixSpherical] Destroy" << std::endl;
+    gzdbg << "[RmagineOptixSpherical] Destroy" << std::endl;
 }
 
 void RmagineOptixSpherical::Load(const std::string& world_name)
 {
     Base::Load(world_name);
-    std::cout << "[RmagineOptixSpherical] Load " << std::endl;
-
     
     GZ_ASSERT(this->world != nullptr,
       "RaySensor did not get a valid World pointer");
@@ -118,7 +117,8 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
             std::string noise_type = noiseElem->Get<std::string>("type");
             if(noise_type == "gaussian")
             {
-                std::cout << "[RmagineOptixSpherical] init gaussian noise" << std::endl;
+                gzdbg << "[RmagineOptixSpherical] init noise: 'gaussian'" << std::endl;
+                
                 float mean = 0.0;
                 if(noiseElem->HasElement("mean"))
                 {
@@ -136,7 +136,8 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
                 m_noise_models.push_back(gaussian_noise);
 
             } else if(noise_type == "uniform_dust") {
-                std::cout << "[RmagineOptixSpherical] init uniform dust noise" << std::endl;
+                gzdbg << "[RmagineOptixSpherical] init noise: 'uniform_dust'" << std::endl;
+                
                 float hit_prob = noiseElem->Get<float>("hit_prob");
                 float return_prob = noiseElem->Get<float>("return_prob");
 
@@ -149,6 +150,8 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
                 m_noise_models.push_back(uniform_dust_noise);
 
             } else if(noise_type == "rel_gaussian") {
+                gzdbg << "[RmagineOptixSpherical] init noise: 'rel_gaussian'" << std::endl;
+                
                 float mean = 0.0;
                 float range_exp = 1.0;
                 float stddev = noiseElem->Get<float>("stddev");
@@ -172,7 +175,7 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
 
                 m_noise_models.push_back(gaussian_noise);
             } else {
-                std::cout << "[RmagineOptixSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
+                gzwarn << "[RmagineOptixSpherical] WARNING: SDF noise type '" << noise_type << "' unknown. skipping." << std::endl;
             }
 
             noiseElem = noiseElem->GetNextElement("noise");
@@ -189,7 +192,7 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
     auto pose = Pose();
     m_Tsb = to_rm(pose);
 
-    std::cout << "[RmagineOptixSpherical] advertising topic " << this->Topic() << std::endl;
+    // std::cout << "[RmagineOptixSpherical] advertising topic " << this->Topic() << std::endl;
     
     if(m_gz_publish)
     {
@@ -198,13 +201,13 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
 
         if(!this->scanPub || !this->scanPub->HasConnections())
         {
-            std::cout << "[RmagineOptixSpherical] Gazebo internal publishing failed. Reason: ";
+            gzwarn << "[RmagineOptixSpherical] Gazebo internal publishing failed. Reason: ";
 
             if(!this->scanPub)
             {
-                std::cout << " No scanPub" << std::endl;
+                gzwarn << "- Reason: No scanPub" << std::endl;
             } else {
-                std::cout << " No connections" << std::endl;
+                gzwarn << "- Reason: No connections" << std::endl;
             }
         }
     }
@@ -242,6 +245,11 @@ void RmagineOptixSpherical::setMap(rm::OptixMapPtr map)
         m_sphere_sim = std::make_shared<rm::SphereSimulatorOptix>(map);
         m_sphere_sim->setTsb(m_Tsb);
         m_sphere_sim->setModel(m_sensor_model);
+    }
+
+    if(m_waiting_for_map)
+    {
+        std::cout << "[RmagineOptixSpherical] RmagineOptixMap found." << std::endl;
     }
 
     m_waiting_for_map = false;
@@ -310,7 +318,7 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
             {
                 this->scanPub->Publish(this->laserMsg);
             } else {
-                 std::cout << "[RmagineOptixSpherical] Publishing failed. " << std::endl;
+                gzwarn << "[RmagineOptixSpherical] Publishing failed. " << std::endl;
             }
             IGN_PROFILE_END();
         }
@@ -319,7 +327,7 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
     } else {
         if(!m_waiting_for_map)
         {
-            std::cout << "[RmagineOptixSpherical] waiting for RmagineOptixMap..." << std::endl;
+            gzdbg << "[RmagineOptixSpherical] waiting for RmagineOptixMap..." << std::endl;
             m_waiting_for_map = true;
         }
     }

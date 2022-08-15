@@ -9,18 +9,17 @@ namespace gazebo
 RmagineEmbreeROS::RmagineEmbreeROS()
 :Base()
 {
-    std::cout << "[RmagineEmbreeROS] Construct" << std::endl;
+    // ROS_INFO_STREAM("[RmagineEmbreeROS] Construct");
 }
 
 RmagineEmbreeROS::~RmagineEmbreeROS()
 {
-    std::cout << "[RmagineEmbreeROS] Destroy" << std::endl;
+    // std::cout << "[RmagineEmbreeROS] Destroy" << std::endl;
 }
 
 void RmagineEmbreeROS::parseOutputs(sdf::ElementPtr outputs)
 {
-
-    std::cout << "[RmagineEmbreeROS::parseOutputs]" << std::endl;
+    // std::cout << "[RmagineEmbreeROS::parseOutputs]" << std::endl;
 
     auto it = outputs->GetFirstElement();
 
@@ -68,43 +67,8 @@ void RmagineEmbreeROS::parseOutputs(sdf::ElementPtr outputs)
             } 
         }
 
-        
-
         it = it->GetNextElement();
     }
-
-    // if(outputs->HasElement("laser"))
-    // {
-    //     sdf::ElementPtr laserElem = outputs->GetElement("laser");
-    //     std::string topic = laserElem->Get<std::string>("topic");
-    //     m_pub_laser = std::make_shared<ros::Publisher>(
-    //                     m_nh->advertise<sensor_msgs::LaserScan>(
-    //                         topic, 1
-    //                     ) 
-    //                 );
-    // }
-
-    // if(outputs->HasElement("pcl"))
-    // {
-    //     sdf::ElementPtr pclElem = outputs->GetElement("pcl");
-    //     std::string topic = pclElem->Get<std::string>("topic");
-    //     m_pub_pcl = std::make_shared<ros::Publisher>(
-    //                     m_nh->advertise<sensor_msgs::PointCloud>(
-    //                         topic, 1
-    //                     ) 
-    //                 );
-    // }
-
-    // if(outputs->HasElement("pcl2"))
-    // {
-    //     sdf::ElementPtr pcl2Elem = outputs->GetElement("pcl2");
-    //     std::string topic = pcl2Elem->Get<std::string>("topic");
-    //     m_pub_pcl2 = std::make_shared<ros::Publisher>(
-    //                     m_nh->advertise<sensor_msgs::PointCloud2>(
-    //                         topic, 1
-    //                     ) 
-    //                 );
-    // }
 }
 
 void RmagineEmbreeROS::Load(
@@ -113,7 +77,6 @@ void RmagineEmbreeROS::Load(
 {
     m_sdf = _sdf;
 
-    std::cout << "[RmagineEmbreeROS] Load!" << std::endl;
     m_spherical_sensor =
         std::dynamic_pointer_cast<sensors::RmagineEmbreeSpherical>(_sensor);
 
@@ -140,6 +103,8 @@ void RmagineEmbreeROS::Load(
     // Connect to the sensor update event.
     m_update_conn = m_spherical_sensor->ConnectUpdated(
         std::bind(&RmagineEmbreeROS::OnUpdate, this));
+
+    ROS_INFO_STREAM("[RmagineEmbreeROS] Loaded.");
 }
 
 void RmagineEmbreeROS::OnUpdate()
@@ -178,7 +143,7 @@ void RmagineEmbreeROS::OnUpdate()
 
                 pub.pub->publish(msg);
             } else {
-                std::cout << "[RmagineEmbreeROS] Could not make Laserscan. phi size 1 != " << sensor_model.phi.size << std::endl;
+                ROS_WARN_STREAM("[RmagineEmbreeROS] Could not make Laserscan. phi size 1 != " << sensor_model.phi.size);
             }
         }
 

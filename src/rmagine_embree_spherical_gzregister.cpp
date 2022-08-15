@@ -17,7 +17,6 @@ namespace gazebo
     public: void Load(int /*_argc*/, char ** /*_argv*/)
     {
       sensors::RegisterRmagineEmbreeSpherical();
-      printf("Loaded RmagineEmbreeSpherical!\n");
     }
 
     /////////////////////////////////////////////
