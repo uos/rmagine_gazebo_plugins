@@ -9,6 +9,7 @@ After building these acceleration structures, you can simulate depth sensors on 
 
 ## Examples
 
+After compiling 
 
 ### `example.launch`
 
@@ -50,11 +51,27 @@ Now the scanner cylinder should rotate in Gazebo as well as in RViz.
 
 ## Usage
 
-### 1. Compilation
+### 1. Installation
 
-Dependency: Rmagine - library. 
 
-Compile with Embree or OptiX support to enable different rmagine_gazebo_plugins:
+#### Rmagine
+
+Follow instructions of Rmagine library installation. Compile with Embree or OptiX backends for CPU or GPU support respectively.
+
+#### Compilation
+Clone this repository to your ROS-workspace (src folder).
+
+```bash
+user@pc:~/catkin_ws/src$ git clone [this-repo-link]
+```
+
+Then compile with
+
+```bash
+user@pc:~/catkin_ws$ catkin_make
+```
+
+Depending on which backends were installed during Rmagine installation the following plugins are built:
 
 1. Embree
     - World-Plugins: `rmagine_embree_map_gzplugin`
@@ -62,6 +79,7 @@ Compile with Embree or OptiX support to enable different rmagine_gazebo_plugins:
 2. OptiX
     - World-Plugins: `rmagine_optix_map_gzplugin`
     - Sensor-Plugins: `rmagine_optix_spherical`
+
 
 ### 2. Sensor Registration
 
