@@ -160,7 +160,6 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
             }
 
             sdf::ElementPtr linkElem = link->GetSDF();
-
             if(linkElem->HasElement("rmagine_ignore"))
             {
                 continue;
@@ -336,6 +335,12 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
                 continue;
             }
 
+            sdf::ElementPtr linkElem = link->GetSDF();
+            if(linkElem->HasElement("rmagine_ignore"))
+            {
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
@@ -419,6 +424,12 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
                 continue;
             }
 
+            sdf::ElementPtr linkElem = link->GetSDF();
+            if(linkElem->HasElement("rmagine_ignore"))
+            {
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
@@ -491,6 +502,12 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
             physics::LinkPtr link = model->GetLink(link_name);
             if(link)
             {
+                sdf::ElementPtr linkElem = link->GetSDF();
+                if(linkElem->HasElement("rmagine_ignore"))
+                {
+                    continue;
+                }
+
                 std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
                 for(auto elem : visuals)
                 {

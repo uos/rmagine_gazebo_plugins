@@ -438,6 +438,12 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateTransformed(
                 continue;
             }
 
+            sdf::ElementPtr linkElem = link->GetSDF();
+            if(linkElem->HasElement("rmagine_ignore"))
+            {
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
@@ -524,6 +530,12 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
                 continue;
             }
 
+            sdf::ElementPtr linkElem = link->GetSDF();
+            if(linkElem->HasElement("rmagine_ignore"))
+            {
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
@@ -599,6 +611,13 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
             physics::LinkPtr link = model->GetLink(link_name);
             if(link)
             {
+
+                sdf::ElementPtr linkElem = link->GetSDF();
+                if(linkElem->HasElement("rmagine_ignore"))
+                {
+                    continue;
+                }
+
                 std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
                 for(auto elem : visuals)
                 {
