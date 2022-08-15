@@ -45,11 +45,17 @@
 <!-- 2D  Rotating LASER -->
 <link name="laser2d">
   <collision>
-    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
     <geometry>
       <cylinder radius="0.0516" length="0.0717"/>
     </geometry>
   </collision>
+  <visual>
+    <origin xyz="0 0 0.0" rpy="0 0 0" />
+    <geometry>
+      <cylinder radius="0.0516" length="0.0717"/>
+    </geometry>
+  </visual>
   <inertial>
     <mass value="0.83"/>
     <origin xyz="0 0 0.0"/>
@@ -58,6 +64,10 @@
       izz="${0.5 * 0.83 * (0.0516*0.0516)}"/>
   </inertial>
 </link>
+
+<gazebo reference="laser2d">
+  <rmagine_ignore/>
+</gazebo>
 
 <joint name="laser2d_to_base_joint" type="continuous">
   <parent link="base_link" />

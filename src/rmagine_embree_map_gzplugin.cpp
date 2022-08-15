@@ -135,6 +135,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
     for(auto model_id : added)
     {
+        
         if(m_model_ignores.find(model_id) != m_model_ignores.end())
         {
             continue;
@@ -158,8 +159,14 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                 continue;
             }
 
-            std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
+            sdf::ElementPtr linkElem = link->GetSDF();
 
+            if(linkElem->HasElement("rmagine_ignore"))
+            {
+                continue;
+            }
+
+            std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
             ignition::math::Pose3d link_world_pose = link->WorldPose();
             rm::Transform Tlw = to_rm(link_world_pose);
             

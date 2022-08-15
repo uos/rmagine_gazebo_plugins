@@ -157,6 +157,13 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                 continue;
             }
 
+            sdf::ElementPtr linkElem = link->GetSDF();
+
+            if(linkElem->HasElement("rmagine_ignore"))
+            {
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
             ignition::math::Pose3d link_world_pose = link->WorldPose();
             rm::Transform Tlw = to_rm(link_world_pose);

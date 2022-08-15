@@ -44,12 +44,35 @@
 
 <!-- 3D LASER -->
 <link name="laser3d">
+  <collision>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <geometry>
+      <cylinder radius="0.0516" length="0.0717"/>
+    </geometry>
+  </collision>
+  <visual>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <geometry>
+      <cylinder radius="0.0516" length="0.0717"/>
+    </geometry>
+  </visual>
+  <inertial>
+    <mass value="0.83"/>
+    <origin xyz="0.0 0.0 0.0"/>
+    <inertia ixx="${(0.83 * (3.0*0.0516*0.0516 + 0.0717*0.0717)) / 12.0}" ixy="0" ixz="0"
+      iyy="${(0.83 * (3.0*0.0516*0.0516 + 0.0717*0.0717)) / 12.0}" iyz="0"
+      izz="${0.5 * 0.83 * (0.0516*0.0516)}"/>
+  </inertial>
 </link>
+
+<gazebo reference="laser3d">
+  <rmagine_ignore/>
+</gazebo>
 
 <joint name="laser3d_to_base_joint" type="fixed">
   <parent link="base_link" />
   <child link="laser3d" />
-  <origin xyz="0 0 1.0" />
+  <origin xyz="0.0 0.0 0.5" />
 </joint>
 
 <gazebo reference="laser3d">
@@ -65,17 +88,17 @@
           <horizontal>
             <min_angle>${-M_PI}</min_angle>
             <increment>${1.0 * M_PI / 180.0}</increment>
-            <samples>360</samples>
+            <samples>1024</samples>
           </horizontal>
           <vertical>
-            <min_angle>${-60.0 * M_PI / 180.0}</min_angle>
+            <min_angle>${-45.0 * M_PI / 180.0}</min_angle>
             <increment>${2.0 * M_PI / 180.0}</increment>
-            <samples>60</samples>
+            <samples>45</samples>
           </vertical>
         </scan>
 
         <range>
-          <min>0.2</min>
+          <min>0.0</min>
           <max>100.0</max>
         </range>
 
