@@ -262,7 +262,7 @@ rm::OptixScenePtr to_rm_optix(
     for(size_t i = 0; i < gzmesh->GetSubMeshCount(); i++)
     {
         const common::SubMesh* gzsubmesh = gzmesh->GetSubMesh(i);
-        gzdbg << "[RmagineOptixMap ]SUBMESH " << i << std::endl;
+        gzdbg << "[RmagineOptixMap] SUBMESH " << i << std::endl;
         gzdbg << "[RmagineOptixMap] -- name: " << gzsubmesh->GetName() << std::endl; 
         gzdbg << "[RmagineOptixMap] -- vertices: " << gzsubmesh->GetVertexCount() << std::endl;
         gzdbg << "[RmagineOptixMap] -- normals: " << gzsubmesh->GetNormalCount() << std::endl;

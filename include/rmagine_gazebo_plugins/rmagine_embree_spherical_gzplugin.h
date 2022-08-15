@@ -59,7 +59,7 @@ public:
         return m_sensor_model;
     }
     
-    inline rm::Memory<float, rm::RAM> ranges() const
+    inline rm::MemoryView<float, rm::RAM> ranges() const
     {
         return m_ranges;
     }
