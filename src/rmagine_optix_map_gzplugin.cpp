@@ -151,6 +151,12 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
         std::vector<physics::LinkPtr> links = model->GetLinks();
         for(physics::LinkPtr link : links)
         {
+            if(!link)
+            {
+                gzwarn << "WARNING - OptixUpdateAdded: link empty" << std::endl;
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
             ignition::math::Pose3d link_world_pose = link->WorldPose();
             rm::Transform Tlw = to_rm(link_world_pose);
@@ -419,6 +425,12 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateTransformed(
 
         for(physics::LinkPtr link : links)
         {
+            if(!link)
+            {
+                gzwarn << "WARNING - OptixUpdateTransformed: link empty" << std::endl;
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
@@ -499,6 +511,12 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
 
         for(physics::LinkPtr link : links)
         {
+            if(!link)
+            {
+                gzwarn << "WARNING - OptixUpdateScaled: link empty" << std::endl;
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
@@ -562,6 +580,12 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
             continue;
         }
         physics::ModelPtr model = model_it->second;
+
+        if(!model)
+        {
+            gzwarn << "WARNING - OptixUpdateJointChanges: Model empty" << std::endl;
+            continue;
+        }
 
         for(std::string link_name : elem.second)
         {
