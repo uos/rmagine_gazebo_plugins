@@ -112,16 +112,27 @@ As soon as the gazebo scene changes, the acceleration structure is updated accor
 Some other examples are located in the worlds folder.
 
 To increase the performance sdf entities can be marked to be ignored by the map plugins.
-For example, if you know that your 3D lidar never scans the robot it is attached to, you may consider ignoring the entire robot in the map plugins.
+For example, if you know that your 3D lidar never scans the robot it is attached to, you may consider excluding the entire robot of the map plugins.
 
 To achieve that in world-files just add an `rmagine_ignore` tag to the model:
 
 ```xml
 <world>
 
+<!-- Exclude single model from map -->
 <model name='plane1_model'>
     <rmagine_ignore/>
     ...
+</model>
+
+<!-- Or exclude single link from map -->
+<model name="plane2_model">
+  ...
+  <link name="plane2_link">
+    ...
+    <rmagine_ignore/>
+  </link>
+
 </model>
 
 </world>
@@ -139,8 +150,6 @@ How to add ignores in urdf-files will be explained in the next section.
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
       <update_rate>60</update_rate>
-      <visualize>false</visualize>
-      <pre_alloc_mem>true</pre_alloc_mem>
 
       <ray>
         <scan>
@@ -175,8 +184,6 @@ How to add ignores in urdf-files will be explained in the next section.
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
       <update_rate>60</update_rate>
-      <visualize>false</visualize>
-      <pre_alloc_mem>true</pre_alloc_mem>
 
       <ray>
         <scan>
@@ -209,19 +216,21 @@ How to add ignores in urdf-files will be explained in the next section.
 
 As in world-files, ignores can be added to URDF files:
 
-1. Ignore the entire robot:
-
 ```xml
 <robot>
 ...
 
+<!-- Ignore the entire robote-->
 <gazebo>
+    <rmagine_ignore/>
+</gazebo>
+
+<!-- Ignore a link. Useful if you want to ignore the scanner visual -->
+<gazebo reference="my_scanner_link">
     <rmagine_ignore/>
 </gazebo>
 </robot>
 ```
-
-2. Ignore a link (TODO)
 
 ### 5. Noise
 
@@ -339,8 +348,6 @@ Examples - this time using OptiX.
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
       <update_rate>60</update_rate>
-      <visualize>false</visualize>
-      <pre_alloc_mem>true</pre_alloc_mem>
 
       <ray>
         <scan>
@@ -390,8 +397,6 @@ Examples - this time using OptiX.
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
       <update_rate>60</update_rate>
-      <visualize>false</visualize>
-      <pre_alloc_mem>true</pre_alloc_mem>
 
       <ray>
         <scan>
