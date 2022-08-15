@@ -104,7 +104,7 @@ user@pc:~$ gazebo -s librmagine_embree_sensors_gzregister.so
 </node>
 ```
 
-### 3. Integrating Map Plugins
+### 3. Map Plugins
 
 Embree sensor plugins require one Embree map plugin running.
 OptiX sensor plugins require one OptiX map plugin running.
@@ -158,7 +158,7 @@ To achieve that in world-files just add an `rmagine_ignore` tag to the model:
 
 How to add ignores in urdf-files will be explained in the next section.
 
-### 4. Integrating Sensors
+### 4. Sensors
 
 **2D Laser**
 
