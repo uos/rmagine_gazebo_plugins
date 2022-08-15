@@ -690,14 +690,14 @@ void RmagineEmbreeMap::UpdateState(
         {
             // TODO: remove meshes if no one uses them anymore
             // std::cout << "3. APPLY REMOVALS" << std::endl;
-            for(auto geom_id : diff.removed)
+            for(auto model_id : diff.removed)
             {
-                if(m_model_ignores.find(geom_id) != m_model_ignores.end())
+                if(m_model_ignores.find(model_id) != m_model_ignores.end())
                 {
                     continue;
                 }
 
-                auto model_mesh_it = m_model_meshes.find(geom_id);
+                auto model_mesh_it = m_model_meshes.find(model_id);
 
                 if(model_mesh_it != m_model_meshes.end())
                 {
@@ -735,13 +735,13 @@ void RmagineEmbreeMap::UpdateState(
                                 m_visual_to_geoms.erase(geom_it);
                             }
                         } else {
-                            gzwarn << "WARNING: geometry (" << geom_id << ") to remove was not in m_geom_to_visual" << std::endl;
+                            gzwarn << "WARNING: geometry of model (" << model_id << ") to remove was not in m_geom_to_visual" << std::endl;
                         }
                     }
 
                     m_model_meshes.erase(model_mesh_it);
                 } else {
-                    gzwarn << "WARNING: Could not found geom_id " << geom_id << " in m_model_meshes." << std::endl;
+                    gzwarn << "WARNING: Could not found model " << model_id << " in m_model_meshes." << std::endl;
                 }
             }
         }

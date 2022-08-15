@@ -739,7 +739,7 @@ void RmagineOptixMap::UpdateState()
         if(diff.ModelRemoved())
         {
             // TODO: remove meshes if no one uses them anymore
-            
+
             for(auto model_id : diff.removed)
             {
                 if(m_model_ignores.find(model_id) != m_model_ignores.end())
@@ -747,34 +747,41 @@ void RmagineOptixMap::UpdateState()
                     continue;
                 }
 
-                auto insts = m_model_meshes[model_id];
+                auto insts_it = m_model_meshes.find(model_id);
 
-                for(auto inst : insts)
+                if(insts_it != m_model_meshes.end())
                 {
-                    insts_old->remove(inst);
-                    scene_changes++;
-
-                    auto vis_it = m_geom_to_visual.find(inst);
-                    if(vis_it != m_geom_to_visual.end())
+                    auto insts = insts_it->second;
+                    for(auto inst : insts)
                     {
-                        std::string key = vis_it->second.name;
+                        insts_old->remove(inst);
+                        scene_changes++;
 
-                        // std::cout << "ERASE instance from instance->visual map. visual: " << key << std::endl;
-
-                        m_geom_to_visual.erase(vis_it);
-
-                        auto geom_it = m_visual_to_geoms.find(key);
-
-                        if(geom_it != m_visual_to_geoms.end())
+                        auto vis_it = m_geom_to_visual.find(inst);
+                        if(vis_it != m_geom_to_visual.end())
                         {
-                            // ERASE ALL GEOMETRIES AT ONCE
-                            // std::cout << "ERASE all instances of visual " << key << std::endl;
-                            m_visual_to_geoms.erase(geom_it);
+                            std::string key = vis_it->second.name;
+
+                            // std::cout << "ERASE instance from instance->visual map. visual: " << key << std::endl;
+
+                            m_geom_to_visual.erase(vis_it);
+
+                            auto geom_it = m_visual_to_geoms.find(key);
+
+                            if(geom_it != m_visual_to_geoms.end())
+                            {
+                                // ERASE ALL GEOMETRIES AT ONCE
+                                // std::cout << "ERASE all instances of visual " << key << std::endl;
+                                m_visual_to_geoms.erase(geom_it);
+                            }
+                        } else {
+                            gzwarn << "WARNING: instance to remove was not in m_geom_to_visual" << std::endl;
                         }
-                    } else {
-                        gzwarn << "WARNING: instance to remove was not in m_geom_to_visual" << std::endl;
                     }
+                } else {
+                    gzwarn << "WARNING: Could not found model (" << model_id << ") in m_model_meshes." << std::endl;
                 }
+
             }
         }
 
