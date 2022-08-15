@@ -337,7 +337,7 @@ Example of using the gaussian model first and the uniform dust model second:
 ```
 
 
-## ROS Adapter
+## ROS Plugin
 
 This plugin generates ROS-messages of the simulated data and writes them to specified ROS-topics.
 The following ROS-Adapter are available dependend on your sensor type:
