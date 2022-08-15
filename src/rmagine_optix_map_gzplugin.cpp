@@ -753,11 +753,6 @@ void RmagineOptixMap::UpdateState()
             }
 
             el = sw();
-            if(!meshes_to_update.empty())
-            {
-                // std::cout << "2. APPLY UPDATES" << std::endl;
-                //     std::cout << "- Prepare instance updates " << meshes_to_update.size() << ": " << el << "s" << std::endl;
-            }
         }
 
         if(diff.ModelRemoved())
@@ -795,7 +790,6 @@ void RmagineOptixMap::UpdateState()
                             if(geom_it != m_visual_to_geoms.end())
                             {
                                 // ERASE ALL GEOMETRIES AT ONCE
-                                // std::cout << "ERASE all instances of visual " << key << std::endl;
                                 m_visual_to_geoms.erase(geom_it);
                             }
                         } else {
