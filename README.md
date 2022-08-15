@@ -7,19 +7,46 @@ After building these acceleration structures, you can simulate depth sensors on 
 
 ![rmagine_gazebo_plugins_img](./img/rmagine_gazebo_plugin_teaser.png)
 
-## Example
+## Examples
 
-After compilation, run
+
+### `example.launch`
 
 ```bash
 user@pc:~$ roslaunch rmagine_gazebo_plugins example.launch
 ```
 
-To execute sensor plugins on different Rmagine backends, for example optix, run
+Simulates a 3d lidar at 20hz on Embree backend.  
+To use OptiX backend, run
 
 ```bash
 user@pc:~$ roslaunch rmagine_gazebo_plugins example.launch rmagine:=optix
 ```
+
+Open RViz set fixed frame to `base_footprint` and visualize topic `laser3d/pcl`.
+
+### `rotating_scanner.launch`
+
+```bash
+user@pc:~$ roslaunch rmagine_gazebo_plugins rotating_laser.launch
+```
+
+or with OptiX backend
+
+```bash
+user@pc:~$ roslaunch rmagine_gazebo_plugins rotating_laser.launch rmagine:=optix
+```
+
+Open RViz set fixed frame to `base_footprint` and visualize topic `laser2d/scan`.
+In Gazebo-GUI find the `laser2d` link at model `robot_sensor`.
+To let the scanner rotate go to Gazebo-GUI:
+1. Right-click on the `laser2d` link at model `robot_sensor`
+2. Click "Apply Force/Torque"
+3. Set Torque to y=0.5 
+4. Click "Apply Torque"
+
+Now the scanner cylinder should rotate in Gazebo as well as in RViz.
+
 
 ## Usage
 
