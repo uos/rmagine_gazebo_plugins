@@ -152,6 +152,12 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
         std::vector<physics::LinkPtr> links = model->GetLinks();
         for(physics::LinkPtr link : links)
         {
+            if(!link)
+            {
+                gzwarn << "WARNING - EmbreeUpdateAdded: link empty " << std::endl;
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             ignition::math::Pose3d link_world_pose = link->WorldPose();
@@ -317,6 +323,12 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
 
         for(physics::LinkPtr link : links)
         {
+            if(!link)
+            {
+                gzwarn << "WARNING - EmbreeUpdateTransformed: link empty " << std::endl;
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
@@ -394,6 +406,12 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateScaled(
 
         for(physics::LinkPtr link : links)
         {
+            if(!link)
+            {
+                gzwarn << "WARNING - EmbreeUpdateScaled: link empty " << std::endl;
+                continue;
+            }
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
 
             for(auto elem : visuals)
