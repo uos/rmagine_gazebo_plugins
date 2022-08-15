@@ -436,19 +436,29 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateTransformed(
 
                 for(auto inst : mesh_vis_it->second)
                 {
-                    unsigned int inst_id = insts_global->get(inst);
+                    auto inst_id_opt = insts_global->getOpt(inst);
 
-                    ignition::math::Pose3d link_world_pose = link->WorldPose();
-                    msgs::Pose vis_pose = vis.pose();
+                    if(inst_id_opt)
+                    {
+                        unsigned int inst_id = *inst_id_opt;
 
-                    rm::Transform Tlw = to_rm(link_world_pose);
-                    rm::Transform Tvl = to_rm(vis_pose);
+                        ignition::math::Pose3d link_world_pose = link->WorldPose();
+                        msgs::Pose vis_pose = vis.pose();
 
-                    rm::Transform Tvw = Tlw * Tvl;
+                        rm::Transform Tlw = to_rm(link_world_pose);
+                        rm::Transform Tvl = to_rm(vis_pose);
 
-                    auto Tiv = m_geom_to_visual[inst].T;
-                    inst->setTransform(Tvw * Tiv);
-                    insts_to_transform.insert(inst);
+                        rm::Transform Tvw = Tlw * Tvl;
+
+                        auto Tiv = m_geom_to_visual[inst].T;
+                        inst->setTransform(Tvw * Tiv);
+                        insts_to_transform.insert(inst);
+
+                    } else {
+                        gzwarn << "WARNING - OptixUpdateTransformed: visual not in scene. But it should." << std::endl;
+                        gzwarn << "- key: " << key << std::endl;
+                    }
+
                 }
             }
         }
@@ -506,11 +516,20 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
 
                 for(auto inst : mesh_vis_it->second)
                 {
-                    unsigned int inst_id = insts_global->get(inst);
-                    msgs::Vector3d vis_scale = vis.scale();
+                    auto inst_id_opt = insts_global->getOpt(inst);
 
-                    inst->setScale(model_scale);
-                    insts_to_scale.insert(inst);
+                    if(inst_id_opt)
+                    {
+                        unsigned int inst_id = *inst_id_opt;
+
+                        msgs::Vector3d vis_scale = vis.scale();
+
+                        inst->setScale(model_scale);
+                        insts_to_scale.insert(inst);
+                    } else {
+                        gzwarn << "WARNING - OptixUpdateScaled: visual not in scene. But it should." << std::endl;
+                        gzwarn << "- key: " << key << std::endl;
+                    }
                 }
             }
         }
@@ -566,19 +585,28 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
 
                     for(auto inst : mesh_vis_it->second)
                     {
-                        unsigned int geom_id = insts_global->get(inst);
-                        
-                        ignition::math::Pose3d link_world_pose = link->WorldPose();
-                        msgs::Pose vis_pose = vis.pose();
+                        auto geom_id_opt = insts_global->getOpt(inst);
 
-                        // convert to rmagine
-                        rm::Transform Tlw = to_rm(link_world_pose);
-                        rm::Transform Tvl = to_rm(vis_pose);
-                        rm::Transform Tvw = Tlw * Tvl;
+                        if(geom_id_opt)
+                        {
+                            unsigned int geom_id = *geom_id_opt;
 
-                        auto Tiv = m_geom_to_visual[inst].T;
-                        inst->setTransform(Tvw * Tiv);
-                        inst_links_to_update.insert(inst);
+                            ignition::math::Pose3d link_world_pose = link->WorldPose();
+                            msgs::Pose vis_pose = vis.pose();
+
+                            // convert to rmagine
+                            rm::Transform Tlw = to_rm(link_world_pose);
+                            rm::Transform Tvl = to_rm(vis_pose);
+                            rm::Transform Tvw = Tlw * Tvl;
+
+                            auto Tiv = m_geom_to_visual[inst].T;
+                            inst->setTransform(Tvw * Tiv);
+                            inst_links_to_update.insert(inst);
+
+                        } else {
+                            gzwarn << "WARNING - OptixUpdateJointChanges: visual not in scene. But it should." << std::endl;
+                            gzwarn << "- key: " << key << std::endl;
+                        }
                     }
                 }
             } else {
@@ -664,9 +692,6 @@ void RmagineOptixMap::UpdateState()
                 unsigned int geom_id = m_map->scene()->add(inst->geometry());
                 unsigned int inst_id = insts_old->add(inst);
             }
-            gzdbg << "[RmagineOptixMap] New map elements" << std::endl;
-            gzdbg << "[RmagineOptixMap] - geometries: " << m_map->scene()->geometries().size() << std::endl;
-            gzdbg << "[RmagineOptixMap] - instances: " << insts_old->instances().size() << std::endl;
         }
 
         if(diff.ModelChanged())
@@ -713,6 +738,8 @@ void RmagineOptixMap::UpdateState()
 
         if(diff.ModelRemoved())
         {
+            // TODO: remove meshes if no one uses them anymore
+            
             for(auto model_id : diff.removed)
             {
                 if(m_model_ignores.find(model_id) != m_model_ignores.end())
@@ -726,8 +753,36 @@ void RmagineOptixMap::UpdateState()
                 {
                     insts_old->remove(inst);
                     scene_changes++;
+
+                    auto vis_it = m_geom_to_visual.find(inst);
+                    if(vis_it != m_geom_to_visual.end())
+                    {
+                        std::string key = vis_it->second.name;
+
+                        // std::cout << "ERASE instance from instance->visual map. visual: " << key << std::endl;
+
+                        m_geom_to_visual.erase(vis_it);
+
+                        auto geom_it = m_visual_to_geoms.find(key);
+
+                        if(geom_it != m_visual_to_geoms.end())
+                        {
+                            // ERASE ALL GEOMETRIES AT ONCE
+                            // std::cout << "ERASE all instances of visual " << key << std::endl;
+                            m_visual_to_geoms.erase(geom_it);
+                        }
+                    } else {
+                        gzwarn << "WARNING: instance to remove was not in m_geom_to_visual" << std::endl;
+                    }
                 }
             }
+        }
+
+        if(diff.ModelAdded() || diff.ModelRemoved())
+        {
+            gzdbg << "[RmagineOptixMap] Number of map elements changed" << std::endl;
+            gzdbg << "[RmagineOptixMap] - geometries: " << m_map->scene()->geometries().size() << std::endl;
+            gzdbg << "[RmagineOptixMap] - instances: " << insts_old->instances().size() << std::endl;
         }
 
         if(scene_changes > 0)
