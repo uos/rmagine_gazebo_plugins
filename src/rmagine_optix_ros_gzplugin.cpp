@@ -188,8 +188,6 @@ void RmagineOptixROS::OnUpdate()
 
         if(pub.msg_type == "sensor_msgs/PointCloud2")
         {
-            bool ordered = true;
-
             sensor_msgs::PointCloud2 msg;
             msg.header.stamp = stamp;
             msg.header.frame_id = m_frame_id;

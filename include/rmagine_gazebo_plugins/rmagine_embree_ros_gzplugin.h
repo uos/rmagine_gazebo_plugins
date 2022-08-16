@@ -60,6 +60,9 @@ private:
     // std::string m_laser_topic_name;
     std::string m_frame_id;
 
+    // unordered pointclouds unique by topic name
+    std::unordered_set<std::string> m_pcl2_unordered;
+
     sdf::ElementPtr m_sdf;
 };
 
