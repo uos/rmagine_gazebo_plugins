@@ -158,9 +158,10 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
             }
 
             sdf::ElementPtr linkElem = link->GetSDF();
-
             if(linkElem->HasElement("rmagine_ignore"))
             {
+                m_link_ignores.insert(link->GetScopedName());
+                m_model_has_link_ignores.insert(model_id);
                 continue;
             }
 
@@ -438,8 +439,7 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateTransformed(
                 continue;
             }
 
-            sdf::ElementPtr linkElem = link->GetSDF();
-            if(linkElem->HasElement("rmagine_ignore"))
+            if(m_link_ignores.find(link->GetScopedName()) != m_link_ignores.end())
             {
                 continue;
             }
@@ -530,8 +530,7 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
                 continue;
             }
 
-            sdf::ElementPtr linkElem = link->GetSDF();
-            if(linkElem->HasElement("rmagine_ignore"))
+            if(m_link_ignores.find(link->GetScopedName()) != m_link_ignores.end())
             {
                 continue;
             }
@@ -611,9 +610,7 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
             physics::LinkPtr link = model->GetLink(link_name);
             if(link)
             {
-
-                sdf::ElementPtr linkElem = link->GetSDF();
-                if(linkElem->HasElement("rmagine_ignore"))
+                if(m_link_ignores.find(link->GetScopedName()) != m_link_ignores.end())
                 {
                     continue;
                 }
@@ -802,28 +799,60 @@ void RmagineOptixMap::UpdateState()
                         insts_old->remove(inst);
                         scene_changes++;
 
-                        auto vis_it = m_geom_to_visual.find(inst);
-                        if(vis_it != m_geom_to_visual.end())
+                        // REMOVE VISUAL CONNECTIONS
                         {
-                            std::string key = vis_it->second.name;
-
-                            // std::cout << "ERASE instance from instance->visual map. visual: " << key << std::endl;
-
-                            m_geom_to_visual.erase(vis_it);
-
-                            auto geom_it = m_visual_to_geoms.find(key);
-
-                            if(geom_it != m_visual_to_geoms.end())
+                            auto vis_it = m_geom_to_visual.find(inst);
+                            if(vis_it != m_geom_to_visual.end())
                             {
-                                // ERASE ALL GEOMETRIES AT ONCE
-                                m_visual_to_geoms.erase(geom_it);
+                                std::string key = vis_it->second.name;
+
+                                // std::cout << "ERASE instance from instance->visual map. visual: " << key << std::endl;
+
+                                m_geom_to_visual.erase(vis_it);
+
+                                auto geom_it = m_visual_to_geoms.find(key);
+
+                                if(geom_it != m_visual_to_geoms.end())
+                                {
+                                    // ERASE ALL GEOMETRIES AT ONCE
+                                    m_visual_to_geoms.erase(geom_it);
+                                }
+                            } else {
+                                gzwarn << "WARNING: instance to remove was not in m_geom_to_visual" << std::endl;
                             }
-                        } else {
-                            gzwarn << "WARNING: instance to remove was not in m_geom_to_visual" << std::endl;
                         }
                     }
+
+                    m_model_meshes.erase(insts_it);
                 } else {
                     gzwarn << "WARNING: Could not found model (" << model_id << ") in m_model_meshes." << std::endl;
+                }
+
+                // REMOVE LINK IGNORES
+                {
+                    auto model_has_link_ignores_it = m_model_has_link_ignores.find(model_id);
+                    if(model_has_link_ignores_it != m_model_has_link_ignores.end())
+                    {
+                        // HAS LINK IGNORES
+                        auto model_it = models_new.find(model_id);
+                        if(model_it != models_new.end())
+                        {
+                            physics::ModelPtr model = model_it->second;
+                            std::vector<physics::LinkPtr> links = model->GetLinks();
+                            for(physics::LinkPtr link : links)
+                            {
+                                if(!link)
+                                {
+                                    gzwarn << "WARNING - EmbreeUpdateAdded: link empty " << std::endl;
+                                    continue;
+                                }
+
+                                m_link_ignores.erase(link->GetScopedName());
+                            }
+                        }
+
+                        m_model_has_link_ignores.erase(model_has_link_ignores_it);
+                    }
                 }
 
             }

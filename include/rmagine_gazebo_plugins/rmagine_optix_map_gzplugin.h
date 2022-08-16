@@ -107,6 +107,8 @@ private:
 
 
     std::unordered_set<uint32_t> m_model_ignores;
+    std::unordered_set<uint32_t> m_model_has_link_ignores;
+    std::unordered_set<std::string> m_link_ignores;
 
 
     std::unordered_map<uint32_t, std::vector<rmagine::OptixInstPtr> > m_model_meshes;
