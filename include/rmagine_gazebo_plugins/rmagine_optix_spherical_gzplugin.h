@@ -58,7 +58,7 @@ public:
         return m_sensor_model;
     }
     
-    inline rm::Memory<float, rm::VRAM_CUDA> ranges() const
+    inline rm::MemoryView<float, rm::VRAM_CUDA> ranges() const
     {
         return m_ranges;
     }

@@ -60,6 +60,17 @@ void RmagineOptixROS::parseOutputs(sdf::ElementPtr outputs)
                             pub.topic, 1
                         ) 
                     );
+
+                if(it->HasElement("ordered"))
+                {
+                    bool ordered = it->Get<bool>("ordered");
+                    
+                    if(!ordered)
+                    {
+                        m_pcl2_unordered.insert(pub.topic);
+                    }
+                }
+
             }
 
             if(pub.pub)
@@ -70,39 +81,6 @@ void RmagineOptixROS::parseOutputs(sdf::ElementPtr outputs)
 
         it = it->GetNextElement();
     }
-
-    // if(outputs->HasElement("laser"))
-    // {
-    //     sdf::ElementPtr laserElem = outputs->GetElement("laser");
-    //     std::string topic = laserElem->Get<std::string>("topic");
-    //     m_pub_laser = std::make_shared<ros::Publisher>(
-    //                     m_nh->advertise<sensor_msgs::LaserScan>(
-    //                         topic, 1
-    //                     ) 
-    //                 );
-    // }
-
-    // if(outputs->HasElement("pcl"))
-    // {
-    //     sdf::ElementPtr pclElem = outputs->GetElement("pcl");
-    //     std::string topic = pclElem->Get<std::string>("topic");
-    //     m_pub_pcl = std::make_shared<ros::Publisher>(
-    //                     m_nh->advertise<sensor_msgs::PointCloud>(
-    //                         topic, 1
-    //                     ) 
-    //                 );
-    // }
-
-    // if(outputs->HasElement("pcl2"))
-    // {
-    //     sdf::ElementPtr pcl2Elem = outputs->GetElement("pcl2");
-    //     std::string topic = pcl2Elem->Get<std::string>("topic");
-    //     m_pub_pcl2 = std::make_shared<ros::Publisher>(
-    //                     m_nh->advertise<sensor_msgs::PointCloud2>(
-    //                         topic, 1
-    //                     ) 
-    //                 );
-    // }
 }
 
 void RmagineOptixROS::Load(
@@ -143,7 +121,6 @@ void RmagineOptixROS::Load(
 void RmagineOptixROS::OnUpdate()
 {
     // std::cout << "[RmagineOptixROS] Update!" << std::endl;
-
     common::Time stamp_gz = m_spherical_sensor->stamp();
     rm::SphericalModel sensor_model = m_spherical_sensor->sensorModel();
     // download
@@ -205,6 +182,122 @@ void RmagineOptixROS::OnUpdate()
                     }
                 }
             }
+
+            pub.pub->publish(msg);
+        }
+
+        if(pub.msg_type == "sensor_msgs/PointCloud2")
+        {
+            bool ordered = true;
+
+            sensor_msgs::PointCloud2 msg;
+            msg.header.stamp = stamp;
+            msg.header.frame_id = m_frame_id;
+            
+            msg.fields.resize(4);
+
+            uint32_t total_bytes = 0;
+
+            sensor_msgs::PointField field_x;
+            field_x.name = "x";
+            field_x.offset = 0;
+            field_x.datatype = sensor_msgs::PointField::FLOAT32;
+            field_x.count = 1;
+
+            sensor_msgs::PointField field_y;
+            field_y.name = "y";
+            field_y.offset = 4;
+            field_y.datatype = sensor_msgs::PointField::FLOAT32;
+            field_y.count = 1;
+
+            sensor_msgs::PointField field_z;
+            field_z.name = "z";
+            field_z.offset = 8;
+            field_z.datatype = sensor_msgs::PointField::FLOAT32;
+            field_z.count = 1;
+
+            sensor_msgs::PointField field_ring;
+            field_ring.name = "ring";
+            field_ring.offset = 12;
+            field_ring.datatype = sensor_msgs::PointField::UINT16;
+            field_ring.count = 1;
+
+            msg.fields[0] = field_x;
+            msg.fields[1] = field_y;
+            msg.fields[2] = field_z;
+            msg.fields[3] = field_ring;
+
+            struct MyPoint
+            {
+                rm::Vector3 p;
+                uint16_t ring;
+            };
+
+            msg.point_step = sizeof(MyPoint);
+            msg.is_dense = false;
+
+            // ordered
+            if(m_pcl2_unordered.find(pub.topic) == m_pcl2_unordered.end())
+            {
+                msg.height = sensor_model.phi.size;
+                msg.width = sensor_model.theta.size;
+
+                msg.data.resize(msg.width * msg.height * msg.point_step);
+
+                MyPoint* data = reinterpret_cast<MyPoint*>(&msg.data[0]);
+
+                for(size_t vid = 0; vid < sensor_model.getHeight(); vid++)
+                {
+                    for(size_t hid = 0; hid < sensor_model.getWidth(); hid++)
+                    {
+                        const unsigned int pid = sensor_model.getBufferId(vid, hid);
+                        const float range = ranges[pid];
+                        
+                        if(sensor_model.range.inside(range))
+                        {
+                            data[pid].p = sensor_model.getDirection(vid, hid) * range;
+                        } else {
+                            // ordered pcl: fill with nans
+                            data[pid].p = rm::Vector3::NaN();
+                        }
+
+                        data[pid].ring = vid;
+                    }
+                }
+            } else {
+                // unordered
+                msg.height = 1;
+                // unclear
+                msg.is_dense = true;
+
+                std::vector<MyPoint> data;
+                data.reserve(sensor_model.theta.size * sensor_model.phi.size);
+
+                for(size_t vid = 0; vid < sensor_model.getHeight(); vid++)
+                {
+                    for(size_t hid = 0; hid < sensor_model.getWidth(); hid++)
+                    {
+                        const unsigned int pid = sensor_model.getBufferId(vid, hid);
+                        const float range = ranges[pid];
+                        
+                        if(sensor_model.range.inside(range))
+                        {
+                            MyPoint entry;
+                            entry.p = sensor_model.getDirection(vid, hid) * range;
+                            entry.ring = vid;
+                            data.push_back(entry);
+                        }
+                    }
+                }
+                
+                msg.width = data.size();
+                // copy bytewise
+                msg.data.resize(msg.width * msg.point_step);
+                MyPoint* data_raw = reinterpret_cast<MyPoint*>(&msg.data[0]);
+                std::copy(data.begin(), data.end(), data_raw);
+            }
+
+            msg.row_step = msg.width * msg.point_step;
 
             pub.pub->publish(msg);
         }
