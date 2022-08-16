@@ -198,10 +198,11 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                     {
                         msgs::BoxGeom gzbox = gzgeom.box();
 
-                        auto cache_it = m_geom_cache.find(GeomCacheID::BOX);
+                        
 
                         rm::OptixGeometryPtr box_geom;
 
+                        auto cache_it = m_geom_cache.find(GeomCacheID::BOX);
                         if(cache_it != m_geom_cache.end())
                         {
                             box_geom = cache_it->second;

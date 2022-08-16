@@ -105,7 +105,7 @@ private:
     };
 
     // mesh cache
-    std::unordered_map<GeomCacheID, rmagine::EmbreeGeometryPtr> m_geom_cache;
+    std::unordered_map<GeomCacheID, rmagine::EmbreeScenePtr> m_geom_cache;
     std::unordered_map<std::string, rmagine::EmbreeScenePtr> m_mesh_cache;
 
     bool m_sensors_loaded = false;

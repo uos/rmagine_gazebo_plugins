@@ -198,27 +198,144 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                     if(gzgeom.has_box())
                     {
-                        msgs::BoxGeom box = gzgeom.box();
-                        geoms.push_back(to_rm_embree(box));
+                        msgs::BoxGeom gzbox = gzgeom.box();
+
+                        rm::EmbreeScenePtr geom_scene;
+
+                        auto cache_it = m_geom_cache.find(GeomCacheID::BOX);
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            geom_scene = cache_it->second;
+                        } else {
+                            rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreeCube>();
+                            geom->apply();
+                            geom->commit();
+                            geom_scene = geom->makeScene();
+                            geom_scene->commit();
+                            m_geom_cache[GeomCacheID::BOX] = geom_scene;
+                        }
+
+                        if(geom_scene)
+                        {
+                            // instantiate
+                            rm::EmbreeInstancePtr geom_instance = geom_scene->instantiate();
+                            geom_instance->setScale(to_rm(gzbox.size()));
+                            geom_instance->apply();
+                            geoms.push_back(geom_instance);
+                        } else {
+                            gzerr << "ERROR: something went wrong generating box geometry" << std::endl;
+                        }
                     }
 
                     if(gzgeom.has_cylinder())
                     {
-                        msgs::CylinderGeom cylinder = gzgeom.cylinder();
-                        rm::EmbreeGeometryPtr geom = to_rm_embree(cylinder);
-                        geoms.push_back(geom);
+                        msgs::CylinderGeom gzcylinder = gzgeom.cylinder();
+
+                        rm::EmbreeScenePtr geom_scene;
+
+                        auto cache_it = m_geom_cache.find(GeomCacheID::CYLINDER);
+
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            geom_scene = cache_it->second;
+                        } else {
+                            rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreeCylinder>(100);
+                            geom->apply();
+                            geom->commit();
+                            geom_scene = geom->makeScene();
+                            geom_scene->commit();
+                            m_geom_cache[GeomCacheID::CYLINDER] = geom_scene;
+                        }
+
+                        if(geom_scene)
+                        {
+                            // instantiate
+                            rm::EmbreeInstancePtr geom_instance = geom_scene->instantiate();
+                            float radius = gzcylinder.radius();
+                            float diameter = radius * 2.0;
+                            float height = gzcylinder.length();
+                            geom_instance->setScale({diameter, diameter, height});
+                            geom_instance->apply();
+                            geoms.push_back(geom_instance);
+                        } else {
+                            gzerr << "ERROR: something went wrong generating cylinder geometry" << std::endl;
+                        }
+
                     }
 
                     if(gzgeom.has_sphere())
                     {
-                        msgs::SphereGeom sphere = gzgeom.sphere();
-                        geoms.push_back(to_rm_embree(sphere));
+                        msgs::SphereGeom gzsphere = gzgeom.sphere();
+                        
+                        rm::EmbreeScenePtr geom_scene;
+                        auto cache_it = m_geom_cache.find(GeomCacheID::SPHERE);
+
+
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            geom_scene = cache_it->second;
+                        } else {
+                            rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreeSphere>(30, 30);
+                            geom->apply();
+                            geom->commit();
+                            geom_scene = geom->makeScene();
+                            geom_scene->commit();
+                            m_geom_cache[GeomCacheID::SPHERE] = geom_scene;
+                        }
+
+                        if(geom_scene)
+                        {
+                            // instantiate
+                            rm::EmbreeInstancePtr geom_instance = geom_scene->instantiate();
+                            float diameter = gzsphere.radius() * 2.0;
+                            geom_instance->setScale({diameter, diameter, diameter});
+                            geom_instance->apply();
+                            geoms.push_back(geom_instance);
+                        } else {
+                            gzerr << "ERROR: something went wrong generating sphere geometry" << std::endl;
+                        }
                     }
 
                     if(gzgeom.has_plane())
                     {
-                        msgs::PlaneGeom plane = gzgeom.plane();
-                        geoms.push_back(to_rm_embree(plane));
+                        msgs::PlaneGeom gzplane = gzgeom.plane();
+
+                        rm::EmbreeScenePtr geom_scene;
+                        auto cache_it = m_geom_cache.find(GeomCacheID::PLANE);
+
+                        if(cache_it != m_geom_cache.end())
+                        {
+                            geom_scene = cache_it->second;
+                        } else {
+                            rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreePlane>();
+                            geom->apply();
+                            geom->commit();
+                            geom_scene = geom->makeScene();
+                            geom_scene->commit();
+                            m_geom_cache[GeomCacheID::PLANE] = geom_scene;
+                        }
+
+                        if(geom_scene)
+                        {
+                            // instantiate
+                            rm::EmbreeInstancePtr geom_instance = geom_scene->instantiate();
+                            
+                            msgs::Vector2d size = gzplane.size();
+                            // TODO: use normal
+                            msgs::Vector3d normal = gzplane.normal();
+                            // rotation of normal? angle shortest path or so
+                            
+                            rm::Vector3 scale;
+                            scale.x = size.x();
+                            scale.y = size.y();
+                            scale.z = 1.0;
+                            geom_instance->setScale(scale);
+                            
+                            geom_instance->apply();
+                            geoms.push_back(geom_instance);
+                        } else {
+                            gzerr << "ERROR: something went wrong generating plane geometry" << std::endl;
+                        }
                     }
 
                     if(gzgeom.has_heightmap())
@@ -264,10 +381,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                         if(mesh_scene)
                         {
                             // make instance
-                            rm::EmbreeInstancePtr mesh_instance = std::make_shared<rm::EmbreeInstance>();
-
-                            // mesh_instance->name = mesh_scene;
-                            mesh_instance->set(mesh_scene);
+                            rm::EmbreeInstancePtr mesh_instance = mesh_scene->instantiate();
                             mesh_instance->apply();
                             geoms.push_back(mesh_instance);
 
