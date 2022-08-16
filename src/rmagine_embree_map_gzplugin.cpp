@@ -92,6 +92,7 @@ void RmagineEmbreeMap::Load(
                 std::this_thread::sleep_for(std::chrono::duration<double>(el_left));
             }
         }
+
         m_stop_updater_thread = false;
         gzdbg << "Updater thread terminated." << std::endl;
     });
@@ -135,17 +136,25 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
     for(auto model_id : added)
     {
-        if(m_model_ignores.find(model_id) != m_model_ignores.end())
-        {
-            continue;
-        }
-
         auto model_it = models.find(model_id);
         if(model_it == models.end())
         {
             continue;
         }
         physics::ModelPtr model = model_it->second;
+        
+        if(!model)
+        {
+            gzwarn << "WARNING - EmbreeUpdateAdded: model empty " << std::endl;
+            continue;
+        }
+
+        sdf::ElementPtr modelElem = model->GetSDF();
+        if(modelElem && modelElem->HasElement("rmagine_ignore"))
+        {
+            m_model_ignores.insert(model_id);
+            continue;
+        }
 
         std::string model_name = model->GetName();
         
@@ -208,9 +217,11 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                             geom_scene = cache_it->second;
                         } else {
                             rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreeCube>();
+                            geom->setQuality(RTC_BUILD_QUALITY_LOW);
                             geom->apply();
                             geom->commit();
                             geom_scene = geom->makeScene();
+                            geom_scene->setQuality(RTC_BUILD_QUALITY_LOW);
                             geom_scene->commit();
                             m_geom_cache[GeomCacheID::BOX] = geom_scene;
                         }
@@ -240,6 +251,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                             geom_scene = cache_it->second;
                         } else {
                             rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreeCylinder>(100);
+                            geom->setQuality(RTC_BUILD_QUALITY_LOW);
                             geom->apply();
                             geom->commit();
                             geom_scene = geom->makeScene();
@@ -269,13 +281,12 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                         
                         rm::EmbreeScenePtr geom_scene;
                         auto cache_it = m_geom_cache.find(GeomCacheID::SPHERE);
-
-
                         if(cache_it != m_geom_cache.end())
                         {
                             geom_scene = cache_it->second;
                         } else {
                             rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreeSphere>(30, 30);
+                            geom->setQuality(RTC_BUILD_QUALITY_LOW);
                             geom->apply();
                             geom->commit();
                             geom_scene = geom->makeScene();
@@ -308,6 +319,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                             geom_scene = cache_it->second;
                         } else {
                             rm::EmbreeGeometryPtr geom = std::make_shared<rm::EmbreePlane>();
+                            geom->setQuality(RTC_BUILD_QUALITY_LOW);
                             geom->apply();
                             geom->commit();
                             geom_scene = geom->makeScene();
@@ -341,6 +353,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                     if(gzgeom.has_heightmap())
                     {
                         rm::EmbreeGeometryPtr geom = to_rm_embree(gzgeom.heightmap());
+                        geom->setQuality(RTC_BUILD_QUALITY_LOW);
                         if(geom)
                         {
                             geoms.push_back(geom);
@@ -373,6 +386,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                             if(mesh_scene)
                             {
+                                mesh_scene->setQuality(RTC_BUILD_QUALITY_LOW);
                                 mesh_scene->commit();
                                 m_mesh_cache[gzmesh.filename()] = mesh_scene;
                             }
@@ -382,6 +396,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                         {
                             // make instance
                             rm::EmbreeInstancePtr mesh_instance = mesh_scene->instantiate();
+                            mesh_instance->setQuality(RTC_BUILD_QUALITY_LOW);
                             mesh_instance->apply();
                             geoms.push_back(mesh_instance);
 
@@ -655,7 +670,6 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateJointCha
                             auto Tiv = m_geom_to_visual[geom].T;
                             geom->setTransform(Tvw * Tiv);
                             mesh_links_to_update.insert(geom);
-
                         } else {
                             gzwarn << "[RmagineEmbreeMap] WARNING: visual not in mesh set. But it should." << std::endl;
                             gzwarn << "[RmagineEmbreeMap] - key: " << key << std::endl;
@@ -677,8 +691,6 @@ void RmagineEmbreeMap::UpdateState(
     const std::unordered_map<uint32_t, physics::ModelPtr>& models_new,
     const SceneDiff& diff)
 {
-    updateModelIgnores(models_new, m_model_ignores);
-
     // apply changes to rmagine
     if(diff.HasChanged())
     {
@@ -920,8 +932,14 @@ void RmagineEmbreeMap::UpdateState(
                 m_map_mutex->lock();
             }
 
+            rm::StopWatch sw;
+            double el;
+
+            sw();
             m_map->scene->commit();
-            
+            el = sw();
+            std::cout << "- Scene commit in " << el << "s" << std::endl;
+
             if(m_map_mutex)
             {
                 m_map_mutex->unlock();
@@ -964,7 +982,20 @@ void RmagineEmbreeMap::UpdateState()
 {
     // std::cout << "UpdateState" << std::endl;
     std::vector<physics::ModelPtr> models = m_world->Models();
-    std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
+
+    std::unordered_map<uint32_t, physics::ModelPtr> models_new;
+
+    { // ToIdMap
+        for(size_t i=0; i<models.size() && i<models.capacity(); i++)
+        {
+            physics::ModelPtr model = models[i];
+            if(model)
+            {
+                uint32_t model_id = model->GetId();
+                models_new[model_id] = model;
+            }
+        }
+    }
 
     SceneDiff diff = m_scene_state.diff(models_new, 
             m_changed_delta_trans, 

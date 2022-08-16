@@ -133,20 +133,27 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
     for(auto model_id : added)
     {
-        if(m_model_ignores.find(model_id) != m_model_ignores.end())
-        {
-            continue;
-        }
-
         auto model_it = models.find(model_id);
         if(model_it == models.end())
         {
             continue;
         }
         physics::ModelPtr model = model_it->second;
+        if(!model)
+        {
+            gzwarn << "WARNING - OptixUpdateAdded: model empty " << std::endl;
+            continue;
+        }
+
+        sdf::ElementPtr modelElem = model->GetSDF();
+        if(modelElem && modelElem->HasElement("rmagine_ignore"))
+        {
+            m_model_ignores.insert(model_id);
+            continue;
+        }
+
 
         std::string model_name = model->GetName();
-        // std::cout << "Add model: " << model_name << std::endl;
 
         std::vector<physics::LinkPtr> links = model->GetLinks();
         for(physics::LinkPtr link : links)
@@ -670,8 +677,21 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
 void RmagineOptixMap::UpdateState()
 {
     std::vector<physics::ModelPtr> models = m_world->Models();
-    std::unordered_map<uint32_t, physics::ModelPtr> models_new = ToIdMap(models);
-    updateModelIgnores(models_new, m_model_ignores);
+    std::unordered_map<uint32_t, physics::ModelPtr> models_new;
+
+    { // ToIdMap
+        for(size_t i=0; i<models.size() && i<models.capacity(); i++)
+        {
+            physics::ModelPtr model = models[i];
+            if(model)
+            {
+                uint32_t model_id = model->GetId();
+                models_new[model_id] = model;
+            }
+        }
+    }
+
+    // updateModelIgnores(models_new, m_model_ignores);
 
     rm::StopWatch sw;
     double el;

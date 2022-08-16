@@ -8,14 +8,14 @@ namespace gazebo
 {
 
 std::unordered_map<uint32_t, physics::ModelPtr> ToIdMap(
-        const std::vector<physics::ModelPtr>& models);
+        std::vector<physics::ModelPtr> models);
+
+// void updateModelIgnores(
+//     std::vector<physics::ModelPtr> models, 
+//     std::unordered_set<uint32_t>& model_ignores);
 
 void updateModelIgnores(
-    const std::vector<physics::ModelPtr>& models, 
-    std::unordered_set<uint32_t>& model_ignores);
-
-void updateModelIgnores(
-    const std::unordered_map<uint32_t, physics::ModelPtr>& models, 
+    std::unordered_map<uint32_t, physics::ModelPtr> models, 
     std::unordered_set<uint32_t>& model_ignores);
 
 template<typename T>
