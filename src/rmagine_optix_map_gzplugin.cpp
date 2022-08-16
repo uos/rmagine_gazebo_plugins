@@ -823,7 +823,8 @@ void RmagineOptixMap::UpdateState()
                         }
                     }
 
-                    m_model_meshes.erase(insts_it);
+                    // this causes a segfault
+                    // m_model_meshes.erase(insts_it);
                 } else {
                     gzwarn << "WARNING: Could not found model (" << model_id << ") in m_model_meshes." << std::endl;
                 }
