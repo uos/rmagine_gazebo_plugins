@@ -120,7 +120,9 @@ private:
     
     
     std::unordered_set<uint32_t> m_model_ignores;
-
+    std::unordered_set<uint32_t> m_model_has_link_ignores;
+    std::unordered_set<std::string> m_link_ignores;
+    
     
     std::unordered_map<uint32_t, std::vector<rm::EmbreeGeometryPtr> > m_model_meshes;
     std::unordered_map<std::string, std::vector<rm::EmbreeGeometryPtr> > m_visual_to_geoms;
