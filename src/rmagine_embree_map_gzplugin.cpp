@@ -63,7 +63,7 @@ void RmagineEmbreeMap::Load(
     parseParams(_sdf);
     
     // create empty map
-    m_map = std::make_shared<rm::EmbreeMap>();
+    m_map = std::make_shared<rm::EmbreeMap>(std::make_shared<rm::EmbreeScene>());
     
     // For gazebo dynamic environments
     m_map->scene->setQuality(RTC_BUILD_QUALITY_LOW);

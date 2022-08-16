@@ -59,10 +59,12 @@ public:
         return m_sensor_model;
     }
     
-    inline rm::MemoryView<float, rm::RAM> ranges() const
-    {
-        return m_ranges;
-    }
+    // inline rm::MemoryView<float, rm::RAM> ranges() const
+    // {
+    //     return m_ranges;
+    // }
+
+    rm::IntAttrAny<rm::RAM> sim_buffers;
 
 protected:
     virtual bool UpdateImpl(const bool _force) override;
@@ -79,7 +81,7 @@ protected:
     rm::EmbreeMapPtr m_map;
     rm::SphereSimulatorEmbreePtr m_sphere_sim;
 
-    rm::Memory<float, rm::RAM> m_ranges;
+    // rm::Memory<float, rm::RAM> m_ranges;
 
     bool m_gz_publish = false;
 

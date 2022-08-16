@@ -48,6 +48,7 @@ public:
 
     void updateScanMsg(const rm::MemoryView<float, rm::VRAM_CUDA>& ranges);
 
+
     inline common::Time stamp() const 
     {
         return lastMeasurementTime;
@@ -57,11 +58,8 @@ public:
     {
         return m_sensor_model;
     }
-    
-    inline rm::MemoryView<float, rm::VRAM_CUDA> ranges() const
-    {
-        return m_ranges;
-    }
+
+    rm::IntAttrAny<rm::VRAM_CUDA> sim_buffers;
 
 protected:
     virtual bool UpdateImpl(const bool _force) override;
@@ -78,7 +76,9 @@ protected:
     rm::OptixMapPtr m_map;
     rm::SphereSimulatorOptixPtr m_sphere_sim;
 
-    rm::Memory<float, rm::VRAM_CUDA> m_ranges;
+    
+
+    // rm::Memory<float, rm::VRAM_CUDA> m_ranges;
 
     bool m_gz_publish = false;
 

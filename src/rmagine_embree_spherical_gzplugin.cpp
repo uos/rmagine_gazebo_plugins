@@ -80,12 +80,12 @@ static rm::SphericalModel fetch_sensor_model(sdf::ElementPtr rayElem)
 RmagineEmbreeSpherical::RmagineEmbreeSpherical()
 :Base(sensors::RAY) // if sensor is base class: Base(sensors::RAY)
 {
-    gzdbg << "[RmagineEmbreeSpherical] Construct" << std::endl;
+    gzdbg << "[RmagineEmbreeSpherical] Constructed." << std::endl;
 }
 
 RmagineEmbreeSpherical::~RmagineEmbreeSpherical()
 {
-    gzdbg << "[RmagineEmbreeSpherical] Destroy" << std::endl;
+    gzdbg << "[RmagineEmbreeSpherical] Destroyed." << std::endl;
 }
 
 void RmagineEmbreeSpherical::Load(const std::string& world_name)
@@ -101,7 +101,7 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
     if(rayElem->HasElement("scan"))
     {
         m_sensor_model = fetch_sensor_model(rayElem);
-        m_ranges.resize(m_sensor_model.size());
+        sim_buffers.ranges.resize(m_sensor_model.size());
     }
 
     // GET NOISE MODEL
@@ -179,6 +179,36 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
             }
 
             noiseElem = noiseElem->GetNextElement("noise");
+        }
+    }
+
+    // COMPUTE
+    if(rayElem->HasElement("compute"))
+    {
+        sdf::ElementPtr computeElem = rayElem->GetElement("compute");
+        
+        if(computeElem->HasElement("normals"))
+        {
+            if(computeElem->Get<bool>("normals"))
+            {
+                sim_buffers.normals.resize(m_sensor_model.size());
+            }
+        }
+
+        if(computeElem->HasElement("object_ids"))
+        {
+            if(computeElem->Get<bool>("object_ids"))
+            {
+                sim_buffers.object_ids.resize(m_sensor_model.size());
+            }
+        }
+
+        if(computeElem->HasElement("face_ids"))
+        {
+            if(computeElem->Get<bool>("face_ids"))
+            {
+                sim_buffers.face_ids.resize(m_sensor_model.size());
+            }
         }
     }
 
@@ -263,9 +293,6 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
 {
     if(m_sphere_sim)
     {
-        
-
-
         IGN_PROFILE("RmagineEmbreeSpherical::UpdateImpl");
         IGN_PROFILE_BEGIN("Update");
 
@@ -278,7 +305,8 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
         {
             m_map_mutex->lock_shared();
         }
-        m_sphere_sim->simulateRanges(Tbms, m_ranges);
+
+        m_sphere_sim->simulate(Tbms, sim_buffers);
         if(m_map_mutex)
         {
             m_map_mutex->unlock_shared();
@@ -287,11 +315,11 @@ bool RmagineEmbreeSpherical::UpdateImpl(const bool _force)
         // apply noise
         for(auto noise_model : m_noise_models)
         {
-            noise_model->apply(m_ranges);
+            noise_model->apply(sim_buffers.ranges);
         }
 
         this->lastMeasurementTime = this->world->SimTime();
-        updateScanMsg(m_ranges);
+        updateScanMsg(sim_buffers.ranges);
 
         IGN_PROFILE_END();
 

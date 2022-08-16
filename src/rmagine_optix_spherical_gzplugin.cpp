@@ -99,7 +99,7 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
     if(rayElem->HasElement("scan"))
     {
         m_sensor_model = fetch_sensor_model(rayElem);
-        m_ranges.resize(m_sensor_model.size());
+        sim_buffers.ranges.resize(m_sensor_model.size());
     }
 
     // GET NOISE MODEL
@@ -180,8 +180,36 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
 
             noiseElem = noiseElem->GetNextElement("noise");
         }
+    }
 
+    // COMPUTE
+    if(rayElem->HasElement("compute"))
+    {
+        sdf::ElementPtr computeElem = rayElem->GetElement("compute");
         
+        if(computeElem->HasElement("normals"))
+        {
+            if(computeElem->Get<bool>("normals"))
+            {
+                sim_buffers.normals.resize(m_sensor_model.size());
+            }
+        }
+
+        if(computeElem->HasElement("object_ids"))
+        {
+            if(computeElem->Get<bool>("object_ids"))
+            {
+                sim_buffers.object_ids.resize(m_sensor_model.size());
+            }
+        }
+
+        if(computeElem->HasElement("face_ids"))
+        {
+            if(computeElem->Get<bool>("face_ids"))
+            {
+                sim_buffers.face_ids.resize(m_sensor_model.size());
+            }
+        }
     }
 
     this->parentEntity = this->world->EntityByName(this->ParentName());
@@ -272,13 +300,12 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
         Tbms[0] = to_rm(pose);
         rm::Memory<rm::Transform, rm::VRAM_CUDA> Tbms_ = Tbms;
 
-        
         if(m_map_mutex)
         {
             m_map_mutex->lock_shared();
         }
 
-        m_sphere_sim->simulateRanges(Tbms_, m_ranges);
+        m_sphere_sim->simulate(Tbms_, sim_buffers);
         
         if(m_map_mutex)
         {
@@ -288,11 +315,11 @@ bool RmagineOptixSpherical::UpdateImpl(const bool _force)
         // apply noise
         for(auto noise_model : m_noise_models)
         {
-            noise_model->apply(m_ranges);
+            noise_model->apply(sim_buffers.ranges);
         }
 
         this->lastMeasurementTime = this->world->SimTime();
-        updateScanMsg(m_ranges);
+        updateScanMsg(sim_buffers.ranges);
         IGN_PROFILE_END();
 
         // std::cout << "[RmagineOptixSpherical] Simulated " << m_ranges.size() << " ranges" << std::endl;
