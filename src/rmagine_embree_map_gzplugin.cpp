@@ -801,29 +801,17 @@ void RmagineEmbreeMap::UpdateState(
 
         if(scene_changes > 0)
         {
-            // rm::StopWatch sw;
-            // double el;
-            
             if(m_map_mutex)
             {
                 m_map_mutex->lock();
             }
 
-            // std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
-
-            // sw();
             m_map->scene->commit();
-            // el = sw();
-            // std::cout << "- Scene update finished in " << el << "s" << std::endl;
             
             if(m_map_mutex)
             {
                 m_map_mutex->unlock();
             }
-
-            // std::cout << "Scene Info: " << std::endl;
-            // std::cout << "- instances: " << m_map->scene->count<rm::EmbreeInstance>() << std::endl;
-            // std::cout << "- meshes: " << m_map->scene->count<rm::EmbreeMesh>() << std::endl;
         }
     }
 
