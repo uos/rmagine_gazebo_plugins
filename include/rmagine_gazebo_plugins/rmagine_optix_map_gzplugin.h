@@ -100,7 +100,7 @@ private:
 
     // mesh cache
     std::unordered_map<std::string, rmagine::OptixScenePtr> m_mesh_cache;
-    std::unordered_map<GeomCacheID, rmagine::OptixGeometryPtr> m_geom_cache;
+    std::unordered_map<GeomCacheID, rmagine::OptixScenePtr> m_geom_cache;
     
 
     bool m_sensors_loaded = false;

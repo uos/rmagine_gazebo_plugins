@@ -100,6 +100,11 @@
           <max>100.0</max>
         </range>
 
+        <compute>
+          <object_ids>true</object_ids>
+          <face_ids>true</face_ids>
+        </compute>
+
         <noise>
           <type>uniform_dust</type>
           <hit_prob>0.0000001</hit_prob>

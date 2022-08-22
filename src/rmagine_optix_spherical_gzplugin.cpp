@@ -203,6 +203,14 @@ void RmagineOptixSpherical::Load(const std::string& world_name)
             }
         }
 
+        if(computeElem->HasElement("geom_ids"))
+        {
+            if(computeElem->Get<bool>("geom_ids"))
+            {
+                sim_buffers.geom_ids.resize(m_sensor_model.size());
+            }
+        }
+
         if(computeElem->HasElement("face_ids"))
         {
             if(computeElem->Get<bool>("face_ids"))
@@ -266,6 +274,7 @@ void RmagineOptixSpherical::setMap(rm::OptixMapPtr map)
 {
     m_map = map;
     
+
     if(m_sphere_sim)
     {
         m_sphere_sim->setMap(map);
@@ -379,7 +388,6 @@ void RmagineOptixSpherical::updateScanMsg(
 
     scan->clear_ranges();
     scan->clear_intensities();
-
     
 
     // vertical direction

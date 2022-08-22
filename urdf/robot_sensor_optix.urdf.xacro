@@ -101,6 +101,12 @@
           <min>0.0</min>
           <max>100.0</max>
         </range>
+
+        <compute>
+          <object_ids>true</object_ids>
+          <geom_ids>true</geom_ids>
+          <face_ids>true</face_ids>
+        </compute>
         
         <noise>
           <type>uniform_dust</type>
@@ -114,7 +120,6 @@
           <stddev>0.002</stddev>
           <range_exp>1.0</range_exp>
         </noise>
-
       </ray>
 
       <plugin name="rmagine_ros_laser3d" filename="librmagine_optix_ros_gzplugin.so">

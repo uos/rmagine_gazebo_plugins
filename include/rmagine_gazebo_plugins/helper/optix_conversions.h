@@ -13,7 +13,7 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::PlaneGeom& plane);
 
 // rmagine::OptixGeometryPtr to_rm(const msgs::BoxGeom& box);
 
-rmagine::OptixInstPtr to_rm_optix(const msgs::BoxGeom& box);
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::BoxGeom& box);
 
 rmagine::OptixGeometryPtr to_rm_optix(const msgs::SphereGeom& sphere);
 

@@ -129,6 +129,8 @@ void RmagineOptixROS::OnUpdate()
     const bool has_normals = normals.size() > 0;
     rm::Memory<unsigned int, rm::RAM> object_ids = m_spherical_sensor->sim_buffers.object_ids;
     const bool has_object_ids = object_ids.size() > 0;
+    rm::Memory<unsigned int, rm::RAM> geom_ids = m_spherical_sensor->sim_buffers.geom_ids;
+    const bool has_geom_ids = geom_ids.size() > 0;
     rm::Memory<unsigned int, rm::RAM> face_ids = m_spherical_sensor->sim_buffers.face_ids;
     const bool has_face_ids = face_ids.size() > 0;
 
@@ -272,6 +274,17 @@ void RmagineOptixROS::OnUpdate()
                 total_bytes += sizeof(uint32_t);
             }
 
+            if(has_geom_ids)
+            {
+                sensor_msgs::PointField field_geom_id;
+                field_geom_id.name = "geom_id";
+                field_geom_id.offset = total_bytes;
+                field_geom_id.datatype = sensor_msgs::PointField::UINT32;
+                field_geom_id.count = 1;
+                msg.fields.push_back(field_geom_id);
+                total_bytes += sizeof(uint32_t);
+            }
+
             if(has_face_ids)
             {
                 sensor_msgs::PointField field_face_id;
@@ -326,6 +339,13 @@ void RmagineOptixROS::OnUpdate()
                             {
                                 uint32_t* obj_id = reinterpret_cast<uint32_t*>(buff);
                                 *obj_id = object_ids[pid];
+                                buff += sizeof(uint32_t);
+                            }
+
+                            if(has_geom_ids)
+                            {
+                                uint32_t* geom_id = reinterpret_cast<uint32_t*>(buff);
+                                *geom_id = geom_ids[pid];
                                 buff += sizeof(uint32_t);
                             }
 

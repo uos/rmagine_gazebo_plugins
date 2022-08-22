@@ -61,8 +61,8 @@ void RmagineOptixMap::Load(
     // create empty map
     rm::OptixScenePtr scene = std::make_shared<rm::OptixScene>();
 
-    rm::OptixInstancesPtr insts = std::make_shared<rm::OptixInstances>();
-    scene->setRoot(insts);
+    // rm::OptixInstancesPtr insts = std::make_shared<rm::OptixInstances>();
+    // scene->setRoot(insts);
 
     m_map = std::make_shared<rm::OptixMap>(scene);
 
@@ -154,6 +154,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
 
         std::string model_name = model->GetName();
+        std::cout << "ADDING " << model_name << std::endl;
 
         std::vector<physics::LinkPtr> links = model->GetLinks();
         for(physics::LinkPtr link : links)
@@ -206,22 +207,23 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         msgs::BoxGeom gzbox = gzgeom.box();
 
                         
-
-                        rm::OptixGeometryPtr box_geom;
+                        rm::OptixScenePtr box_scene;
+                        
 
                         auto cache_it = m_geom_cache.find(GeomCacheID::BOX);
                         if(cache_it != m_geom_cache.end())
                         {
-                            box_geom = cache_it->second;
+                            box_scene = cache_it->second;
                         } else {
-                            box_geom = std::make_shared<rm::OptixCube>();
+                            rm::OptixGeometryPtr box_geom = std::make_shared<rm::OptixCube>();
                             box_geom->apply();
                             box_geom->commit();
-                            m_geom_cache[GeomCacheID::BOX] = box_geom;
+                            box_scene = box_geom->makeScene();
+                            box_scene->commit();
+                            m_geom_cache[GeomCacheID::BOX] = box_scene;
                         }
 
-                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-                        mesh_inst->setGeometry(box_geom);
+                        rm::OptixInstPtr mesh_inst = box_scene->instantiate();
                         msgs::Vector3d size = gzbox.size();
                         rm::Vector3 rm_scale = to_rm(size);
                         mesh_inst->setScale(rm_scale);
@@ -235,19 +237,21 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                         auto cache_it = m_geom_cache.find(GeomCacheID::CYLINDER);
 
-                        rm::OptixGeometryPtr cylinder_geom;
+                        rm::OptixScenePtr cylinder_scene;
+                        
                         if(cache_it != m_geom_cache.end())
                         {
-                            cylinder_geom = cache_it->second;
+                            cylinder_scene = cache_it->second;
                         } else {
-                            cylinder_geom = std::make_shared<rm::OptixCylinder>(100);
+                            rm::OptixGeometryPtr cylinder_geom = std::make_shared<rm::OptixCylinder>(100);
                             cylinder_geom->apply();
                             cylinder_geom->commit();
-                            m_geom_cache[GeomCacheID::CYLINDER] = cylinder_geom;
+                            cylinder_scene = cylinder_geom->makeScene();
+                            cylinder_scene->commit();
+                            m_geom_cache[GeomCacheID::CYLINDER] = cylinder_scene;
                         }
 
-                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-                        mesh_inst->setGeometry(cylinder_geom);
+                        rm::OptixInstPtr mesh_inst = cylinder_scene->instantiate();
                         float radius = gzcylinder.radius();
                         float diameter = radius * 2.0;
                         float height = gzcylinder.length();
@@ -262,19 +266,20 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         
                         auto cache_it = m_geom_cache.find(GeomCacheID::SPHERE);
 
-                        rm::OptixGeometryPtr sphere_geom;
+                        rm::OptixScenePtr sphere_scene;
                         if(cache_it != m_geom_cache.end())
                         {
-                            sphere_geom = cache_it->second;
+                            sphere_scene = cache_it->second;
                         } else {
-                            sphere_geom = std::make_shared<rm::OptixSphere>(30, 30);
+                            rm::OptixGeometryPtr sphere_geom = std::make_shared<rm::OptixSphere>(30, 30);
                             sphere_geom->apply();
                             sphere_geom->commit();
-                            m_geom_cache[GeomCacheID::SPHERE] = sphere_geom;
+                            sphere_scene = sphere_geom->makeScene();
+                            sphere_scene->commit();
+                            m_geom_cache[GeomCacheID::SPHERE] = sphere_scene;
                         }
 
-                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-                        mesh_inst->setGeometry(sphere_geom);
+                        rm::OptixInstPtr mesh_inst = sphere_scene->instantiate();
                         float diameter = gzsphere.radius() * 2.0;
                         mesh_inst->setScale({diameter, diameter, diameter});
 
@@ -286,21 +291,27 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         msgs::PlaneGeom gzplane = gzgeom.plane();
                         
                         auto cache_it = m_geom_cache.find(GeomCacheID::PLANE);
-                        rm::OptixGeometryPtr plane_geom;
+                        rm::OptixScenePtr plane_scene;
                         if(cache_it != m_geom_cache.end())
                         {
-                            plane_geom = cache_it->second;
+                            plane_scene = cache_it->second;
                         } else {
-                            plane_geom = std::make_shared<rm::OptixPlane>();
+                            
+                            // std::cout << "Make plane geom." << std::endl;
+                            rm::OptixGeometryPtr plane_geom = std::make_shared<rm::OptixPlane>();
                             plane_geom->apply();
                             plane_geom->commit();
-                            m_geom_cache[GeomCacheID::PLANE] = plane_geom;
+                            // std::cout << "Make plane geom done." << std::endl;
+                            // std::cout << "Make Plane Scene" << std::endl;
+                            plane_scene = plane_geom->makeScene();
+                            plane_scene->commit();
+                            m_geom_cache[GeomCacheID::PLANE] = plane_scene;
+                            // std::cout << "Make plane scene done." << std::endl;
                         }
 
                         msgs::Vector2d size = gzplane.size();
 
-                        rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-                        mesh_inst->setGeometry(plane_geom);
+                        rm::OptixInstPtr mesh_inst = plane_scene->instantiate();
 
                         rm::Vector3 scale;
                         scale.x = size.x();
@@ -320,11 +331,11 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                         if(geom)
                         {
-                            rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-                            mesh_inst->setGeometry(geom);
+                            geom->commit();
+                            rm::OptixInstPtr geom_inst = geom->instantiate();
                             
-                            insts.push_back(mesh_inst);
-                            insts_ignore_model_transform.insert(mesh_inst);
+                            insts.push_back(geom_inst);
+                            insts_ignore_model_transform.insert(geom_inst);
                         } else {
                             gzwarn << "[RmagineOptixMap] Could not load heightmap!" << std::endl;  
                         }
@@ -342,7 +353,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         {
                             scene = cache_it->second;
                         } else {
-                            
                             for(auto loader_it = m_mesh_loader.begin(); loader_it != m_mesh_loader.end() && !scene; ++loader_it)
                             {
                                 if(*loader_it == MeshLoading::INTERNAL)
@@ -355,34 +365,16 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                             if(scene)
                             {
+                                scene->commit();
                                 m_mesh_cache[gzmesh.filename()] = scene;
                             }
                         }
 
                         if(scene)
                         {
-                            rm::OptixGeometryPtr root = scene->getRoot();
-
-                            rm::OptixInstancesPtr insts_new = std::dynamic_pointer_cast<rm::OptixInstances>(root);
-                            if(insts_new)
-                            {
-                                for(auto elem : insts_new->instances())
-                                {
-                                    // make a copy
-                                    rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>(*elem.second);
-
-                                    // apply scale
-                                    inst->setScale(inst->scale().mult_ewise(scale));
-                                    insts.push_back(inst);
-                                }
-                            } else {
-                                // never change geometry
-                                rm::OptixInstPtr inst = std::make_shared<rm::OptixInst>();
-                                inst->setGeometry(root);
-                                inst->setScale(scale);
-                                insts.push_back(inst);
-                            }
-
+                            rm::OptixInstPtr inst = scene->instantiate();
+                            inst->setScale(scale);
+                            insts.push_back(inst);
                         } else {
                             gzwarn << "[RmagineOptixMap] WARNING add mesh failed. Could not load " << gzmesh.filename() << std::endl;
                         }
@@ -399,11 +391,15 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         }
                         
                         inst->apply();
+                        inst->commit();
                         inst_to_visual[inst] = {key, Tiv, model_id};
                     }
                 }
             }
         }
+
+
+        std::cout << "ADDING " << model_name << " done." << std::endl;
     }
 
     return inst_to_visual;
@@ -415,9 +411,9 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateTransformed(
 {
     std::unordered_set<rm::OptixInstPtr> insts_to_transform;
 
-    rm::OptixInstancesPtr insts_global = 
-        std::dynamic_pointer_cast<rm::OptixInstances>(
-            m_map->scene()->getRoot());
+    // rm::OptixInstancesPtr insts_global = 
+    //     std::dynamic_pointer_cast<rm::OptixInstances>(
+    //         m_map->scene()->getRoot());
 
     for(auto model_id : transformed)
     {
@@ -469,7 +465,7 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateTransformed(
 
                 for(auto inst : mesh_vis_it->second)
                 {
-                    auto inst_id_opt = insts_global->getOpt(inst);
+                    auto inst_id_opt = m_map->scene()->getOpt(inst);
 
                     if(inst_id_opt)
                     {
@@ -505,10 +501,6 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
     const std::unordered_set<uint32_t>& scaled)
 {
     std::unordered_set<rm::OptixInstPtr> insts_to_scale;
-
-    rm::OptixInstancesPtr insts_global = 
-        std::dynamic_pointer_cast<rm::OptixInstances>(
-            m_map->scene()->getRoot());
 
     for(auto model_id : scaled)
     {
@@ -560,7 +552,7 @@ std::unordered_set<rmagine::OptixInstPtr> RmagineOptixMap::OptixUpdateScaled(
 
                 for(auto inst : mesh_vis_it->second)
                 {
-                    auto inst_id_opt = insts_global->getOpt(inst);
+                    auto inst_id_opt = m_map->scene()->getOpt(inst);
 
                     if(inst_id_opt)
                     {
@@ -587,10 +579,6 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
     const std::unordered_map<uint32_t, std::unordered_set<std::string> >& joints_changed)
 {
     std::unordered_set<rm::OptixInstPtr> inst_links_to_update;
-
-    rm::OptixInstancesPtr insts_global = 
-        std::dynamic_pointer_cast<rm::OptixInstances>(
-            m_map->scene()->getRoot());
 
     for(auto elem : joints_changed)
     {
@@ -640,7 +628,7 @@ std::unordered_set<rm::OptixInstPtr> RmagineOptixMap::OptixUpdateJointChanges(
 
                     for(auto inst : mesh_vis_it->second)
                     {
-                        auto geom_id_opt = insts_global->getOpt(inst);
+                        auto geom_id_opt = m_map->scene()->getOpt(inst);
 
                         if(geom_id_opt)
                         {
@@ -720,7 +708,9 @@ void RmagineOptixMap::UpdateState()
 
         if(diff.ModelAdded())
         {
+            // std::cout << "OptixUpdateAdded" << std::endl;
             updates_add = OptixUpdateAdded(models_new, diff.added);
+            // std::cout << "OptixUpdateAdded done." << std::endl;
             scene_changes += updates_add.size();
 
             for(auto elem : updates_add)
@@ -746,20 +736,16 @@ void RmagineOptixMap::UpdateState()
                 m_geom_to_visual[inst] = elem.second;
             }
         }
-
-        // shortcut
-        rm::OptixInstancesPtr insts_old = 
-            std::dynamic_pointer_cast<rm::OptixInstances>(
-                m_map->scene()->getRoot());
         
         if(updates_add.size() > 0)
         {
+            // std::cout << "ADD " << updates_add.size() << " instances." << std::endl;
             for(auto elem : updates_add)
             {
                 rm::OptixInstPtr inst = elem.first;
-                unsigned int geom_id = m_map->scene()->add(inst->geometry());
-                unsigned int inst_id = insts_old->add(inst);
+                unsigned int inst_id = m_map->scene()->add(inst);
             }
+            // std::cout << "ADD " << updates_add.size() << " instances done." << std::endl;
         }
 
         if(diff.ModelChanged())
@@ -817,7 +803,7 @@ void RmagineOptixMap::UpdateState()
                     auto insts = insts_it->second;
                     for(auto inst : insts)
                     {
-                        insts_old->remove(inst);
+                        m_map->scene()->remove(inst);
                         scene_changes++;
 
                         // REMOVE VISUAL CONNECTIONS
@@ -883,8 +869,8 @@ void RmagineOptixMap::UpdateState()
         if(diff.ModelAdded() || diff.ModelRemoved())
         {
             gzdbg << "[RmagineOptixMap] Number of map elements changed" << std::endl;
-            gzdbg << "[RmagineOptixMap] - geometries: " << m_map->scene()->geometries().size() << std::endl;
-            gzdbg << "[RmagineOptixMap] - instances: " << insts_old->instances().size() << std::endl;
+            gzdbg << "[RmagineOptixMap] - instances: " << m_map->scene()->geometries().size() << std::endl;
+            // gzdbg << "[RmagineOptixMap] - instances: " << insts_old->instances().size() << std::endl;
         }
 
         if(scene_changes > 0)
@@ -900,7 +886,6 @@ void RmagineOptixMap::UpdateState()
             // std::cout << "SCENE UPDATE: " << scene_changes << " changes" << std::endl;
 
             sw();
-            insts_old->commit();
             m_map->scene()->commit();
             el = sw();
             // std::cout << "- Scene update finished in " << el << "s" << std::endl;

@@ -48,35 +48,35 @@ rmagine::OptixGeometryPtr to_rm_optix(const msgs::PlaneGeom& plane)
     return mesh;
 }
 
-// rmagine::OptixGeometryPtr to_rm(const msgs::BoxGeom& box)
-// {
-//     // fill embree mesh
-//     rm::OptixCubePtr mesh = std::make_shared<rm::OptixCube>();
+rmagine::OptixGeometryPtr to_rm_optix(const msgs::BoxGeom& box)
+{
+    // fill embree mesh
+    rm::OptixCubePtr mesh = std::make_shared<rm::OptixCube>();
 
+    // msgs::Vector3d size = box.size();
+    // rm::Vector3 rm_scale = to_rm(size);
+    // mesh->setScale(rm_scale);
+
+    return mesh;
+}
+
+// rmagine::OptixInstPtr to_rm_optix(const msgs::BoxGeom& box)
+// {
+//     // make basic mesh
+//     rm::OptixCubePtr mesh = std::make_shared<rm::OptixCube>();
+//     mesh->apply();
+//     mesh->commit();
+
+//     // make inst
+//     rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+//     mesh_inst->setGeometry(mesh);
 //     msgs::Vector3d size = box.size();
 //     rm::Vector3 rm_scale = to_rm(size);
-//     mesh->setScale(rm_scale);
+//     mesh_inst->setScale(rm_scale);
+//     mesh_inst->apply();
 
-//     return mesh;
+//     return mesh_inst;
 // }
-
-rmagine::OptixInstPtr to_rm_optix(const msgs::BoxGeom& box)
-{
-    // make basic mesh
-    rm::OptixCubePtr mesh = std::make_shared<rm::OptixCube>();
-    mesh->apply();
-    mesh->commit();
-
-    // make inst
-    rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-    mesh_inst->setGeometry(mesh);
-    msgs::Vector3d size = box.size();
-    rm::Vector3 rm_scale = to_rm(size);
-    mesh_inst->setScale(rm_scale);
-    mesh_inst->apply();
-
-    return mesh_inst;
-}
 
 rmagine::OptixGeometryPtr to_rm_optix(const msgs::SphereGeom& sphere)
 {
@@ -329,30 +329,30 @@ rm::OptixScenePtr to_rm_optix(
         }
     }
 
-    auto meshes = ret->geometries();
-    if(meshes.size() == 0)
-    {
-        gzwarn << "[RmagineOptixMap] Mesh to Optix - no meshes constructed." << std::endl;
-        ret.reset();
-    } else {
-        // make one instance per mesh
-        rm::OptixInstancesPtr insts = std::make_shared<rm::OptixInstances>();
+    // auto meshes = ret->geometries();
+    // if(meshes.size() == 0)
+    // {
+    //     gzwarn << "[RmagineOptixMap] Mesh to Optix - no meshes constructed." << std::endl;
+    //     ret.reset();
+    // } else {
+    //     // make one instance per mesh
+    //     rm::OptixInstancesPtr insts = std::make_shared<rm::OptixInstances>();
 
-        for(auto elem : meshes)
-        {
-            rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
-            mesh_inst->setGeometry(elem.second);
-            mesh_inst->name = elem.second->name;
-            mesh_inst->apply();
-            insts->add(mesh_inst);
-        }
+    //     for(auto elem : meshes)
+    //     {
+    //         rm::OptixInstPtr mesh_inst = std::make_shared<rm::OptixInst>();
+    //         mesh_inst->setGeometry(elem.second);
+    //         mesh_inst->name = elem.second->name;
+    //         mesh_inst->apply();
+    //         insts->add(mesh_inst);
+    //     }
         
-        insts->name = gzmesh->GetName();
-        insts->commit();
+    //     insts->name = gzmesh->GetName();
+    //     insts->commit();
 
-        ret->name = gzmesh->GetName();
-        ret->setRoot(insts);
-    }
+    //     ret->name = gzmesh->GetName();
+    //     ret->setRoot(insts);
+    // }
 
     return ret;
 }
