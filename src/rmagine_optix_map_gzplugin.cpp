@@ -67,11 +67,11 @@ void RmagineOptixMap::Load(
     m_map = std::make_shared<rm::OptixMap>(scene);
 
 
-    gzdbg << "Starting updater thread." << std::endl;
+    // gzdbg << "Starting updater thread." << std::endl;
 
     m_updater_thread = std::thread([this]()
     {
-        gzdbg << "Updater thread started." << std::endl;
+        // gzdbg << "Updater thread started." << std::endl;
         rm::StopWatch sw;
         double el;
         // minimum duration for one loop
@@ -91,7 +91,7 @@ void RmagineOptixMap::Load(
             }
         }
         m_stop_updater_thread = false;
-        gzdbg << "Updater thread terminated." << std::endl;
+        // gzdbg << "Updater thread terminated." << std::endl;
     });
 
     gzdbg << "[RmagineOptixMap] Loaded." << std::endl;
@@ -154,7 +154,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
 
         std::string model_name = model->GetName();
-        std::cout << "ADDING " << model_name << std::endl;
+        // std::cout << "ADDING " << model_name << std::endl;
 
         std::vector<physics::LinkPtr> links = model->GetLinks();
         for(physics::LinkPtr link : links)
@@ -399,7 +399,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
         }
 
 
-        std::cout << "ADDING " << model_name << " done." << std::endl;
+        // std::cout << "ADDING " << model_name << " done." << std::endl;
     }
 
     return inst_to_visual;

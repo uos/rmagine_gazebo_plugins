@@ -42,9 +42,76 @@
   <origin xyz="0 0 0.1" />
 </joint>
 
+<!-- 2D LASER EXAMPLE -->
+<link name="laser2d">
+  <collision>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <geometry>
+      <cylinder radius="0.0516" length="0.02"/>
+    </geometry>
+  </collision>
+  <visual>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <geometry>
+      <cylinder radius="0.0516" length="0.02"/>
+    </geometry>
+  </visual>
+  <inertial>
+    <mass value="0.2"/>
+    <origin xyz="0.0 0.0 0.0"/>
+    <inertia ixx="${(0.2 * (3.0*0.0516*0.0516 + 0.0717*0.0717)) / 12.0}" ixy="0" ixz="0"
+      iyy="${(0.2 * (3.0*0.0516*0.0516 + 0.0717*0.0717)) / 12.0}" iyz="0"
+      izz="${0.5 * 0.2 * (0.0516*0.0516)}"/>
+  </inertial>
+</link>
 
+<joint name="laser2d_to_base_joint" type="fixed">
+  <parent link="base_link" />
+  <child link="laser2d" />
+  <origin xyz="0.0 0.0 0.3" />
+</joint>
 
-<!-- 3D LASER -->
+<gazebo reference="laser2d">
+  <rmagine_ignore/>
+    <sensor type="rmagine_optix_spherical" name="laser2d">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>20</update_rate>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <min_angle>${-M_PI}</min_angle>
+            <increment>${1.0 * M_PI / 180.0}</increment>
+            <samples>360</samples>
+          </horizontal>
+        </scan>
+
+        <range>
+          <min>0.0</min>
+          <max>15.0</max>
+        </range>
+
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.002</stddev>
+        </noise>
+      </ray>
+
+      <plugin name="rmagine_ros_laser2d" filename="librmagine_optix_ros_gzplugin.so">
+          <frame>laser2d</frame>
+          <outputs>
+            <output name="scan">
+              <msg>sensor_msgs/LaserScan</msg>
+              <topic>laser2d/scan</topic>
+            </output>
+          </outputs>
+      </plugin>
+    </sensor>
+</gazebo>
+
+<!-- 3D LASER EXAMPLE -->
 <link name="laser3d">
   <collision>
     <origin rpy="0 0 0" xyz="0 0 0.0"/>
@@ -67,10 +134,6 @@
   </inertial>
 </link>
 
-<gazebo reference="laser3d">
-  <rmagine_ignore/>
-</gazebo>
-
 <joint name="laser3d_to_base_joint" type="fixed">
   <parent link="base_link" />
   <child link="laser3d" />
@@ -78,6 +141,7 @@
 </joint>
 
 <gazebo reference="laser3d">
+  <rmagine_ignore/>
     <sensor type="rmagine_optix_spherical" name="laser3d">
       <pose>0 0 0 0 0 0</pose>
       <always_on>true</always_on>
