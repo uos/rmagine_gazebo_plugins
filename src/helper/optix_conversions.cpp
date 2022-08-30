@@ -7,7 +7,6 @@
 
 #include <rmagine/map/AssimpIO.hpp>
 #include <rmagine/map/optix/optix_shapes.h>
-#include <rmagine/map/optix/OptixInstances.hpp>
 #include <rmagine/map/optix/OptixInst.hpp>
 #include <rmagine/map/optix/OptixMesh.hpp>
 
