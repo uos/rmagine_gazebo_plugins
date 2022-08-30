@@ -151,12 +151,17 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
         float half_width = size.X() / 2.0;
         float half_height = size.Y() / 2.0;
 
-        gzdbg << "Filling " << mesh->vertices.size() << " vertices..." << std::endl;
+
+        
         
         rm::Vector3 correction = {0.0, 0.0, 0.0};
 
         int center_vert = vertSize / 2;
         
+        auto mesh_vertices = mesh->vertices();
+
+        gzdbg << "Filling " << mesh_vertices.size() << " vertices..." << std::endl;
+
         // the following cannot handle higher subsampling levels yet
         for(size_t yimg=0; yimg < vertSize; yimg++)
         {
@@ -188,12 +193,14 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
 
                 vertex_corrected += offset;
 
-                assert(buff_id < mesh->vertices.size());
-                mesh->vertices[buff_id] = vertex_corrected;
+                // assert(buff_id < mesh->vertices.size());
+                mesh_vertices[buff_id] = vertex_corrected;
             }
         }
 
-        gzdbg << "Filling " << mesh->Nfaces << " faces..." << std::endl;
+        auto mesh_faces = mesh->faces();
+
+        gzdbg << "Filling " << mesh_faces.size() << " faces..." << std::endl;
         // fill faces
         for(size_t i=1; i<vertSize; i++)
         {
@@ -209,12 +216,12 @@ rmagine::EmbreeGeometryPtr to_rm_embree(const msgs::HeightmapGeom& heightmap)
                 unsigned int f0 = quad_id * 2 + 0;
                 unsigned int f1 = quad_id * 2 + 1;
 
-                assert(f0 < mesh->Nfaces);
-                assert(f1 < mesh->Nfaces);
+                // assert(f0 < mesh->Nfaces);
+                // assert(f1 < mesh->Nfaces);
 
                 // connect as in plane example
-                mesh->faces[f0] = {v1, v0, v3};
-                mesh->faces[f1] = {v3, v2, v1};
+                mesh_faces[f0] = {v1, v0, v3};
+                mesh_faces[f1] = {v3, v2, v1};
             }
         }
 
@@ -311,16 +318,19 @@ rm::EmbreeScenePtr to_rm_embree(
                 gzsubmesh->GetIndexCount() / 3);
 
             // TODO fill
+            
             gzdbg << "Converting vertices" << std::endl;
-            for(size_t i=0; i<mesh->vertices.size(); i++)
+            auto mesh_vertices = mesh->vertices();
+            for(size_t i=0; i<mesh_vertices.size(); i++)
             {
-                mesh->vertices[i] = to_rm(gzsubmesh->Vertex(i));
+                mesh_vertices[i] = to_rm(gzsubmesh->Vertex(i));
             }
 
             gzdbg << "Converting faces" << std::endl;
-            for(size_t i=0; i<mesh->Nfaces; i++)
+            auto mesh_faces = mesh->faces();
+            for(size_t i=0; i<mesh_faces.size(); i++)
             {
-                mesh->faces[i] = {
+                mesh_faces[i] = {
                     gzsubmesh->GetIndex(i * 3 + 0),
                     gzsubmesh->GetIndex(i * 3 + 1),
                     gzsubmesh->GetIndex(i * 3 + 2)
@@ -331,10 +341,13 @@ rm::EmbreeScenePtr to_rm_embree(
             if(gzsubmesh->GetNormalCount())
             {
                 gzdbg << "Converting vertex normals" << std::endl;
-                mesh->vertex_normals.resize(gzsubmesh->GetNormalCount());
-                for(size_t i=0; i<mesh->vertex_normals.size(); i++)
+                mesh->initVertexNormals();
+
+                auto mesh_vertex_normals = mesh->vertexNormals();
+                
+                for(size_t i=0; i<mesh_vertex_normals.size(); i++)
                 {
-                    mesh->vertex_normals[i] = to_rm(gzsubmesh->Normal(i));
+                    mesh_vertex_normals[i] = to_rm(gzsubmesh->Normal(i));
                 }
             }
 
