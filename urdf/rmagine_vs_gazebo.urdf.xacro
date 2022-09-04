@@ -1,0 +1,276 @@
+<?xml version="1.0"?>
+<robot
+  xmlns:xacro="http://ros.org/wiki/xacro"
+  xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+  xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+  xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+  name="robot_sensor">
+
+<xacro:property name="M_PI" value="3.14159265359"/>
+
+<link name="base_footprint">
+</link>
+
+<link name="base_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <geometry>
+      <box size="0.4 0.3 0.2"/>
+    </geometry>
+    <material name="silver" >
+      <color rgba="0.5 0.5 0.5 1" />
+    </material>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <geometry>
+      <box size="0.4 0.3 0.2"/>
+    </geometry>
+  </collision>
+  <inertial>
+      <mass value="10.0" />
+      <origin xyz="0 0 0" />
+      <inertia ixx="${0.0833333 * 10.0 * (0.3*0.3 + 0.2*0.2)}" ixy="0.0" ixz="0.0"
+        iyy="${0.0833333 * 10.0 * (0.4*0.4 + 0.2*0.2)}" iyz="0.0"
+        izz="${0.0833333 * 10.0 * (0.4*0.4 + 0.3*0.3)}" />
+    </inertial>
+</link>
+
+<joint name="base_to_bf_joint" type="fixed">
+  <parent link="base_footprint" />
+  <child link="base_link" />
+  <origin xyz="0 0 0.1" />
+</joint>
+
+<!-- 3D LASER EXAMPLE -->
+<link name="laser3d">
+  <collision>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <geometry>
+      <cylinder radius="0.0516" length="0.0717"/>
+    </geometry>
+  </collision>
+  <visual>
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <geometry>
+      <cylinder radius="0.0516" length="0.0717"/>
+    </geometry>
+  </visual>
+  <inertial>
+    <mass value="0.83"/>
+    <origin xyz="0.0 0.0 0.0"/>
+    <inertia ixx="${(0.83 * (3.0*0.0516*0.0516 + 0.0717*0.0717)) / 12.0}" ixy="0" ixz="0"
+      iyy="${(0.83 * (3.0*0.0516*0.0516 + 0.0717*0.0717)) / 12.0}" iyz="0"
+      izz="${0.5 * 0.83 * (0.0516*0.0516)}"/>
+  </inertial>
+</link>
+
+<joint name="laser3d_to_base_joint" type="fixed">
+  <parent link="base_link" />
+  <child link="laser3d" />
+  <origin xyz="0.0 0.0 0.5" />
+</joint>
+
+<gazebo reference="laser3d">
+  <sensor type="gpu_ray" name="GZGPU">
+    <pose>0 0 0 0 0 0</pose>
+    <visualize>false</visualize>
+    <update_rate>20</update_rate>
+    <ray>
+      <scan>
+        <horizontal>
+          <samples>900</samples>
+          <resolution>1</resolution>
+          <min_angle>${-M_PI}</min_angle>
+          <max_angle>${M_PI}</max_angle>
+        </horizontal>
+        <vertical>
+          <samples>16</samples>
+          <resolution>1</resolution>
+          <min_angle>${-15.0*M_PI/180.0}</min_angle>
+          <max_angle>${15.0*M_PI/180.0}</max_angle>
+        </vertical>
+      </scan>
+      <range>
+        <min>0.15</min>
+        <max>100.0</max>
+        <resolution>0.001</resolution>
+      </range>
+      <noise>
+        <type>gaussian</type>
+        <mean>0.0</mean>
+        <stddev>0.0</stddev>
+      </noise>
+    </ray>
+    <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_velodyne_gpu_laser.so">
+      <topicName>laser3d/gz_gpu</topicName>
+      <frameName>laser3d</frameName>
+      <organize_cloud>true</organize_cloud>
+      <min_range>0.15</min_range>
+      <max_range>100.0</max_range>
+      <gaussianNoise>0.01</gaussianNoise>
+    </plugin>
+  </sensor>
+</gazebo>
+
+<gazebo reference="laser3d">
+  <sensor type="ray" name="GZCPU">
+    <pose>0 0 0 0 0 0</pose>
+    <visualize>false</visualize>
+    <update_rate>20</update_rate>
+    <ray>
+      <scan>
+        <horizontal>
+          <samples>900</samples>
+          <resolution>1</resolution>
+          <min_angle>${-M_PI}</min_angle>
+          <max_angle>${M_PI}</max_angle>
+        </horizontal>
+        <vertical>
+          <samples>16</samples>
+          <resolution>1</resolution>
+          <min_angle>-${15.0*M_PI/180.0}</min_angle>
+          <max_angle> ${15.0*M_PI/180.0}</max_angle>
+        </vertical>
+      </scan>
+      <range>
+        <min>0.15</min>
+        <max>101.0</max>
+        <resolution>0.001</resolution>
+      </range>
+      <noise>
+        <type>gaussian</type>
+        <mean>0.0</mean>
+        <stddev>0.0</stddev>
+      </noise>
+    </ray>
+    <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_velodyne_laser.so">
+      <topicName>laser3d/gz_cpu</topicName>
+      <frameName>laser3d</frameName>
+      <organize_cloud>true</organize_cloud>
+      <min_range>0.15</min_range>
+      <max_range>100</max_range>
+      <gaussianNoise>0.01</gaussianNoise>
+    </plugin>
+  </sensor>
+</gazebo>
+
+<gazebo reference="laser3d">
+  <rmagine_ignore/>
+    <sensor type="rmagine_optix_spherical" name="laser3d">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>20</update_rate>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <min_angle>${-M_PI}</min_angle>
+            <increment>${360.0 / 900.0 * M_PI / 180.0}</increment>
+            <samples>900</samples>
+          </horizontal>
+          <vertical>
+            <min_angle>${-15.0 * M_PI / 180.0}</min_angle>
+            <increment>${2.0 * M_PI / 180.0}</increment>
+            <samples>30</samples>
+          </vertical>
+        </scan>
+
+        <range>
+          <min>0.0</min>
+          <max>100.0</max>
+        </range>
+
+        <compute>
+          <object_ids>true</object_ids>
+          <geom_ids>true</geom_ids>
+          <face_ids>true</face_ids>
+        </compute>
+        
+        <noise>
+          <type>uniform_dust</type>
+          <hit_prob>0.0000001</hit_prob>
+          <return_prob>0.5</return_prob>
+        </noise> 
+
+        <noise>
+          <type>rel_gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.002</stddev>
+          <range_exp>1.0</range_exp>
+        </noise>
+      </ray>
+
+      <plugin name="rmagine_ros_laser3d" filename="librmagine_optix_ros_gzplugin.so">
+          <frame>laser3d</frame>
+          <outputs>
+            <output name="pcl2">
+              <msg>sensor_msgs/PointCloud2</msg>
+              <topic>laser3d/rm_gpu</topic>
+            </output>
+          </outputs>
+      </plugin>
+    </sensor>
+</gazebo>
+
+<gazebo reference="laser3d">
+  <rmagine_ignore/>
+    <sensor type="rmagine_embree_spherical" name="laser3d_cpu">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>true</always_on>
+      <update_rate>20</update_rate>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <min_angle>${-M_PI}</min_angle>
+            <increment>${360.0 / 900 * M_PI / 180.0}</increment>
+            <samples>900</samples>
+          </horizontal>
+          <vertical>
+            <min_angle>${-15.0 * M_PI / 180.0}</min_angle>
+            <increment>${2.0 * M_PI / 180.0}</increment>
+            <samples>30</samples>
+          </vertical>
+        </scan>
+
+        <range>
+          <min>0.0</min>
+          <max>100.0</max>
+        </range>
+
+        <compute>
+          <object_ids>true</object_ids>
+          <geom_ids>true</geom_ids>
+          <face_ids>true</face_ids>
+        </compute>
+        
+        <noise>
+          <type>uniform_dust</type>
+          <hit_prob>0.0000001</hit_prob>
+          <return_prob>0.5</return_prob>
+        </noise> 
+
+        <noise>
+          <type>rel_gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.002</stddev>
+          <range_exp>1.0</range_exp>
+        </noise>
+      </ray>
+
+      <plugin name="rmagine_ros_laser3d_cpu" filename="librmagine_embree_ros_gzplugin.so">
+          <frame>laser3d</frame>
+          <outputs>
+            <output name="pcl2">
+              <msg>sensor_msgs/PointCloud2</msg>
+              <topic>laser3d/rm_cpu</topic>
+            </output>
+          </outputs>
+      </plugin>
+    </sensor>
+</gazebo>
+
+
+
+</robot>
