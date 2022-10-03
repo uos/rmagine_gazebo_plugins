@@ -1,4 +1,4 @@
-# rmagine_gazebo_plugins
+# rmagine_gazebo_plugins (WIP)
 
 Depth sensor plugins for Gazebo using the sensor simulation library `rmagine`. 
 With rmagines OptiX backend it is possible to simulate depth sensor data directly on your RTX graphics card. With Embree backend you can simulate any provided sensor online on your CPU.
@@ -298,7 +298,7 @@ Example:
 
 3. Uniform Dust Noise
 
-Apply uniform dust noise to simulated ranges. Assuming some small particles could be hit by the range sensor that are not modeled in by the scene, use this noise type. 
+Apply uniform dust noise to simulated ranges. Assuming some small particles could be hit by the range sensor that are not modeled by the scene, use this noise type. 
 
 Parameters:
 
@@ -459,3 +459,14 @@ Examples - this time using OptiX.
     </sensor>
 </gazebo>
 ```
+
+## Work in Progress
+
+This is a pre-release. There is still some work to do for the first stable release:
+
+- Implemented: SphericalModel. TODO: PinholeModel, O1DnModel, OnDnModel
+- Bug: Sometimes the Gazebo simulation needs to be started twice in order to get everything started (blocking threads?)
+- Tests: More tests on different devices. Let me know, if you had problems integrating the rmagine_gazebo_plugins into your project.
+
+Nice-to-Have:
+- Add segmenting functionallity: Store labeled sensor data from a list of poses in a commonly used file format
