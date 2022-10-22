@@ -269,7 +269,7 @@ rmagine::EmbreeScenePtr to_rm_embree_assimp(const msgs::MeshGeom& gzmesh)
             for(auto elem : scene->geometries())
             {
                 auto geom = elem.second;   
-                geom->setScale(geom->scale().mult_ewise(scale));
+                geom->setScale(geom->scale().multEwise(scale));
             }
         } else {
             gzwarn << "WARNING Assimp Import: make_embree_scene failed." << std::endl;
@@ -415,7 +415,7 @@ rmagine::EmbreeScenePtr to_rm_embree_gazebo(const msgs::MeshGeom& gzmesh)
         for(auto elem : ret->geometries())
         {
             auto geom = elem.second;   
-            geom->setScale(geom->scale().mult_ewise(scale));
+            geom->setScale(geom->scale().multEwise(scale));
             geom->apply();
         }
     } else {
