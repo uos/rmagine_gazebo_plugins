@@ -472,3 +472,14 @@ This is a pre-release. There is still some work to do for the first stable relea
 
 Nice-to-Have:
 - Add segmenting functionallity: Store labeled sensor data from a list of poses in a commonly used file format
+
+Known Issues:
+
+- "Core dumped" on exit:
+```bash
+[Dbg] [rmagine_embree_map_gzplugin.cpp:52] [RmagineEmbreeMap] Destroyed.
+terminate called after throwing an instance of 'boost::wrapexcept<boost::lock_error>'
+terminate called recursively
+  what():  boost: mutex lock failed in pthread_mutex_lock: Invalid argument
+Aborted (core dumped)
+```
