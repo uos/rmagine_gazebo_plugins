@@ -467,7 +467,6 @@ Examples - this time using OptiX.
 This is a pre-release. There is still some work to do for the first stable release:
 
 - Implemented: SphericalModel. TODO: PinholeModel, O1DnModel, OnDnModel
-- Bug: Sometimes the Gazebo simulation needs to be started twice in order to get everything started (blocking threads?)
 - Tests: More tests on different devices. Let me know, if you had problems integrating the rmagine_gazebo_plugins into your project.
 
 Nice-to-Have:
@@ -475,6 +474,7 @@ Nice-to-Have:
 
 Known Issues:
 
+- Sometimes the Gazebo simulation needs to be started twice in order to get everything started (blocking threads?)
 - "Core dumped" on exit:
 ```bash
 [Dbg] [rmagine_embree_map_gzplugin.cpp:52] [RmagineEmbreeMap] Destroyed.
