@@ -1,101 +1,5 @@
 [[Code](https://github.com/uos/rmagine_gazebo_plugins)] [[Wiki](https://github.com/uos/rmagine_gazebo_plugins/wiki)]
 
-
-<style>
-.video-container {
-  width: 100%;
-  height: auto;
-  position: relative;
-}
-
-.play-btn {
-  width: 80px;
-  height: 80px;
-  background: radial-gradient( rgba(255, 0, 0, 0.8) 60%, rgba(255, 255, 255, 1) 62%);
-  border-radius: 50%;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  -ms-transform: translate(-50%, -50%);
-  box-shadow: 0px 0px 25px 3px rgba(255, 0, 0, 0.8);
-}
-
-/* triangle */
-.play-btn::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  -webkit-transform: translateX(-40%) translateY(-50%);
-  transform: translateX(-40%) translateY(-50%);
-  transform-origin: center center;
-  width: 0;
-  height: 0;
-  border-top: 15px solid transparent;
-  border-bottom: 15px solid transparent;
-  border-left: 25px solid #fff;
-  z-index: 100;
-  -webkit-transition: all 400ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
-  transition: all 400ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
-}
-
-/* pulse wave */
-.play-btn:before {
-  content: "";
-  position: absolute;
-  width: 150%;
-  height: 150%;
-  -webkit-animation-delay: 0s;
-  animation-delay: 0s;
-  -webkit-animation: pulsate1 2s;
-  animation: pulsate1 2s;
-  -webkit-animation-direction: forwards;
-  animation-direction: forwards;
-  -webkit-animation-iteration-count: infinite;
-  animation-iteration-count: infinite;
-  -webkit-animation-timing-function: steps;
-  animation-timing-function: steps;
-  opacity: 1;
-  border-radius: 50%;
-  border: 5px solid rgba(255, 255, 255, .75);
-  top: -30%;
-  left: -30%;
-  background: rgba(198, 16, 0, 0);
-}
-
-@-webkit-keyframes pulsate1 {
-  0% {
-    -webkit-transform: scale(0.6);
-    transform: scale(0.6);
-    opacity: 1;
-    box-shadow: inset 0px 0px 25px 3px rgba(255, 255, 255, 0.75), 0px 0px 25px 10px rgba(255, 255, 255, 0.75);
-  }
-  100% {
-    -webkit-transform: scale(1);
-    transform: scale(1);
-    opacity: 0;
-    box-shadow: none;
-  }
-}
-
-@keyframes pulsate1 {
-  0% {
-    -webkit-transform: scale(0.6);
-    transform: scale(0.6);
-    opacity: 1;
-    box-shadow: inset 0px 0px 25px 3px rgba(255, 255, 255, 0.75), 0px 0px 25px 10px rgba(255, 255, 255, 0.75);
-  }
-  100% {
-    -webkit-transform: scale(1, 1);
-    transform: scale(1);
-    opacity: 0;
-    box-shadow: none;
-  }
-}
-
-</style>
-
 # rmagine_gazebo_plugins (WIP)
 
 Range sensor plugins for Gazebo using the sensor simulation library [rmagine](https://github.com/uos/rmagine). 
@@ -103,11 +7,43 @@ With rmagine's OptiX backend it is possible to simulate depth sensor data direct
 Embree and OptiX are libraries for raytracing and build BVH acceleration structures on the scene for faster ray traversals.
 After building these acceleration structures, you can simulate depth sensors on CPU or GPU without getting perfomance issues even in large Gazebo worlds.
 
-<div class="video-container">
-  <img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" alt="Rmagine Gazebo plugin video" />
-  <a class="play-btn" href="https://www.youtube.com/watch?v=IOrBxiW0AmY">
+<div class="video-container" style="width: 100%;
+                height: auto;
+                position: relative;">
+  <img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" alt="Rmagine Gazebo plugin video" style="" />
+  <a class="play-btn" href="https://www.youtube.com/watch?v=IOrBxiW0AmY" style="
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                -webkit-transform: translateX(-40%) translateY(-50%);
+                transform: translateX(-40%) translateY(-50%);
+                transform-origin: center center;
+                width: 0;
+                height: 0;
+                border-top: 20px solid transparent;
+                border-bottom: 20px solid transparent;
+                border-left: 33px solid #fff;
+                z-index: 100;
+            ">
+  </a>
+  <a class="play-btn" href="https://www.youtube.com/watch?v=IOrBxiW0AmY" style="
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                -webkit-transform: translateX(-50%) translateY(-50%);
+                transform: translateX(-50%) translateY(-50%);
+                transform-origin: center center;
+                width: 0;
+                height: 0;
+                height: 70px;
+                width: 70px;
+                background-color: #FF0000;
+                border-radius: 50%;
+            ">
   </a>
 </div>
+
+
 
 ## Examples
 
