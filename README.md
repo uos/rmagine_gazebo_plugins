@@ -7,40 +7,13 @@ With rmagine's OptiX backend it is possible to simulate depth sensor data direct
 Embree and OptiX are libraries for raytracing and build BVH acceleration structures on the scene for faster ray traversals.
 After building these acceleration structures, you can simulate depth sensors on CPU or GPU without getting perfomance issues even in large Gazebo worlds.
 
-<div class="video-container" style="width: 100%;
-                height: auto;
-                position: relative;">
-  <img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" alt="Rmagine Gazebo plugin video" style="" />
-  <a class="play-btn" href="https://www.youtube.com/watch?v=IOrBxiW0AmY" style="
-                position: absolute;
-                left: 50%;
-                top: 50%;
-                -webkit-transform: translateX(-40%) translateY(-50%);
-                transform: translateX(-40%) translateY(-50%);
-                transform-origin: center center;
-                width: 0;
-                height: 0;
-                border-top: 20px solid transparent;
-                border-bottom: 20px solid transparent;
-                border-left: 33px solid #fff;
-                z-index: 100;
-            ">
-  </a>
-  <a class="play-btn" href="https://www.youtube.com/watch?v=IOrBxiW0AmY" style="
-                position: absolute;
-                left: 50%;
-                top: 50%;
-                -webkit-transform: translateX(-50%) translateY(-50%);
-                transform: translateX(-50%) translateY(-50%);
-                transform-origin: center center;
-                width: 0;
-                height: 0;
-                height: 70px;
-                width: 70px;
-                background-color: #FF0000;
-                border-radius: 50%;
-            ">
-  </a>
+Youtube-Video:
+
+<div align="center">
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=IOrBxiW0AmY
+" target="_blank"><img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" 
+alt="Rmagine Gazebo Plugin YT Video" width="80%" height="auto" border="10" />
+</a>
 </div>
 
 
