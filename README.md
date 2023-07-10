@@ -11,8 +11,9 @@ Youtube-Video:
 
 <div align="center">
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=IOrBxiW0AmY
-" target="_blank"><img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" 
-alt="Rmagine Gazebo Plugin YT Video" width="80%" height="auto" border="10" />
+" target="_blank" >
+  <img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" 
+  alt="Rmagine Gazebo Plugin YT Video" width="100%" style="max-width: 500px" height="auto" border="10" />
 </a>
 </div>
 
