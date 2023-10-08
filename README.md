@@ -493,3 +493,12 @@ terminate called recursively
   what():  boost: mutex lock failed in pthread_mutex_lock: Invalid argument
 Aborted (core dumped)
 ```
+
+
+### Known Bug-Fixes:
+
+On my system, Gazebo finds all rmagine libraries automatically. If that is not the case for you, try appending your ROS workspace `your_ws` to the Gazebo search pathes:
+
+```console
+export GAZEBO_PLUGIN_PATH=~/your_ws/devel/lib:$GAZEBO_PLUGIN_PATH
+```
