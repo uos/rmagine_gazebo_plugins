@@ -39,6 +39,22 @@ OPTIONAL_COMPONENTS
 )
 
 
+set(rmagine_gazebo_libs)
+
+if(TARGET rmagine::embree)
+  list(APPEND rmagine_gazebo_libs rmagine_embree_spherical_gzplugin)
+  list(APPEND rmagine_gazebo_libs rmagine_embree_sensors_gzregister)
+  list(APPEND rmagine_gazebo_libs rmagine_embree_map_gzplugin)
+  list(APPEND rmagine_gazebo_libs rmagine_embree_ros_gzplugin)
+endif(TARGET rmagine::embree)
+
+if(TARGET rmagine::optix)
+  list(APPEND rmagine_gazebo_libs rmagine_optix_spherical_gzplugin)
+  list(APPEND rmagine_gazebo_libs rmagine_optix_sensors_gzregister)
+  list(APPEND rmagine_gazebo_libs rmagine_optix_map_gzplugin)
+  list(APPEND rmagine_gazebo_libs rmagine_optix_ros_gzplugin)
+endif(TARGET rmagine::optix)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -52,7 +68,7 @@ catkin_package(
   INCLUDE_DIRS 
     include
   LIBRARIES 
-    gazebo_rmagine_map_plugin
+    ${rmagine_gazebo_libs}
   CATKIN_DEPENDS 
     ${GZ_RM_DEPS}
 )
@@ -87,6 +103,7 @@ target_link_libraries(rmagine_gazebo_helper
   rmagine::core
 )
 
+if(TARGET rmagine::embree)
 
 add_library(rmagine_embree_spherical_gzplugin SHARED
   src/rmagine_embree_spherical_gzplugin.cpp
@@ -138,11 +155,11 @@ install(
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
+endif(TARGET rmagine::embree)
+
 
 ### OPTIX
 if(TARGET rmagine::optix)
-
-message(WARNING "BUILD OPTIX STUFF!")
 
 #### ROS-less Gazebo plugins
 add_library(rmagine_optix_spherical_gzplugin SHARED
