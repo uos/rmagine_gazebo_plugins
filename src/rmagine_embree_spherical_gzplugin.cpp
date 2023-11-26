@@ -212,6 +212,7 @@ void RmagineEmbreeSpherical::Load(const std::string& world_name)
         }
     }
 
+    std::cout << "Get Parent Entity: " << this->ParentName() << std::endl;
     this->parentEntity = this->world->EntityByName(this->ParentName());
 
     GZ_ASSERT(this->parentEntity != nullptr,
@@ -264,12 +265,13 @@ bool RmagineEmbreeSpherical::IsActive() const
 
 void RmagineEmbreeSpherical::setMap(rm::EmbreeMapPtr map)
 {
+    std::cout << "!!!! SET MAP" << std::endl;
+    
     m_map = map;
     
     if(m_sphere_sim)
     {
         m_sphere_sim->setMap(map);
-
     } else {
         m_sphere_sim = std::make_shared<rm::SphereSimulatorEmbree>(map);
         m_sphere_sim->setTsb(m_Tsb);

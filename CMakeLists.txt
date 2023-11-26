@@ -27,6 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
   ${GZ_RM_DEPS}
 )
 
+
 find_package(gazebo REQUIRED)
 
 find_package(rmagine 2.2.1...
@@ -71,6 +72,8 @@ catkin_package(
     ${rmagine_gazebo_libs}
   CATKIN_DEPENDS 
     ${GZ_RM_DEPS}
+  DEPENDS
+    rmagine
 )
 
 # add_dependencies(${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
@@ -86,7 +89,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${GAZEBO_MSG_INCLUDE_DIRS} 
   ${GAZEBO_INCLUDE_DIRS}
-  ${rmagine_INCLUDE_DIRS}
 )
 
 #### ROS-less Gazebo plugins

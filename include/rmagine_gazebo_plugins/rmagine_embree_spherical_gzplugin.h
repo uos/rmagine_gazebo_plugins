@@ -58,7 +58,7 @@ public:
     {
         return m_sensor_model;
     }
-    
+
     // inline rm::MemoryView<float, rm::RAM> ranges() const
     // {
     //     return m_ranges;
@@ -81,13 +81,12 @@ protected:
     rm::EmbreeMapPtr m_map;
     rm::SphereSimulatorEmbreePtr m_sphere_sim;
 
-    // rm::Memory<float, rm::RAM> m_ranges;
-
     bool m_gz_publish = false;
 
     std::vector<rm::NoisePtr> m_noise_models;
 
-private:
+    
+
 
     /// \brief Parent entity pointer
     physics::EntityPtr parentEntity;
@@ -102,6 +101,8 @@ private:
     std::mutex mutex;
 
     bool m_waiting_for_map = false;
+
+    
 };
 
 using RmagineEmbreeSphericalPtr = std::shared_ptr<RmagineEmbreeSpherical>;
