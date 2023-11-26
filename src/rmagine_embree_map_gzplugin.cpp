@@ -199,7 +199,6 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
 
                 rm::Transform Tvl = to_rm(vis_pose);
                 rm::Transform Tvw = Tlw * Tvl;
-                std::string key = vis.name();
 
                 if(vis.has_geometry())
                 {
@@ -425,7 +424,7 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                         geom->apply();
                         geom->commit();
 
-                        geom_to_visual[geom] = {key, Tiv, model_id};
+                        geom_to_visual[geom] = {vis_name, Tiv, model_id};
                     }
                 }
             }
@@ -480,13 +479,13 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
             for(auto elem : visuals)
             {
                 msgs::Visual vis = elem.second;
-                std::string key = vis.name();
+                std::string vis_name = vis.name();
 
-                auto mesh_vis_it = m_visual_to_geoms.find(key);
+                auto mesh_vis_it = m_visual_to_geoms.find(vis_name);
                 if(mesh_vis_it == m_visual_to_geoms.end())
                 {
                     gzwarn << "WARNING mesh to update not found in embree. Skipping." << std::endl;
-                    gzwarn << "- key: " << key << std::endl;
+                    gzwarn << "- key: " << vis_name << std::endl;
                     continue;
                 }
 
@@ -514,7 +513,7 @@ std::unordered_set<rm::EmbreeGeometryPtr> RmagineEmbreeMap::EmbreeUpdateTransfor
 
                     } else {
                         gzwarn << "WARNING: visual not in mesh set. But it should." << std::endl;
-                        gzwarn << "- key: " << key << std::endl;
+                        gzwarn << "- key: " << vis_name << std::endl;
                     }
                 }
             }

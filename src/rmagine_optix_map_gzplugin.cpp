@@ -164,6 +164,8 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                 continue;
             }
 
+            std::string link_name = link->GetName();
+
             sdf::ElementPtr linkElem = link->GetSDF();
             if(linkElem->HasElement("rmagine_ignore"))
             {
@@ -181,6 +183,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                 msgs::Visual vis = elem.second;
                 msgs::Vector3d vis_scale = vis.scale();
                 msgs::Pose vis_pose = vis.pose();
+                std::string vis_name = vis.name();
 
                 rm::Vector Svl = to_rm(vis_scale);
 
@@ -192,7 +195,6 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
 
                 rm::Transform Tvl = to_rm(vis_pose);
                 rm::Transform Tvw = Tlw * Tvl;
-                std::string key = vis.name();
 
                 if(vis.has_geometry())
                 {
@@ -382,6 +384,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                     for(auto inst : insts)
                     {
                         auto Tiv = inst->transform();
+                        inst->name = model_name + "/" + link_name + "/" + vis_name;
                         
                         if(insts_ignore_model_transform.find(inst) == insts_ignore_model_transform.end())
                         {    
@@ -391,7 +394,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                         
                         inst->apply();
                         inst->commit();
-                        inst_to_visual[inst] = {key, Tiv, model_id};
+                        inst_to_visual[inst] = {vis_name, Tiv, model_id};
                     }
                 }
             }
