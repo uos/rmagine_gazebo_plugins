@@ -178,16 +178,19 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                 continue;
             }
 
+
             std::map<uint32_t, msgs::Visual> visuals = link->Visuals();
             ignition::math::Pose3d link_world_pose = link->WorldPose();
             rm::Transform Tlw = to_rm(link_world_pose);
             
             for(auto elem : visuals)
             {
+                
                 msgs::Visual vis = elem.second;
                 msgs::Vector3d vis_scale = vis.scale();
                 msgs::Pose vis_pose = vis.pose();
                 std::string vis_name = vis.name();
+                
 
                 rm::Vector Svl = to_rm(vis_scale);
 
@@ -412,8 +415,8 @@ std::unordered_map<rm::EmbreeGeometryPtr, VisualTransform> RmagineEmbreeMap::Emb
                     {
                         // Transform from instance to visual (or is it to world: TODO check)
                         auto Tiv = geom->transform();
-                        geom->name = model_name + "/" + link_name + "/" + vis_name;
-
+                        geom->name = vis_name;
+                        
                         // Set transform from instance to world
                         if(geoms_ignore_model_transform.find(geom) == geoms_ignore_model_transform.end())
                         {

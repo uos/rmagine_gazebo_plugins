@@ -84,7 +84,7 @@ protected:
 
     std::vector<rm::NoiseCudaPtr> m_noise_models;
 
-private:
+// private:
 
     /// \brief Parent entity pointer
     physics::EntityPtr parentEntity;

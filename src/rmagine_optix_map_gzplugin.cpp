@@ -384,7 +384,7 @@ std::unordered_map<rm::OptixInstPtr, VisualTransform> RmagineOptixMap::OptixUpda
                     for(auto inst : insts)
                     {
                         auto Tiv = inst->transform();
-                        inst->name = model_name + "/" + link_name + "/" + vis_name;
+                        inst->name = vis_name;
                         
                         if(insts_ignore_model_transform.find(inst) == insts_ignore_model_transform.end())
                         {    
