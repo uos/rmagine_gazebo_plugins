@@ -58,6 +58,7 @@
   <exec_depend>gazebo_ros</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <depend>rmagine</depend>
 
   <!-- <export>
     <gazebo_ros plugin_path="${prefix}/../../lib" gazebo_media_path="${prefix}" />
