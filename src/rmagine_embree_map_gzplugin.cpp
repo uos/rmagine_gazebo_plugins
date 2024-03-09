@@ -944,7 +944,7 @@ void RmagineEmbreeMap::UpdateState(
             sw();
             m_map->scene->commit();
             el = sw();
-            std::cout << "- Scene commit in " << el << "s" << std::endl;
+            gzdbg << "[RmagineEmbreeMap] Scene commit in " << el << "s" << std::endl;
 
             if(m_map_mutex)
             {
