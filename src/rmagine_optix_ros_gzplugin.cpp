@@ -36,29 +36,17 @@ void RmagineOptixROS::parseOutputs(sdf::ElementPtr outputs)
 
             if(pub.msg_type == "sensor_msgs/LaserScan")
             {
-                pub.pub = std::make_shared<ros::Publisher>(
-                        m_nh->advertise<sensor_msgs::LaserScan>(
-                            pub.topic, 1
-                        )
-                    );
+                pub.pub = m_node->create_publisher<sensor_msgs::msg::LaserScan>(pub.topic, 1);
             }
 
             if(pub.msg_type == "sensor_msgs/PointCloud")
             {
-                pub.pub = std::make_shared<ros::Publisher>(
-                        m_nh->advertise<sensor_msgs::PointCloud>(
-                            pub.topic, 1
-                        ) 
-                    );
+                pub.pub = m_node->create_publisher<sensor_msgs::msg::PointCloud>(pub.topic, 1);
             }
 
             if(pub.msg_type == "sensor_msgs/PointCloud2")
             {
-                pub.pub = std::make_shared<ros::Publisher>(
-                        m_nh->advertise<sensor_msgs::PointCloud2>(
-                            pub.topic, 1
-                        ) 
-                    );
+                pub.pub = m_node->create_publisher<sensor_msgs::msg::PointCloud2>(pub.topic, 1);
 
                 if(it->HasElement("ordered"))
                 {
@@ -98,14 +86,12 @@ void RmagineOptixROS::Load(
         return;
     }
 
-    if (!ros::isInitialized())
+    if (!m_node)
     {
-        ROS_FATAL_STREAM_NAMED("laser", "A ROS node for Gazebo has not been initialized, unable to load plugin. "
-        << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
-        return;
+        // Use node name from robot_namespace if provided, else use a default
+        std::string node_name = m_robot_namespace.empty() ? "rmagine_optix_ros_gzplugin" : m_robot_namespace;
+        m_node = std::make_shared<rclcpp::Node>(node_name);
     }
-
-    m_nh.reset(new ros::NodeHandle(m_robot_namespace));
 
     m_frame_id = m_sdf->Get<std::string>("frame");
 
@@ -134,7 +120,7 @@ void RmagineOptixROS::OnUpdate()
     rm::Memory<unsigned int, rm::RAM> face_ids = m_spherical_sensor->sim_buffers.face_ids;
     const bool has_face_ids = face_ids.size() > 0;
 
-    ros::Time stamp(stamp_gz.sec, stamp_gz.nsec);
+    rclcpp::Time stamp(stamp_gz.sec, stamp_gz.nsec, RCL_ROS_TIME);
 
     for(auto elem : m_pubs)
     {
@@ -144,7 +130,7 @@ void RmagineOptixROS::OnUpdate()
             if(sensor_model.phi.size == 1)
             {
                 // ready to build sensor_msgs::LaserScan msg
-                sensor_msgs::LaserScan msg;
+                sensor_msgs::msg::LaserScan msg;
                 msg.header.stamp = stamp;
                 msg.header.frame_id = m_frame_id;
 
@@ -160,7 +146,10 @@ void RmagineOptixROS::OnUpdate()
                     msg.ranges[i] = ranges[i];
                 }
 
-                pub.pub->publish(msg);
+                auto typed_pub = std::dynamic_pointer_cast<rclcpp::Publisher<sensor_msgs::msg::LaserScan>>(pub.pub);
+                if (typed_pub) {
+                    typed_pub->publish(msg);
+                }
             } else {
                 std::cout << "[RmagineOptixROS] Could not make Laserscan. phi size 1 != " << sensor_model.phi.size << std::endl;
             }
@@ -168,7 +157,7 @@ void RmagineOptixROS::OnUpdate()
 
         if(pub.msg_type == "sensor_msgs/PointCloud")
         {
-            sensor_msgs::PointCloud msg;
+            sensor_msgs::msg::PointCloud msg;
             msg.header.stamp = stamp;
             msg.header.frame_id = m_frame_id;
             
@@ -182,7 +171,7 @@ void RmagineOptixROS::OnUpdate()
                     if(sensor_model.range.inside(range))
                     {
                         rm::Vector p = sensor_model.getDirection(vid, hid) * range;
-                        geometry_msgs::Point32 p_ros;
+                        geometry_msgs::msg::Point32 p_ros;
                         p_ros.x = p.x;
                         p_ros.y = p.y;
                         p_ros.z = p.z;
@@ -191,12 +180,15 @@ void RmagineOptixROS::OnUpdate()
                 }
             }
 
-            pub.pub->publish(msg);
+            auto typed_pub = std::dynamic_pointer_cast<rclcpp::Publisher<sensor_msgs::msg::PointCloud>>(pub.pub);
+            if (typed_pub) {
+                typed_pub->publish(msg);
+            }
         }
 
         if(pub.msg_type == "sensor_msgs/PointCloud2")
         {
-            sensor_msgs::PointCloud2 msg;
+            sensor_msgs::msg::PointCloud2 msg;
             msg.header.stamp = stamp;
             msg.header.frame_id = m_frame_id;
             
@@ -204,60 +196,60 @@ void RmagineOptixROS::OnUpdate()
 
             uint32_t total_bytes = 0;
 
-            sensor_msgs::PointField field_x;
+            sensor_msgs::msg::PointField field_x;
             field_x.name = "x";
             field_x.offset = 0;
-            field_x.datatype = sensor_msgs::PointField::FLOAT32;
+            field_x.datatype = sensor_msgs::msg::PointField::FLOAT32;
             field_x.count = 1;
             msg.fields.push_back(field_x);
             total_bytes += sizeof(float);
 
-            sensor_msgs::PointField field_y;
+            sensor_msgs::msg::PointField field_y;
             field_y.name = "y";
             field_y.offset = total_bytes;
-            field_y.datatype = sensor_msgs::PointField::FLOAT32;
+            field_y.datatype = sensor_msgs::msg::PointField::FLOAT32;
             field_y.count = 1;
             msg.fields.push_back(field_y);
             total_bytes += sizeof(float);
 
-            sensor_msgs::PointField field_z;
+            sensor_msgs::msg::PointField field_z;
             field_z.name = "z";
             field_z.offset = total_bytes;
-            field_z.datatype = sensor_msgs::PointField::FLOAT32;
+            field_z.datatype = sensor_msgs::msg::PointField::FLOAT32;
             field_z.count = 1;
             msg.fields.push_back(field_z);
             total_bytes += sizeof(float);
 
-            sensor_msgs::PointField field_ring;
+            sensor_msgs::msg::PointField field_ring;
             field_ring.name = "ring";
             field_ring.offset = total_bytes;
-            field_ring.datatype = sensor_msgs::PointField::UINT32;
+            field_ring.datatype = sensor_msgs::msg::PointField::UINT32;
             field_ring.count = 1;
             msg.fields.push_back(field_ring);
             total_bytes += sizeof(uint32_t);
 
             if(has_normals)
             {
-                sensor_msgs::PointField field_nx;
+                sensor_msgs::msg::PointField field_nx;
                 field_nx.name = "nx";
                 field_nx.offset = total_bytes;
-                field_nx.datatype = sensor_msgs::PointField::FLOAT32;
+                field_nx.datatype = sensor_msgs::msg::PointField::FLOAT32;
                 field_nx.count = 1;
                 msg.fields.push_back(field_nx);
                 total_bytes += sizeof(float);
 
-                sensor_msgs::PointField field_ny;
+                sensor_msgs::msg::PointField field_ny;
                 field_ny.name = "ny";
                 field_ny.offset = total_bytes;
-                field_ny.datatype = sensor_msgs::PointField::FLOAT32;
+                field_ny.datatype = sensor_msgs::msg::PointField::FLOAT32;
                 field_ny.count = 1;
                 msg.fields.push_back(field_ny);
                 total_bytes += sizeof(float);
 
-                sensor_msgs::PointField field_nz;
+                sensor_msgs::msg::PointField field_nz;
                 field_nz.name = "nz";
                 field_nz.offset = total_bytes;
-                field_nz.datatype = sensor_msgs::PointField::FLOAT32;
+                field_nz.datatype = sensor_msgs::msg::PointField::FLOAT32;
                 field_nz.count = 1;
                 msg.fields.push_back(field_nz);
                 total_bytes += sizeof(float);
@@ -265,10 +257,10 @@ void RmagineOptixROS::OnUpdate()
 
             if(has_object_ids)
             {
-                sensor_msgs::PointField field_obj_id;
+                sensor_msgs::msg::PointField field_obj_id;
                 field_obj_id.name = "obj_id";
                 field_obj_id.offset = total_bytes;
-                field_obj_id.datatype = sensor_msgs::PointField::UINT32;
+                field_obj_id.datatype = sensor_msgs::msg::PointField::UINT32;
                 field_obj_id.count = 1;
                 msg.fields.push_back(field_obj_id);
                 total_bytes += sizeof(uint32_t);
@@ -276,10 +268,10 @@ void RmagineOptixROS::OnUpdate()
 
             if(has_geom_ids)
             {
-                sensor_msgs::PointField field_geom_id;
+                sensor_msgs::msg::PointField field_geom_id;
                 field_geom_id.name = "geom_id";
                 field_geom_id.offset = total_bytes;
-                field_geom_id.datatype = sensor_msgs::PointField::UINT32;
+                field_geom_id.datatype = sensor_msgs::msg::PointField::UINT32;
                 field_geom_id.count = 1;
                 msg.fields.push_back(field_geom_id);
                 total_bytes += sizeof(uint32_t);
@@ -287,10 +279,10 @@ void RmagineOptixROS::OnUpdate()
 
             if(has_face_ids)
             {
-                sensor_msgs::PointField field_face_id;
+                sensor_msgs::msg::PointField field_face_id;
                 field_face_id.name = "face_id";
                 field_face_id.offset = total_bytes;
-                field_face_id.datatype = sensor_msgs::PointField::UINT32;
+                field_face_id.datatype = sensor_msgs::msg::PointField::UINT32;
                 field_face_id.count = 1;
                 msg.fields.push_back(field_face_id);
                 total_bytes += sizeof(uint32_t);
@@ -399,7 +391,10 @@ void RmagineOptixROS::OnUpdate()
 
             msg.row_step = msg.width * msg.point_step;
 
-            pub.pub->publish(msg);
+            auto typed_pub = std::dynamic_pointer_cast<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>>(pub.pub);
+            if (typed_pub) {
+                typed_pub->publish(msg);
+            }
         }
     }
 

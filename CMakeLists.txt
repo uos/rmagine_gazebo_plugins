@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5.0)
 project(rmagine_gazebo_plugins)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+## Compile as C++17
 add_compile_options(-std=c++17)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -13,23 +12,12 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
   endif()
 endif()
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-
-set(GZ_RM_DEPS
-  gazebo_ros
-  roscpp
-  sensor_msgs
-)
-
-find_package(catkin REQUIRED COMPONENTS
-  ${GZ_RM_DEPS}
-)
-
-
+## find ament and dependencies
+find_package(ament_cmake REQUIRED)
 find_package(gazebo REQUIRED)
-
+find_package(gazebo_ros REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(rmagine 2.2.1...
 COMPONENTS
   core
@@ -39,54 +27,9 @@ OPTIONAL_COMPONENTS
   optix
 )
 
-
-set(rmagine_gazebo_libs)
-
-if(TARGET rmagine::embree)
-  list(APPEND rmagine_gazebo_libs rmagine_embree_spherical_gzplugin)
-  list(APPEND rmagine_gazebo_libs rmagine_embree_sensors_gzregister)
-  list(APPEND rmagine_gazebo_libs rmagine_embree_map_gzplugin)
-  list(APPEND rmagine_gazebo_libs rmagine_embree_ros_gzplugin)
-endif(TARGET rmagine::embree)
-
-if(TARGET rmagine::optix)
-  list(APPEND rmagine_gazebo_libs rmagine_optix_spherical_gzplugin)
-  list(APPEND rmagine_gazebo_libs rmagine_optix_sensors_gzregister)
-  list(APPEND rmagine_gazebo_libs rmagine_optix_map_gzplugin)
-  list(APPEND rmagine_gazebo_libs rmagine_optix_ros_gzplugin)
-endif(TARGET rmagine::optix)
-
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if your package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS 
-    include
-  LIBRARIES 
-    ${rmagine_gazebo_libs}
-  CATKIN_DEPENDS 
-    ${GZ_RM_DEPS}
-  DEPENDS
-    rmagine
-)
-
-# add_dependencies(${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
-
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
+## include dirs
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
   ${GAZEBO_MSG_INCLUDE_DIRS} 
   ${GAZEBO_INCLUDE_DIRS}
 )
@@ -143,10 +86,12 @@ add_library(rmagine_embree_ros_gzplugin SHARED
 
 target_link_libraries(rmagine_embree_ros_gzplugin 
   rmagine_embree_spherical_gzplugin
-  ${catkin_LIBRARIES}
   ${GAZEBO_LIBRARIES}
   rmagine::embree
 )
+
+# Link ROS2
+ament_target_dependencies(rmagine_embree_ros_gzplugin rclcpp sensor_msgs)
 
 install(
   TARGETS 
@@ -154,7 +99,7 @@ install(
     rmagine_embree_spherical_gzplugin 
     rmagine_embree_sensors_gzregister
     rmagine_embree_ros_gzplugin
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION lib
 )
 
 endif(TARGET rmagine::embree)
@@ -201,10 +146,11 @@ add_library(rmagine_optix_ros_gzplugin SHARED
 
 target_link_libraries(rmagine_optix_ros_gzplugin 
   rmagine_optix_spherical_gzplugin
-  ${catkin_LIBRARIES}
   ${GAZEBO_LIBRARIES}
   rmagine::optix
 )
+# Link ROS2
+ament_target_dependencies(rmagine_optix_ros_gzplugin rclcpp sensor_msgs)
 
 install(
   TARGETS 
@@ -216,3 +162,11 @@ install(
 )
 
 endif(TARGET rmagine::optix)
+
+# Install launch files
+install(
+  DIRECTORY launch worlds urdf
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+ament_package()
