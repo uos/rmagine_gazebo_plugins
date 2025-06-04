@@ -1,5 +1,9 @@
 <?xml version="1.0" ?> 
 <sdf version='1.7'>
+
+  <!-- Enable Rmagine Sensors -->
+  <!-- <plugin name='RegisterRmagineEmbreeSphericalPlugin' filename='librmagine_embree_sensors_gzregister.so' /> -->
+
   <world name='default'>
     <scene>
       <ambient>0.5 0.5 0.5 1</ambient>
@@ -95,6 +99,7 @@
       <static>1</static>
     </model>
 
+    
     <!-- Embree Map Plugin -->
     <plugin name='rmagine_embree_map' filename='librmagine_embree_map_gzplugin.so'>
       <update>
@@ -116,4 +121,6 @@
     </plugin>
 
   </world>
+
+  
 </sdf>

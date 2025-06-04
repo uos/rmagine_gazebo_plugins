@@ -1,0 +1,1 @@
+prepend-non-duplicate;GAZEBO_PLUGIN_PATH;lib/@PROJECT_NAME@

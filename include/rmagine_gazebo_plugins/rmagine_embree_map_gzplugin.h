@@ -41,9 +41,10 @@ struct VisualTransform
     uint32_t model_id;
 };
 
-class RmagineEmbreeMap : public WorldPlugin
+class RmagineEmbreeMap 
+: public WorldPlugin
 {
-public: 
+public:
     RmagineEmbreeMap();
     virtual ~RmagineEmbreeMap();
 
@@ -91,7 +92,6 @@ private:
     double m_update_rate_limit = 200.0;
 
     std::vector<MeshLoading> m_mesh_loader = {GAZEBO, INTERNAL};
-
 
     std::shared_ptr<std::shared_mutex> m_map_mutex;
     rmagine::EmbreeMapPtr m_map;

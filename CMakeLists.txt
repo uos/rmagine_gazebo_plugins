@@ -35,7 +35,6 @@ include_directories(
 )
 
 #### ROS-less Gazebo plugins
-
 add_library(rmagine_gazebo_helper SHARED
   src/helper/helper_functions.cpp
   src/helper/SceneState.cpp    
@@ -46,6 +45,10 @@ add_library(rmagine_gazebo_helper SHARED
 target_link_libraries(rmagine_gazebo_helper 
   ${GAZEBO_LIBRARIES}
   rmagine::core
+)
+
+install(TARGETS rmagine_gazebo_helper
+    LIBRARY DESTINATION lib/${PROJECT_NAME}
 )
 
 if(TARGET rmagine::embree)
@@ -78,6 +81,10 @@ target_link_libraries(rmagine_embree_map_gzplugin
   rmagine_gazebo_helper
   ${GAZEBO_LIBRARIES}
   rmagine::embree
+  # with the current implementation the map notifies
+  # the sensors when the map was changed. Therefore,
+  # it depends on them:
+  rmagine_embree_spherical_gzplugin
 )
 
 # ROS Gazebo plugins
@@ -91,7 +98,9 @@ target_link_libraries(rmagine_embree_ros_gzplugin
 )
 
 # Link ROS2
-ament_target_dependencies(rmagine_embree_ros_gzplugin rclcpp sensor_msgs)
+ament_target_dependencies(rmagine_embree_ros_gzplugin 
+  rclcpp 
+  sensor_msgs)
 
 install(
   TARGETS 
@@ -99,9 +108,7 @@ install(
     rmagine_embree_spherical_gzplugin 
     rmagine_embree_sensors_gzregister
     rmagine_embree_ros_gzplugin
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib/${PROJECT_NAME}
 )
 
 endif(TARGET rmagine::embree)
@@ -160,9 +167,9 @@ install(
     rmagine_optix_spherical_gzplugin
     rmagine_optix_sensors_gzregister
     rmagine_optix_ros_gzplugin
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib/${PROJECT_NAME}
+  LIBRARY DESTINATION lib/${PROJECT_NAME}
+  RUNTIME DESTINATION bin/${PROJECT_NAME}
 )
 
 endif(TARGET rmagine::optix)
@@ -172,5 +179,8 @@ install(
   DIRECTORY launch worlds urdf
   DESTINATION share/${PROJECT_NAME}
 )
+
+ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/hooks/${PROJECT_NAME}.dsv.in")
+ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/hooks/${PROJECT_NAME}.sh.in")
 
 ament_package()
