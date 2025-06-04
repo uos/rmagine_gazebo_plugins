@@ -1,7 +1,7 @@
 #ifndef GAZEBO_RMAGINE_EMBREE_ROS_PLUGIN_H
 #define GAZEBO_RMAGINE_EMBREE_ROS_PLUGIN_H
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <gazebo/gazebo.hh>
 #include <gazebo/sensors/sensors.hh>
@@ -12,9 +12,9 @@
 #include <rmagine/types/sensor_models.h>
 #include <rmagine/simulation/SphereSimulatorEmbree.hpp>
 
-#include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/PointCloud.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <sensor_msgs/msg/point_cloud.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
 #include <unordered_map>
@@ -27,7 +27,7 @@ namespace gazebo
 struct Publisher {
     std::string msg_type;
     std::string topic;
-    std::shared_ptr<ros::Publisher> pub;
+    rclcpp::PublisherBase::SharedPtr pub;
 };
 
 class RmagineEmbreeROS : public SensorPlugin
@@ -51,7 +51,7 @@ private:
 
     event::ConnectionPtr m_update_conn;
 
-    std::shared_ptr<ros::NodeHandle> m_nh;
+    std::shared_ptr<rclcpp::Node> m_node;
 
     std::unordered_map<std::string, Publisher> m_pubs;
 

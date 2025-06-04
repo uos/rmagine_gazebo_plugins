@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>rmagine_gazebo_plugins</name>
   <version>0.0.0</version>
   <description>The rmagine_gazebo_plugins package</description>
@@ -48,19 +48,17 @@
   <!--   <test_depend>gtest</test_depend> -->
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>gazebo_ros</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_export_depend>gazebo_ros</build_export_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>sensor_msgs</build_export_depend>
-  <exec_depend>gazebo_ros</exec_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>gazebo_ros</depend>
+  <depend>pluginlib</depend>
   <depend>rmagine</depend>
 
   <!-- <export>
     <gazebo_ros plugin_path="${prefix}/../../lib" gazebo_media_path="${prefix}" />
   </export> -->
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>

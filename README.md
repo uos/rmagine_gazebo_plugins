@@ -26,14 +26,14 @@ After compiling
 ### `example.launch`
 
 ```bash
-user@pc:~$ roslaunch rmagine_gazebo_plugins example.launch
+user@pc:~$ ros2 launch rmagine_gazebo_plugins example.launch.xml
 ```
 
 Simulates a 3d lidar at 20hz on Embree backend.  
 To use OptiX backend, run
 
 ```bash
-user@pc:~$ roslaunch rmagine_gazebo_plugins example.launch rmagine:=optix
+user@pc:~$ ros2 launch rmagine_gazebo_plugins example.launch.xml rmagine:=optix
 ```
 
 Open RViz set fixed frame to `base_footprint` and visualize topic `laser3d/pcl`.
@@ -41,13 +41,13 @@ Open RViz set fixed frame to `base_footprint` and visualize topic `laser3d/pcl`.
 ### `rotating_scanner.launch`
 
 ```bash
-user@pc:~$ roslaunch rmagine_gazebo_plugins rotating_laser.launch
+user@pc:~$ ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml
 ```
 
 or with OptiX backend
 
 ```bash
-user@pc:~$ roslaunch rmagine_gazebo_plugins rotating_laser.launch rmagine:=optix
+user@pc:~$ ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml rmagine:=optix
 ```
 
 Open RViz set fixed frame to `base_footprint` and visualize topic `laser2d/scan`.
@@ -74,13 +74,13 @@ Follow instructions of Rmagine library installation. Compile with Embree or Opti
 Clone this repository to your ROS-workspace (src folder).
 
 ```bash
-user@pc:~/catkin_ws/src$ git clone [this-repo-link]
+user@pc:~/colcon_ws/src$ git clone [this-repo-link]
 ```
 
 Then compile with
 
 ```bash
-user@pc:~/catkin_ws$ catkin_make
+user@pc:~/colcon_ws$ colcon build
 ```
 
 Depending on which backends were installed during Rmagine installation the following plugins are built:
@@ -110,10 +110,16 @@ user@pc:~$ gazebo -s librmagine_embree_sensors_gzregister.so
 2. ROS launch file
 
 ```xml
-<node name="gazebo" pkg="gazebo_ros" type="gzserver" 
-    args="-s librmagine_embree_sensors_gzregister.so ...">
-...
-</node>
+<include file="$(find-pkg-share gazebo_ros)/launch/gazebo.launch.py">
+    <arg name="world"        value="$(var world)" />
+    <arg name="pause"        value="$(var paused)"/>
+    <arg name="gui"          value="$(var gui)"/>
+    <arg name="physics"      value="$(var physics)"/>
+    <arg name="debug"        value="$(var debug)"/>
+    <arg name="verbose"      value="$(var verbose)"/>
+    <arg name="extra_gazebo_args"
+        value="-s librmagine_optix_sensors_gzregister.so -s librmagine_embree_sensors_gzregister.so -- "/>
+</include>
 ```
 
 ### 3. Map Plugins
@@ -364,9 +370,9 @@ The following ROS-Adapter are available dependend on your sensor type:
 
 
 Supported `output` messages are:
-- `sensor_msgs/LaserScan`
-- `sensor_msgs/PointCloud`
-- `sensor_msgs/PointCloud2`
+- `sensor_msgs/msg/LaserScan`
+- `sensor_msgs/msg/PointCloud`
+- `sensor_msgs/msg/PointCloud2`
 
 Examples - this time using OptiX.
 

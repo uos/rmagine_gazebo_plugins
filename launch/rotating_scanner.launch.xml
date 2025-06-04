@@ -1,0 +1,51 @@
+<?xml version="1.0" ?> 
+<launch>
+    <!-- AFTER LAUNCH: apply force to robot_sensor link laser2d - torque y=0.5 -->
+
+    <arg name="rmagine" default="embree" />
+    <arg name="world" default="$(find-pkg-share rmagine_gazebo_plugins)/worlds/test.world"/>
+    <arg name="paused" default="false"/>
+    <arg name="use_sim_time" default="true"/>
+    <arg name="gui" default="true"/>
+
+    <!-- Robot pose -->
+    <arg name="x" default="0"/>
+    <arg name="y" default="0"/>
+    <arg name="z" default="0"/>
+    <arg name="roll" default="0"/>
+    <arg name="pitch" default="0"/>
+    <arg name="yaw" default="0"/>
+
+
+    <arg name="debug" default="false"/>
+    <arg name="physics" default="ode"/>
+    <arg name="verbose" default="true"/>
+    
+    <!-- start gazebo server and client -->
+    <include file="$(find-pkg-share gazebo_ros)/launch/gazebo.launch.py">
+        <arg name="world"        value="$(var world)" />
+        <arg name="pause"        value="$(var paused)"/>
+        <arg name="gui"          value="$(var gui)"/>
+        <arg name="physics"      value="$(var physics)"/>
+        <arg name="debug"        value="$(var debug)"/>
+        <arg name="verbose"      value="$(var verbose)"/>
+        <arg name="extra_gazebo_args"
+            value="-s librmagine_optix_sensors_gzregister.so -s librmagine_embree_sensors_gzregister.so -- "/>
+    </include>
+    
+    <!-- Robot state publisher -->
+    <node pkg="robot_state_publisher" exec="robot_state_publisher" name="robot_state_publisher">
+        <param name="robot_description" type="str"
+         value="$(command 'xacro $(find-pkg-share rmagine_gazebo_plugins)/urdf/robot_rotating_$(var rmagine).urdf.xacro')" />
+        <param name="tf_prefix" value="''" />
+        <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
+    
+    <!-- spawn robot in gazebo -->
+    <node name="spawn_robot_model" pkg="gazebo_ros" exec="spawn_entity.py"
+        args="-topic robot_description -entity robot_sensor
+                -x $(var x) -y $(var y) -z $(var z)
+                -R $(var roll) -P $(var pitch) -Y $(var yaw)"
+        output="screen" />
+
+</launch>
