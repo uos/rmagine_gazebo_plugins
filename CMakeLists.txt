@@ -18,7 +18,7 @@ find_package(gazebo REQUIRED)
 find_package(gazebo_ros REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(rmagine 2.2.1...
+find_package(rmagine 2.3
 COMPONENTS
   core
 OPTIONAL_COMPONENTS
@@ -99,7 +99,9 @@ install(
     rmagine_embree_spherical_gzplugin 
     rmagine_embree_sensors_gzregister
     rmagine_embree_ros_gzplugin
+  ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 endif(TARGET rmagine::embree)
@@ -155,10 +157,12 @@ ament_target_dependencies(rmagine_optix_ros_gzplugin rclcpp sensor_msgs)
 install(
   TARGETS 
     rmagine_optix_map_gzplugin
-    rmagine_optix_spherical_gzplugin 
+    rmagine_optix_spherical_gzplugin
     rmagine_optix_sensors_gzregister
     rmagine_optix_ros_gzplugin
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 endif(TARGET rmagine::optix)
@@ -166,7 +170,7 @@ endif(TARGET rmagine::optix)
 # Install launch files
 install(
   DIRECTORY launch worlds urdf
-  DESTINATION share/${PROJECT_NAME}/
+  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()
