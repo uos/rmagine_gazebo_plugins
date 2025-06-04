@@ -30,7 +30,7 @@
         <arg name="debug"        value="$(var debug)"/>
         <arg name="verbose"      value="$(var verbose)"/>
         <arg name="extra_gazebo_args"
-            value="-s librmagine_optix_sensors_gzregister.so -s librmagine_embree_sensors_gzregister.so -- "/>
+            value="-s librmagine_optix_sensors_gzregister.so -s librmagine_embree_sensors_gzregister.so"/>
     </include>
     
     <!-- Robot state publisher -->
