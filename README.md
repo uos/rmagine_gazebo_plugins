@@ -1,5 +1,8 @@
 [[Code](https://github.com/uos/rmagine_gazebo_plugins)] [[Wiki](https://github.com/uos/rmagine_gazebo_plugins/wiki)]
 
+> [!IMPORTANT]
+> Requires: Gazebo Classic, ROS 2 (Humble)
+
 # rmagine_gazebo_plugins (WIP)
 
 Range sensor plugins for Gazebo using the sensor simulation library [rmagine](https://github.com/uos/rmagine). 
@@ -23,31 +26,31 @@ Youtube-Video:
 
 After compiling 
 
-### `example.launch`
+### `example.launch.xml`
 
-```bash
-user@pc:~$ ros2 launch rmagine_gazebo_plugins example.launch.xml
+```console
+ros2 launch rmagine_gazebo_plugins example.launch.xml
 ```
 
 Simulates a 3d lidar at 20hz on Embree backend.  
 To use OptiX backend, run
 
-```bash
-user@pc:~$ ros2 launch rmagine_gazebo_plugins example.launch.xml rmagine:=optix
+```console
+ros2 launch rmagine_gazebo_plugins example.launch.xml rmagine:=optix
 ```
 
 Open RViz set fixed frame to `base_footprint` and visualize topic `laser3d/pcl`.
 
-### `rotating_scanner.launch`
+### `rotating_scanner.launch.xml`
 
-```bash
-user@pc:~$ ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml
+```console
+ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml
 ```
 
 or with OptiX backend
 
-```bash
-user@pc:~$ ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml rmagine:=optix
+```console
+ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml rmagine:=optix
 ```
 
 Open RViz set fixed frame to `base_footprint` and visualize topic `laser2d/scan`.
@@ -63,24 +66,24 @@ Now the scanner cylinder should rotate in Gazebo as well as in RViz.
 
 ## Usage
 
-### 1. Installation
-
+### 1. Installatio
 
 #### Rmagine
 
 Follow instructions of Rmagine library installation. Compile with Embree or OptiX backends for CPU or GPU support respectively.
+You can clone rmagine into your ROS workspace's src folder: `colcon_ws/src`.
 
 #### Compilation
-Clone this repository to your ROS-workspace (src folder).
+Clone this repository to your ROS workspace (src folder), `colcon_ws/src`:
 
 ```bash
-user@pc:~/colcon_ws/src$ git clone [this-repo-link]
+git clone git@github.com:uos/rmagine_gazebo_plugins.git
 ```
 
-Then compile with
+In `colcon_ws` folder compile with
 
 ```bash
-user@pc:~/colcon_ws$ colcon build
+colcon build
 ```
 
 Depending on which backends were installed during Rmagine installation the following plugins are built:
@@ -96,7 +99,6 @@ Depending on which backends were installed during Rmagine installation the follo
 ### 2. Sensor Registration
 
 The rmagine sensors are implemented as new gazebo sensors. They need to be registered first. To do that, you need to add `librmagine_embree_sensors_gzregister.so` or `librmagine_optix_sensors_gzregister.so` to the arguments of the gazebo execution call.
-
 
 
 **Embree Example**
