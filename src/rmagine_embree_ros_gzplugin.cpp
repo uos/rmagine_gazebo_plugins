@@ -336,7 +336,10 @@ void RmagineEmbreeROS::OnUpdate()
                     }
                 }
             } else {
+                
+                RCLCPP_WARN_STREAM(m_node->get_logger(), "RmagineEmbreeROS - Generating unordered point cloud is not implemented.");
                 // unordered
+
                 // msg.height = 1;
                 // // unclear
                 // msg.is_dense = true;
@@ -370,7 +373,7 @@ void RmagineEmbreeROS::OnUpdate()
 
             msg.row_step = msg.width * msg.point_step;
 
-            auto typed_pub = std::dynamic_pointer_cast<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>>(pub.pub);
+            auto typed_pub = std::dynamic_pointer_cast<rclcpp::Publisher<sensor_msgs::msg::PointCloud2> >(pub.pub);
             if (typed_pub) {
                 typed_pub->publish(msg);
             }

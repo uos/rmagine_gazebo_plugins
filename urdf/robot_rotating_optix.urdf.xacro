@@ -77,52 +77,49 @@
 </joint>
 
 <gazebo reference="laser2d">
-    <sensor type="rmagine_optix_spherical" name="laser2d">
-      <pose>0 0 0 0 0 0</pose>
-      <always_on>true</always_on>
-      <update_rate>60</update_rate>
+  <sensor type="rmagine_optix_spherical" name="laser2d">
+    <pose>0 0 0 0 0 0</pose>
+    <always_on>true</always_on>
+    <update_rate>60</update_rate>
 
-      <ray>
-        <scan>
-          <horizontal>
-            <min_angle>${-60.0 * M_PI / 180.0}</min_angle>
-            <increment>${0.01 * M_PI / 180.0}</increment>
-            <samples>12000</samples>
-          </horizontal>
-        </scan>
+    <ray>
+      <scan>
+        <horizontal>
+          <min_angle>${-60.0 * M_PI / 180.0}</min_angle>
+          <increment>${0.01 * M_PI / 180.0}</increment>
+          <samples>12000</samples>
+        </horizontal>
+      </scan>
 
-        <range>
-          <min>0.2</min>
-          <max>100.0</max>
-        </range>
+      <range>
+        <min>0.2</min>
+        <max>100.0</max>
+      </range>
 
-      </ray>
+    </ray>
 
-      <plugin name="rmagine_ros_laser3d" filename="librmagine_optix_ros_gzplugin.so">
-          <frame>laser2d</frame>
+    <plugin name="rmagine_ros_laser3d" filename="librmagine_optix_ros_gzplugin.so">
+      <frame>laser2d</frame>
 
-          <outputs>
-            <output name="scan">
-              <msg>sensor_msgs/LaserScan</msg>
-              <topic>laser2d/scan</topic>
-            </output>
+      <outputs>
+        <output name="scan">
+          <msg>sensor_msgs/LaserScan</msg>
+          <topic>laser2d/scan</topic>
+        </output>
 
-            <output name="pcl">
-              <msg>sensor_msgs/PointCloud</msg>
-              <topic>laser2d/pcl</topic>
-            </output>
+        <output name="pcl">
+          <msg>sensor_msgs/PointCloud</msg>
+          <topic>laser2d/pcl</topic>
+        </output>
 
-          </outputs>
-      </plugin>
-    </sensor>
+      </outputs>
+    </plugin>
+  </sensor>
 </gazebo>
 
 <gazebo>
   <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
-      <!-- <robotNamespace>/mm</robotNamespace> -->
-      <jointName>
-        robot_sensor::laser2d_to_base_joint
-      </jointName>
+    <joint_name>laser2d_to_base_joint</joint_name>
   </plugin>    
 </gazebo>
 
