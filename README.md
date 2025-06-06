@@ -76,13 +76,13 @@ You can clone rmagine into your ROS workspace's src folder: `colcon_ws/src`.
 #### Compilation
 Clone this repository to your ROS workspace (src folder), `colcon_ws/src`:
 
-```bash
+```console
 git clone git@github.com:uos/rmagine_gazebo_plugins.git
 ```
 
 In `colcon_ws` folder compile with
 
-```bash
+```console
 colcon build
 ```
 
@@ -103,10 +103,10 @@ The rmagine sensors are implemented as new gazebo sensors. They need to be regis
 
 **Embree Example**
 
-1. Command line Arguments:
+1. Gazebo executable:
 
-```bash
-user@pc:~$ gazebo -s librmagine_embree_sensors_gzregister.so
+```console
+gazebo -s librmagine_embree_sensors_gzregister.so
 ```
 
 2. ROS 2 launch file
