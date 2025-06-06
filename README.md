@@ -109,20 +109,15 @@ The rmagine sensors are implemented as new gazebo sensors. They need to be regis
 user@pc:~$ gazebo -s librmagine_embree_sensors_gzregister.so
 ```
 
-2. ROS launch file
+2. ROS 2 launch file
 
 ```xml
-<include file="$(find-pkg-share gazebo_ros)/launch/gazebo.launch.py">
-    <arg name="world"        value="$(var world)" />
-    <arg name="pause"        value="$(var paused)"/>
-    <arg name="gui"          value="$(var gui)"/>
-    <arg name="physics"      value="$(var physics)"/>
-    <arg name="debug"        value="$(var debug)"/>
-    <arg name="verbose"      value="$(var verbose)"/>
-    <arg name="extra_gazebo_args"
-        value="-s librmagine_optix_sensors_gzregister.so -s librmagine_embree_sensors_gzregister.so -- "/>
-</include>
+<executable cmd="gzserver -s librmagine_embree_sensors_gzregister.so ..." />
+<executable cmd="gzclient" />
 ```
+
+> [!NOTE]
+> See launch files in this repository for more details.
 
 ### 3. Map Plugins
 
