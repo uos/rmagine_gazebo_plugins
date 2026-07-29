@@ -1,0 +1,8 @@
+# Fixture rays_file for gz_embree_o1dn.sdf. O1Dn has one shared origin for
+# all rays, so a single forward-facing ray is enough to exercise the model
+# type end-to-end.
+width: 1
+height: 1
+rays:
+  - origin: [0, 0, 0]
+    dir: [1, 0, 0]

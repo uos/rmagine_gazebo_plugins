@@ -1,0 +1,46 @@
+{
+  "world": "dynamic",
+  "world_file": "gz_embree_dynamic.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 8.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "scan": {
+      "description": "The moving box should produce changing center-beam distances over time.",
+      "center_value_expected_range": [
+        1.7,
+        3.3
+      ],
+      "center_value_expected_span_min": 0.5
+    },
+    "points": {
+      "description": "The point cloud should move with the box along x while retaining finite points.",
+      "bbox_midpoint_x_expected_range": [
+        1.7,
+        3.3
+      ],
+      "bbox_midpoint_x_span_expected_min": 0.5
+    }
+  },
+  "expected": {
+    "scan": {
+      "min_messages": 5,
+      "min_rate_hz": 4.0,
+      "latest_finite_count_min": 20,
+      "center_value_span_min": 0.5,
+      "center_value_stddev_min": 0.15
+    },
+    "points": {
+      "min_messages": 5,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 20,
+      "bbox_midpoint_x_span_min": 0.5,
+      "finite_point_count_span_min": 5
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "world": "plane",
+  "world_file": "gz_embree_plane.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "scan": {
+      "description": "A vertical wall plane (normal -1 0 0, not the default +Z) faces the sensor at x=3 -- exercises both plane geometry support and the HasSceneChanged() non-identity-rotation fix.",
+      "center_value_expected_range": [
+        2.7,
+        3.3
+      ],
+      "center_value_expected_stddev_max": 0.05
+    },
+    "points": {
+      "description": "Finite points should lie on the plane surface at x=3, spanning several meters in y (the plane's 4x4 size).",
+      "bbox_midpoint_x_expected_range": [
+        2.7,
+        3.3
+      ],
+      "bbox_y_span_expected_min": 3.0
+    }
+  },
+  "expected": {
+    "scan": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_count_min": 50,
+      "center_window_finite_min": 5,
+      "center_value_range": {
+        "min": 2.7,
+        "max": 3.3
+      },
+      "center_value_stddev_max": 0.05
+    },
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 50,
+      "bbox_midpoint_x_range": {
+        "min": 2.7,
+        "max": 3.3
+      },
+      "bbox_y_span_min": 3.0
+    }
+  }
+}

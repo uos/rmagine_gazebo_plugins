@@ -1,0 +1,32 @@
+{
+  "world": "optix_noise",
+  "world_file": "gz_optix_noise.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "scan": {
+      "description": "Identical scene to optix_baseline (box at x=3, center_value ~2.5), plus a gaussian noise element (stddev 0.1). The falsifiable check: optix_baseline's own center_value_stddev is ~0 (deterministic, same box every frame) -- if this world's stddev isn't clearly above that, the noise element isn't actually being applied by rmagine_optix_sensor_system.",
+      "center_value_expected_range": [2.0, 3.0],
+      "center_value_expected_stddev_min": 0.03
+    }
+  },
+  "expected": {
+    "scan": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_count_min": 20,
+      "center_window_finite_min": 5,
+      "center_value_range": {
+        "min": 2.0,
+        "max": 3.0
+      },
+      "center_value_stddev_min": 0.03
+    }
+  }
+}

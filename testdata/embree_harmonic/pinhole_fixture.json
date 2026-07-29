@@ -1,0 +1,31 @@
+{
+  "world": "pinhole",
+  "world_file": "gz_embree_pinhole.sdf",
+  "topics": {
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "points": {
+      "description": "A narrow-FOV 20x20 Pinhole camera aimed at a box centered directly in front of it -- every ray should hit the box's front face.",
+      "bbox_midpoint_x_expected_range": [2.3, 2.7],
+      "bbox_y_span_expected_min": 0.3,
+      "representative_points_description": "400/400 finite points, all at x~2.5, spread in y/z within the box's front face."
+    }
+  },
+  "expected": {
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 380,
+      "bbox_midpoint_x_range": {
+        "min": 2.3,
+        "max": 2.7
+      },
+      "bbox_y_span_min": 0.3
+    }
+  }
+}

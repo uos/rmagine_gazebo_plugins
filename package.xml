@@ -49,11 +49,26 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <depend>geometry_msgs</depend>
   <depend>rclcpp</depend>
+  <exec_depend>rclpy</exec_depend>
   <depend>sensor_msgs</depend>
-  <depend>gazebo_ros</depend>
-  <depend>pluginlib</depend>
+  <exec_depend>sensor_msgs_py</exec_depend>
+  <depend>tf2_ros</depend>
+  <depend>gz-sim8</depend>
+  <depend>gz-plugin2</depend>
+  <depend>gz-transport13</depend>
+  <depend>gz-common5</depend>
+  <depend>gz-math7</depend>
+  <depend>gz-msgs10</depend>
+  <depend>gz-rendering8</depend>
+  <depend>ros_gz_bridge</depend>
+  <depend>ros_gz_image</depend>
+  <depend>ros_gz_sim</depend>
   <depend>rmagine</depend>
+  <depend>yaml-cpp</depend>
+  <test_depend>ament_cmake_test</test_depend>
 
   <!-- <export>
     <gazebo_ros plugin_path="${prefix}/../../lib" gazebo_media_path="${prefix}" />
