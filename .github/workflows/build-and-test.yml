@@ -10,9 +10,9 @@
 name: build-and-test
 on:
   push:
-    branches: [ros2]
+    branches: [ros2, ros2-jazzy-harmonic]
   pull_request:
-    branches: [ros2]
+    branches: [ros2, ros2-jazzy-harmonic]
   workflow_dispatch:
 
 jobs:
