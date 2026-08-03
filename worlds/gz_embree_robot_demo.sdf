@@ -19,7 +19,7 @@
     <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
       <ignore_model>rmagine_example_robot</ignore_model>
       <update>
-        <rate_limit>60</rate_limit>
+        <rate_limit>100</rate_limit>
         <delta_trans>0.001</delta_trans>
         <delta_rot>0.001</delta_rot>
       </update>

@@ -154,7 +154,7 @@
   <gazebo reference="lidar_link">
     <sensor name="lidar_sensor" type="custom" gz:type="rmagine_embree">
       <always_on>true</always_on>
-      <update_rate>10</update_rate>
+      <update_rate>20</update_rate>
       <map_key>default</map_key>
       <frame>lidar_link</frame>
       <!-- topic_points = topic_scan + "/points" matches gpu_lidar's own
@@ -172,9 +172,9 @@
           <samples>360</samples>
         </horizontal>
         <vertical>
-          <min_angle>-0.2618</min_angle>
-          <increment>0.0873</increment>
-          <samples>7</samples>
+          <min_angle>-0.7</min_angle>
+          <increment>0.02</increment>
+          <samples>64</samples>
         </vertical>
       </scan>
     </sensor>
