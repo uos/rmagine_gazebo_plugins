@@ -13,7 +13,6 @@
 
     <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
       <ignore_model>sensor_model</ignore_model>
-      <debug>true</debug>
       <update>
         <rate_limit>30</rate_limit>
         <delta_trans>0.001</delta_trans>
@@ -84,7 +83,6 @@
           </scan>
           <range_min>0.2</range_min>
           <range_max>50.0</range_max>
-          <debug>true</debug>
         </sensor>
         <visual name="sensor_visual">
           <geometry>
