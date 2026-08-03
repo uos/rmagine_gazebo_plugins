@@ -125,6 +125,59 @@ Use [`ros_gz_bridge`](https://github.com/gazebosim/ros_gz)'s `parameter_bridge`,
 ros2 run ros_gz_bridge parameter_bridge --ros-args -p config_file:=/path/to/bridge.yaml
 ```
 
+### 2c. Migrating from `gpu_lidar`
+
+Switching an existing robot from gz-sim's built-in `gpu_lidar` sensor to rmagine is a same-shape edit to the `<sensor>` block, not a rewrite. The only thing that never needs to change is your `ros_gz_bridge` config: keep `<topic_points>` set to `<topic_scan>/points`, matching `gpu_lidar`'s own convention of auto-publishing `PointCloudPacked` on `<topic>/points`, and the same bridge entries that worked for `gpu_lidar` keep working unchanged.
+
+**Before** (`gpu_lidar`):
+
+```xml
+<sensor name="lidar" type="gpu_lidar">
+  <topic>scan</topic>
+  <update_rate>10</update_rate>
+  <frame_id>lidar_link</frame_id>
+  <lidar>
+    <scan>
+      <horizontal><samples>360</samples><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+      <vertical><samples>16</samples><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+    </scan>
+    <range><min>0.2</min><max>30.0</max></range>
+  </lidar>
+</sensor>
+```
+
+**After** (rmagine):
+
+```xml
+<sensor name="lidar" type="custom" gz:type="rmagine_embree">
+  <topic_scan>scan</topic_scan>
+  <topic_points>scan/points</topic_points>
+  <update_rate>10</update_rate>
+  <frame>lidar_link</frame>
+  <range_min>0.2</range_min>
+  <range_max>30.0</range_max>
+  <scan>
+    <horizontal><min_angle>-3.14159</min_angle><increment>0.0175019</increment><samples>360</samples></horizontal>
+    <vertical><min_angle>-0.261799</min_angle><increment>0.0349065</increment><samples>16</samples></vertical>
+  </scan>
+</sensor>
+```
+
+Field-by-field diff:
+
+| `gpu_lidar` | rmagine | Notes |
+|---|---|---|
+| `type="gpu_lidar"` | `type="custom" gz:type="rmagine_embree"` (or `rmagine_optix` for the GPU/OptiX backend) | required |
+| `<topic>` | `<topic_scan>` + `<topic_points>` | set `<topic_points>` to `<topic_scan>/points` to match `gpu_lidar`'s own auto-suffix and keep any existing bridge config unchanged |
+| `<frame_id>` | `<frame>` | |
+| `<lidar><range><min>/<max></lidar>` | `<range_min>`/`<range_max>` | now top-level |
+| `<lidar><scan><horizontal>/<vertical>` | `<scan><horizontal>/<vertical>` | now top-level (not nested under `<lidar>`/`<ray>`) |
+| `...<min_angle>`/`<max_angle>` | `...<min_angle>`/`<increment>` | rmagine reads the angular step directly rather than deriving it from `max_angle`; `increment = (max_angle - min_angle) / (samples - 1)` |
+| `<update_rate>` | `<update_rate>` | unchanged |
+| `<always_on>`, `<visualize>`, `<enable_metrics>` | (accepted, ignored) | harmless if left in place |
+
+Everything else (`<map_key>`, `<model_type>`, `<debug>`, Pinhole/O1Dn/OnDn-specific tags, `<noise>`) is a rmagine-only addition with no `gpu_lidar` equivalent, and all of it is optional.
+
 ### 3. Non-spherical sensor models
 
 Set `<model_type>` to `pinhole`, `o1dn`, or `ondn` (default `spherical`):

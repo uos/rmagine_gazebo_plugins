@@ -110,6 +110,14 @@
     <origin xyz="0 0 ${wheel_radius - axis_height}" rpy="0 0 0"/>
   </joint>
 
+  <!-- base_footprint is deliberately massless (the standard ROS convention
+       for a ground-projected reference frame); sdformat's
+       preserveFixedJoint requires the preserved joint's parent link to
+       have its own <inertial>, so this one is left to lump normally (into
+       "base_footprint", which is already a real, expected TF frame via
+       DiffDrive's own odom->base_footprint output). Only lidar_joint below
+       needs preserving, so lidar_link survives as its own entity. -->
+
   <xacro:wheel name="wheel_front_left" x="${axis_front}" y="${wheel_y_offset}"/>
   <xacro:wheel name="wheel_front_right" x="${axis_front}" y="${-wheel_y_offset}"/>
   <xacro:wheel name="wheel_rear_left" x="${axis_back}" y="${wheel_y_offset}"/>
@@ -136,14 +144,25 @@
     <origin xyz="0 0 ${body_height/2 + lidar_length/2 + 0.05}" rpy="0 0 0"/>
   </joint>
 
+  <!-- Keeps lidar_link a real, separate entity instead of being lumped
+       into base_link; see the comment above base_footprint_to_base_joint
+       for why the OTHER fixed joint here is deliberately left unpreserved. -->
+  <gazebo reference="lidar_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+  </gazebo>
+
   <gazebo reference="lidar_link">
     <sensor name="lidar_sensor" type="custom" gz:type="rmagine_embree">
       <always_on>true</always_on>
       <update_rate>10</update_rate>
       <map_key>default</map_key>
       <frame>lidar_link</frame>
+      <!-- topic_points = topic_scan + "/points" matches gpu_lidar's own
+           auto-suffix convention (see README.md, "Migrating from
+           gpu_lidar"); keeps a bridge config written for a gpu_lidar
+           sensor working unchanged if this sensor ever swaps in for one. -->
       <topic_scan>/model/rmagine_example_robot/scan</topic_scan>
-      <topic_points>/model/rmagine_example_robot/points</topic_points>
+      <topic_points>/model/rmagine_example_robot/scan/points</topic_points>
       <range_min>0.15</range_min>
       <range_max>30.0</range_max>
       <scan>

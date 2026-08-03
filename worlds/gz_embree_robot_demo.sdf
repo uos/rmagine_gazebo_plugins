@@ -44,6 +44,13 @@
     <model name="ground_plane">
       <static>true</static>
       <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <size>20 20</size>
+            </plane>
+          </geometry>
+        </collision>
         <visual name="visual">
           <geometry>
             <plane>
@@ -58,14 +65,23 @@
       </link>
     </model>
 
-    <!-- A handful of static boxes to drive around and scan -- reuses the
-         same box-geometry path already exercised by the other fixture
-         worlds (gz_embree_baseline.sdf etc.), just arranged into a small
-         obstacle course instead of one isolated target. -->
+    <!-- A handful of dynamic boxes/a cylinder to drive around, scan, and
+         push/pick up in the GUI; reuses the same box/cylinder-geometry path
+         already exercised by the other fixture worlds
+         (gz_embree_baseline.sdf etc.), just given real mass/inertia here
+         (rather than the fixture worlds' static targets) so they respond
+         to gravity and collisions like normal objects. -->
     <model name="box_1">
-      <static>true</static>
+      <static>false</static>
       <pose>3 1 0.5 0 0 0</pose>
       <link name="link">
+        <inertial>
+          <mass>5.0</mass>
+          <inertia><ixx>0.8333</ixx><iyy>0.8333</iyy><izz>0.8333</izz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>1 1 1</size></box></geometry>
+        </collision>
         <visual name="visual">
           <geometry><box><size>1 1 1</size></box></geometry>
           <material><ambient>0.8 0.2 0.2 1</ambient><diffuse>0.8 0.2 0.2 1</diffuse></material>
@@ -74,9 +90,16 @@
     </model>
 
     <model name="box_2">
-      <static>true</static>
+      <static>false</static>
       <pose>3 -1.5 0.5 0 0 0</pose>
       <link name="link">
+        <inertial>
+          <mass>5.0</mass>
+          <inertia><ixx>0.8333</ixx><iyy>0.8333</iyy><izz>0.8333</izz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>1 1 1</size></box></geometry>
+        </collision>
         <visual name="visual">
           <geometry><box><size>1 1 1</size></box></geometry>
           <material><ambient>0.2 0.2 0.8 1</ambient><diffuse>0.2 0.2 0.8 1</diffuse></material>
@@ -85,9 +108,16 @@
     </model>
 
     <model name="box_3">
-      <static>true</static>
+      <static>false</static>
       <pose>-2 2 0.75 0 0 0.5</pose>
       <link name="link">
+        <inertial>
+          <mass>3.0</mass>
+          <inertia><ixx>0.625</ixx><iyy>0.625</iyy><izz>0.125</izz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.5 0.5 1.5</size></box></geometry>
+        </collision>
         <visual name="visual">
           <geometry><box><size>0.5 0.5 1.5</size></box></geometry>
           <material><ambient>0.2 0.8 0.2 1</ambient><diffuse>0.2 0.8 0.2 1</diffuse></material>
@@ -96,9 +126,16 @@
     </model>
 
     <model name="cylinder_1">
-      <static>true</static>
+      <static>false</static>
       <pose>-3 -2 0.6 0 0 0</pose>
       <link name="link">
+        <inertial>
+          <mass>4.0</mass>
+          <inertia><ixx>0.64</ixx><iyy>0.64</iyy><izz>0.32</izz></inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><cylinder><radius>0.4</radius><length>1.2</length></cylinder></geometry>
+        </collision>
         <visual name="visual">
           <geometry><cylinder><radius>0.4</radius><length>1.2</length></cylinder></geometry>
           <material><ambient>0.8 0.8 0.2 1</ambient><diffuse>0.8 0.8 0.2 1</diffuse></material>
