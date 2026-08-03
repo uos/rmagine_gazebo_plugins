@@ -38,13 +38,22 @@ static rmagine::Transform ToRmTransform(const gz::math::Pose3d &pose)
   return T;
 }
 
+static gz::msgs::Time ToGzTime(std::chrono::nanoseconds t)
+{
+  const auto sec = std::chrono::duration_cast<std::chrono::seconds>(t);
+  gz::msgs::Time time;
+  time.set_sec(static_cast<int64_t>(sec.count()));
+  time.set_nsec(static_cast<int32_t>((t - sec).count()));
+  return time;
+}
+
 template<typename SimPtrT, typename ModelT>
 void RmagineOptixSensorInstance::RunAndPublish(
   SimPtrT &sim,
   const ModelT &model,
   const rmagine::Transform &Tsb,
   const rmagine::Transform &Tbm,
-  const rclcpp::Time &stamp,
+  const gz::msgs::Time &stamp,
   const gz::math::Pose3d &base_pose,
   const gz::math::Pose3d &sensor_pose)
 {
@@ -89,7 +98,7 @@ void RmagineOptixSensorInstance::RunAndPublish(
   LogSimulationSummary(debug_, "RmagineOptixSensorInstance", frame_id_,
     base_pose, sensor_pose, local_sensor_pose_, model, ranges);
 
-  PublishLaserScanIfApplicable(model, ranges, stamp, frame_id_, update_rate_, scan_pubs_);
+  PublishLaserScanIfApplicable(model, ranges, stamp, frame_id_, scan_pubs_);
 
   PointCloudExtras extras;
   extras.normals = normals.raw();
@@ -167,12 +176,10 @@ void RmagineOptixSensorInstance::ResolveFrameEntity(
 void RmagineOptixSensorInstance::Load(
   gz::sim::Entity sensor_entity,
   const std::shared_ptr<const sdf::Element> &_sdf,
-  const rclcpp::Node::SharedPtr &node,
-  tf2_ros::TransformBroadcaster *tf_broadcaster)
+  gz::transport::Node *gz_node)
 {
   sensor_entity_ = sensor_entity;
-  node_ = node;
-  tf_broadcaster_ = tf_broadcaster;
+  gz_node_ = gz_node;
 
   model_cfg_ = LoadSensorModelConfig(_sdf);
 
@@ -185,10 +192,6 @@ void RmagineOptixSensorInstance::Load(
     if(_sdf->HasElement("frame"))
     {
       frame_id_ = _sdf->Get<std::string>("frame");
-    }
-    if(_sdf->HasElement("parent_frame"))
-    {
-      parent_frame_id_ = _sdf->Get<std::string>("parent_frame");
     }
     if(_sdf->HasElement("topic_scan"))
     {
@@ -280,15 +283,15 @@ void RmagineOptixSensorInstance::Load(
     }
   }
 
-  scan_pubs_.push_back(node_->create_publisher<sensor_msgs::msg::LaserScan>(topic_scan_, 1));
+  scan_pubs_.push_back(gz_node_->Advertise<gz::msgs::LaserScan>(topic_scan_));
   for(const auto &topic : extra_scan_topics_)
   {
-    scan_pubs_.push_back(node_->create_publisher<sensor_msgs::msg::LaserScan>(topic, 1));
+    scan_pubs_.push_back(gz_node_->Advertise<gz::msgs::LaserScan>(topic));
   }
-  points_pubs_.push_back(node_->create_publisher<sensor_msgs::msg::PointCloud2>(topic_points_, 1));
+  points_pubs_.push_back(gz_node_->Advertise<gz::msgs::PointCloudPacked>(topic_points_));
   for(const auto &topic : extra_points_topics_)
   {
-    points_pubs_.push_back(node_->create_publisher<sensor_msgs::msg::PointCloud2>(topic, 1));
+    points_pubs_.push_back(gz_node_->Advertise<gz::msgs::PointCloudPacked>(topic));
   }
 
   RefreshSimulator();
@@ -313,23 +316,7 @@ void RmagineOptixSensorInstance::Update(
     sensor_pose = gz::sim::worldPose(frame_entity_, _ecm);
     local_sensor_pose_ = base_pose.Inverse() * sensor_pose;
   }
-  const rclcpp::Time stamp(sim_now.count(), RCL_ROS_TIME);
-
-  if(tf_broadcaster_)
-  {
-    geometry_msgs::msg::TransformStamped tf_msg;
-    tf_msg.header.stamp = stamp;
-    tf_msg.header.frame_id = parent_frame_id_;
-    tf_msg.child_frame_id = frame_id_;
-    tf_msg.transform.translation.x = sensor_pose.Pos().X();
-    tf_msg.transform.translation.y = sensor_pose.Pos().Y();
-    tf_msg.transform.translation.z = sensor_pose.Pos().Z();
-    tf_msg.transform.rotation.x = sensor_pose.Rot().X();
-    tf_msg.transform.rotation.y = sensor_pose.Rot().Y();
-    tf_msg.transform.rotation.z = sensor_pose.Rot().Z();
-    tf_msg.transform.rotation.w = sensor_pose.Rot().W();
-    tf_broadcaster_->sendTransform(tf_msg);
-  }
+  const gz::msgs::Time stamp = ToGzTime(sim_now);
 
   const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
     std::chrono::duration<double>(1.0 / update_rate_));
@@ -376,21 +363,12 @@ constexpr const char *kGzTypeRmagineOptix = "rmagine_optix";
 
 void RmagineOptixSensorSystem::Configure(
   const gz::sim::Entity &,
-  const std::shared_ptr<const sdf::Element> &_sdf,
+  const std::shared_ptr<const sdf::Element> &,
   gz::sim::EntityComponentManager &,
   gz::sim::EventManager &)
 {
-  if(!rclcpp::ok())
-  {
-    rclcpp::init(0, nullptr);
-  }
-  std::string node_name = "rmagine_optix_sensor_system";
-  if(_sdf && _sdf->HasElement("node_name"))
-  {
-    node_name = _sdf->Get<std::string>("node_name");
-  }
-  node_ = std::make_shared<rclcpp::Node>(node_name);
-  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node_);
+  // gz_node_ default-constructs to a valid, usable gz-transport node --
+  // no ROS/rclcpp init needed anywhere in this plugin anymore.
 }
 
 void RmagineOptixSensorSystem::PostUpdate(
@@ -418,7 +396,7 @@ void RmagineOptixSensorSystem::PostUpdate(
       }
 
       auto instance = std::make_unique<RmagineOptixSensorInstance>();
-      instance->Load(entity, elem, node_, tf_broadcaster_.get());
+      instance->Load(entity, elem, &gz_node_);
       instances_[entity] = std::move(instance);
       return true;
     });

@@ -9,9 +9,11 @@
 #include <type_traits>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/laser_scan.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <gz/transport/Node.hh>
+#include <gz/msgs/laserscan.pb.h>
+#include <gz/msgs/pointcloud_packed.pb.h>
+#include <gz/msgs/PointCloudPackedUtils.hh>
+#include <gz/msgs/time.pb.h>
 #include <gz/math/Pose3.hh>
 
 #include <rmagine/types/Memory.hpp>
@@ -87,15 +89,18 @@ void LogSimulationSummary(
 // 2D lidar) -- Pinhole/O1Dn/OnDn have no equivalent flat representation,
 // so this is a no-op for them (checked at compile time, not just runtime,
 // so it never even touches model.phi/.theta on models that don't have
-// those members).
+// those members). gz::msgs::LaserScan actually supports a vertical axis
+// too (unlike sensor_msgs/LaserScan), but this stays gated to phi.size==1
+// since that's the only case ros_gz_bridge's LaserScan conversion (and
+// ROS's own LaserScan message) can represent -- a multi-ring scan should
+// use PublishPointCloud instead, same as before.
 template<typename ModelT, typename RangesT>
 void PublishLaserScanIfApplicable(
   const ModelT &model,
   const RangesT &ranges,
-  const rclcpp::Time &stamp,
+  const gz::msgs::Time &stamp,
   const std::string &frame_id,
-  double update_rate,
-  const std::vector<rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr> &scan_pubs)
+  std::vector<gz::transport::Node::Publisher> &scan_pubs)
 {
   if constexpr (std::is_same_v<ModelT, rmagine::SphericalModel>)
   {
@@ -104,39 +109,35 @@ void PublishLaserScanIfApplicable(
       return;
     }
 
-    sensor_msgs::msg::LaserScan scan;
-    scan.header.stamp = stamp;
-    scan.header.frame_id = frame_id;
-    scan.range_min = model.range.min;
-    scan.range_max = model.range.max;
-    scan.angle_min = model.theta.min;
-    scan.angle_increment = model.theta.inc;
+    gz::msgs::LaserScan scan;
+    *scan.mutable_header()->mutable_stamp() = stamp;
+    scan.set_frame(frame_id);
+    scan.set_range_min(model.range.min);
+    scan.set_range_max(model.range.max);
+    scan.set_angle_min(model.theta.min);
+    scan.set_angle_step(model.theta.inc);
     if(model.theta.size > 0)
     {
-      scan.angle_max = model.theta.min
-        + model.theta.inc * static_cast<float>(model.theta.size - 1);
+      scan.set_angle_max(model.theta.min
+        + model.theta.inc * static_cast<float>(model.theta.size - 1));
     } else {
-      scan.angle_max = model.theta.min;
+      scan.set_angle_max(model.theta.min);
     }
-    if(update_rate > 0.0)
-    {
-      scan.scan_time = static_cast<float>(1.0 / update_rate);
-    }
-    if(model.theta.size > 1 && update_rate > 0.0)
-    {
-      scan.time_increment = scan.scan_time / static_cast<float>(model.theta.size - 1);
-    }
-    scan.ranges.resize(ranges.size());
+    scan.set_count(model.theta.size);
+    scan.set_vertical_angle_min(0.0);
+    scan.set_vertical_angle_max(0.0);
+    scan.set_vertical_angle_step(0.0);
+    scan.set_vertical_count(1);
+    scan.mutable_ranges()->Reserve(static_cast<int>(ranges.size()));
     for(size_t i = 0; i < ranges.size(); ++i)
     {
-      scan.ranges[i] = ranges[i];
+      scan.add_ranges(static_cast<double>(ranges[i]));
     }
-    for(const auto &scan_pub : scan_pubs)
+    // Publish() isn't const on gz::transport::Node::Publisher -- scan_pubs
+    // must be a non-const reference (see this function's signature).
+    for(auto &scan_pub : scan_pubs)
     {
-      if(scan_pub)
-      {
-        scan_pub->publish(scan);
-      }
+      scan_pub.Publish(scan);
     }
   }
 }
@@ -144,11 +145,9 @@ void PublishLaserScanIfApplicable(
 // Optional extra per-point data a simulate() call can produce alongside
 // Ranges (see rmagine/simulation/SimulationResults.hpp) -- Classic's ROS 1
 // PointCloud2 publisher could emit `ring`/normals/`obj_id`/`face_id` on
-// top of x/y/z; the Harmonic port only ever requested Ranges, so none of
-// this was even computed, not just dropped at publish time. nullptr means
-// "not requested/available", and that field is omitted from the message
-// entirely (not zero-filled) -- callers only pay for what they ask
-// `RunAndPublish`'s ResT Bundle to compute.
+// top of x/y/z. nullptr means "not requested/available", and that field is
+// omitted from the message entirely (not zero-filled) -- callers only pay
+// for what they ask `RunAndPublish`'s ResT Bundle to compute.
 struct PointCloudExtras
 {
   const rmagine::Vector* normals = nullptr;
@@ -160,9 +159,9 @@ template<typename ModelT, typename RangesT>
 void PublishPointCloud(
   const ModelT &model,
   const RangesT &ranges,
-  const rclcpp::Time &stamp,
+  const gz::msgs::Time &stamp,
   const std::string &frame_id,
-  const std::vector<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr> &points_pubs,
+  std::vector<gz::transport::Node::Publisher> &points_pubs,
   const PointCloudExtras &extras = PointCloudExtras{})
 {
   if(points_pubs.empty())
@@ -170,50 +169,62 @@ void PublishPointCloud(
     return;
   }
 
-  sensor_msgs::msg::PointCloud2 msg;
-  msg.header.stamp = stamp;
-  msg.header.frame_id = frame_id;
-  msg.height = model.getHeight();
-  msg.width = model.getWidth();
-  msg.is_dense = false;
+  using Field = gz::msgs::PointCloudPacked::Field;
 
-  auto add_field = [&msg](const std::string &name, uint8_t datatype, uint32_t size) -> uint32_t
-  {
-    sensor_msgs::msg::PointField field;
-    field.name = name;
-    field.offset = msg.point_step;
-    field.datatype = datatype;
-    field.count = 1;
-    msg.fields.push_back(field);
-    const uint32_t offset = msg.point_step;
-    msg.point_step += size;
-    return offset;
-  };
-
-  msg.fields.resize(0);
-  msg.point_step = 0;
-  const uint32_t off_x = add_field("x", sensor_msgs::msg::PointField::FLOAT32, sizeof(float));
-  add_field("y", sensor_msgs::msg::PointField::FLOAT32, sizeof(float));
-  add_field("z", sensor_msgs::msg::PointField::FLOAT32, sizeof(float));
+  std::vector<std::pair<std::string, Field::DataType>> fields;
+  fields.emplace_back("xyz", Field::FLOAT32);
   // ring: which row (vid) a point came from -- a rotating-scanner concept
   // (Spherical's phi rows), but well-defined identically for every model
   // type here (just the row index), so always published, not gated behind
   // model type the way LaserScan is.
-  const uint32_t off_ring = add_field("ring", sensor_msgs::msg::PointField::UINT16, sizeof(uint16_t));
-  const uint32_t off_nx = extras.normals
-    ? add_field("normal_x", sensor_msgs::msg::PointField::FLOAT32, sizeof(float)) : 0;
+  fields.emplace_back("ring", Field::UINT16);
   if(extras.normals)
   {
-    add_field("normal_y", sensor_msgs::msg::PointField::FLOAT32, sizeof(float));
-    add_field("normal_z", sensor_msgs::msg::PointField::FLOAT32, sizeof(float));
+    fields.emplace_back("normal_x", Field::FLOAT32);
+    fields.emplace_back("normal_y", Field::FLOAT32);
+    fields.emplace_back("normal_z", Field::FLOAT32);
   }
-  const uint32_t off_obj_id = extras.object_ids
-    ? add_field("obj_id", sensor_msgs::msg::PointField::UINT32, sizeof(uint32_t)) : 0;
-  const uint32_t off_face_id = extras.face_ids
-    ? add_field("face_id", sensor_msgs::msg::PointField::UINT32, sizeof(uint32_t)) : 0;
+  if(extras.object_ids)
+  {
+    fields.emplace_back("obj_id", Field::UINT32);
+  }
+  if(extras.face_ids)
+  {
+    fields.emplace_back("face_id", Field::UINT32);
+  }
 
-  msg.row_step = msg.width * msg.point_step;
-  msg.data.resize(msg.width * msg.height * msg.point_step);
+  gz::msgs::PointCloudPacked msg;
+  gz::msgs::InitPointCloudPacked(msg, frame_id, false, fields);
+  *msg.mutable_header()->mutable_stamp() = stamp;
+
+  // InitPointCloudPacked() already set frame_id via a header "frame_id"
+  // data entry (see its own implementation) -- nothing further needed here
+  // for frame_id specifically.
+
+  const uint32_t point_step = msg.point_step();
+  uint32_t offset = 0;
+  const uint32_t off_x = offset; offset += 3 * sizeof(float);
+  const uint32_t off_ring = offset; offset += sizeof(uint16_t);
+  uint32_t off_nx = 0, off_obj_id = 0, off_face_id = 0;
+  if(extras.normals)
+  {
+    off_nx = offset; offset += 3 * sizeof(float);
+  }
+  if(extras.object_ids)
+  {
+    off_obj_id = offset; offset += sizeof(uint32_t);
+  }
+  if(extras.face_ids)
+  {
+    off_face_id = offset; offset += sizeof(uint32_t);
+  }
+
+  msg.set_height(static_cast<uint32_t>(model.getHeight()));
+  msg.set_width(static_cast<uint32_t>(model.getWidth()));
+  msg.set_is_bigendian(false);
+  msg.set_is_dense(false);
+  msg.set_row_step(msg.width() * point_step);
+  msg.mutable_data()->resize(msg.width() * msg.height() * point_step);
 
   for(size_t vid = 0; vid < model.getHeight(); vid++)
   {
@@ -221,7 +232,7 @@ void PublishPointCloud(
     {
       const unsigned int pid = model.getBufferId(vid, hid);
       const float range = ranges[pid];
-      uint8_t* buff = &msg.data[pid * msg.point_step];
+      char* buff = &(*msg.mutable_data())[pid * point_step];
       rmagine::Vector3* p = reinterpret_cast<rmagine::Vector3*>(buff + off_x);
       if(model.range.inside(range))
       {
@@ -253,12 +264,9 @@ void PublishPointCloud(
     }
   }
 
-  for(const auto &points_pub : points_pubs)
+  for(auto &points_pub : points_pubs)
   {
-    if(points_pub)
-    {
-      points_pub->publish(msg);
-    }
+    points_pub.Publish(msg);
   }
 }
 

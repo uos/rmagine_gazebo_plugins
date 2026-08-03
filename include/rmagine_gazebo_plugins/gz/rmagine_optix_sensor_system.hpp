@@ -13,12 +13,9 @@
 #include <gz/sim/Entity.hh>
 #include <gz/sim/EntityComponentManager.hh>
 #include <gz/math/Pose3.hh>
-
-#include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-#include <sensor_msgs/msg/laser_scan.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tf2_ros/transform_broadcaster.h>
+#include <gz/transport/Node.hh>
+#include <gz/msgs/laserscan.pb.h>
+#include <gz/msgs/pointcloud_packed.pb.h>
 
 #include <rmagine/map/OptixMap.hpp>
 #include <rmagine/simulation/SphereSimulatorOptix.hpp>
@@ -33,15 +30,16 @@
 namespace rmagine_gazebo_plugins
 {
 
-// GPU mirror of RmagineEmbreeSensorInstance -- see its header comment.
+// GPU mirror of RmagineEmbreeSensorInstance -- see its header comment
+// (gz-transport-native publishing, no TF -- gz::sim::systems::PosePublisher
+// + ros_gz_bridge covers it).
 class RmagineOptixSensorInstance
 {
 public:
   void Load(
     gz::sim::Entity sensor_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
-    const rclcpp::Node::SharedPtr &node,
-    tf2_ros::TransformBroadcaster *tf_broadcaster);
+    gz::transport::Node *gz_node);
 
   void Update(const gz::sim::UpdateInfo &_info,
               const gz::sim::EntityComponentManager &_ecm);
@@ -56,7 +54,7 @@ private:
     const ModelT &model,
     const rmagine::Transform &Tsb,
     const rmagine::Transform &Tbm,
-    const rclcpp::Time &stamp,
+    const gz::msgs::Time &stamp,
     const gz::math::Pose3d &base_pose,
     const gz::math::Pose3d &sensor_pose);
 
@@ -64,7 +62,6 @@ private:
   gz::sim::Entity frame_entity_{gz::sim::kNullEntity};
 
   std::string map_key_{"default"};
-  std::string parent_frame_id_{"world"};
   std::string frame_id_{"sensor"};
   std::string topic_scan_{"scan"};
   std::string topic_points_{"points"};
@@ -86,11 +83,10 @@ private:
   bool frame_resolved_logged_{false};
 
   // Non-owning -- see the identical comment on RmagineEmbreeSensorInstance's
-  // own node_/tf_broadcaster_.
-  rclcpp::Node::SharedPtr node_;
-  tf2_ros::TransformBroadcaster *tf_broadcaster_{nullptr};
-  std::vector<rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr> scan_pubs_;
-  std::vector<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr> points_pubs_;
+  // own gz_node_.
+  gz::transport::Node *gz_node_{nullptr};
+  std::vector<gz::transport::Node::Publisher> scan_pubs_;
+  std::vector<gz::transport::Node::Publisher> points_pubs_;
 
   // Applied to simulated ranges (in VRAM, before download to RAM) in the
   // order parsed from SDF.
@@ -121,8 +117,7 @@ public:
                   const gz::sim::EntityComponentManager &_ecm) override;
 
 private:
-  rclcpp::Node::SharedPtr node_;
-  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  gz::transport::Node gz_node_;
   std::unordered_map<gz::sim::Entity, std::unique_ptr<RmagineOptixSensorInstance>> instances_;
 };
 

@@ -13,12 +13,9 @@
 #include <gz/sim/Entity.hh>
 #include <gz/sim/EntityComponentManager.hh>
 #include <gz/math/Pose3.hh>
-
-#include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-#include <sensor_msgs/msg/laser_scan.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tf2_ros/transform_broadcaster.h>
+#include <gz/transport/Node.hh>
+#include <gz/msgs/laserscan.pb.h>
+#include <gz/msgs/pointcloud_packed.pb.h>
 
 #include <rmagine/map/EmbreeMap.hpp>
 #include <rmagine/simulation/SphereSimulatorEmbree.hpp>
@@ -35,20 +32,25 @@ namespace rmagine_gazebo_plugins
 // One of these is created per discovered `<sensor type="custom"
 // gz:type="rmagine_embree">` entity, owned by RmagineEmbreeSensorSystem --
 // see that class's comment for why. Holds everything a per-sensor plugin
-// instance used to hold; the node/TF broadcaster are shared across all
-// instances now (owned by the factory) rather than one per sensor.
+// instance used to hold; the gz-transport node is shared across all
+// instances now (owned by the factory) rather than one per sensor. Publishes
+// only gz-native messages (gz::msgs::LaserScan/PointCloudPacked) -- no ROS
+// dependency at all. TF is NOT published here: every sensor frame in this
+// package's worlds is a fixed joint, so gz-sim's own
+// gz::sim::systems::PosePublisher system (attached to the robot/model in
+// SDF) plus ros_gz_bridge's Pose_V->TFMessage conversion covers it
+// completely -- see README.md and worlds/gz_embree_robot_demo.sdf.
 class RmagineEmbreeSensorInstance
 {
 public:
   // Parses this sensor's own SDF element (`sdf::Sensor::Element()` --
   // i.e. the <sensor> element itself, since this is a "custom" sensor type,
   // not a nested <plugin>'s SDF) and creates this instance's publishers on
-  // the shared node.
+  // the shared gz-transport node.
   void Load(
     gz::sim::Entity sensor_entity,
     const std::shared_ptr<const sdf::Element> &_sdf,
-    const rclcpp::Node::SharedPtr &node,
-    tf2_ros::TransformBroadcaster *tf_broadcaster);
+    gz::transport::Node *gz_node);
 
   void Update(const gz::sim::UpdateInfo &_info,
               const gz::sim::EntityComponentManager &_ecm);
@@ -58,7 +60,7 @@ private:
   void ResolveFrameEntity(const gz::sim::EntityComponentManager &_ecm);
 
   // Runs setTsb/setModel/simulate for whichever (simulator, model) pair is
-  // currently active, then publishes PointCloud2 (and LaserScan, for
+  // currently active, then publishes PointCloudPacked (and LaserScan, for
   // Spherical) via the shared templated helpers in sensor_model_publish.hpp.
   template<typename SimPtrT, typename ModelT>
   void RunAndPublish(
@@ -66,7 +68,7 @@ private:
     const ModelT &model,
     const rmagine::Transform &Tsb,
     const rmagine::Transform &Tbm,
-    const rclcpp::Time &stamp,
+    const gz::msgs::Time &stamp,
     const gz::math::Pose3d &base_pose,
     const gz::math::Pose3d &sensor_pose);
 
@@ -74,7 +76,6 @@ private:
   gz::sim::Entity frame_entity_{gz::sim::kNullEntity};
 
   std::string map_key_{"default"};
-  std::string parent_frame_id_{"world"};
   std::string frame_id_{"sensor"};
   std::string topic_scan_{"scan"};
   std::string topic_points_{"points"};
@@ -109,15 +110,14 @@ private:
   gz::math::Pose3d local_sensor_pose_{0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   bool frame_resolved_logged_{false};
 
-  // Non-owning -- both point at RmagineEmbreeSensorSystem's shared members,
-  // set once in Load() and valid for this instance's whole lifetime (an
-  // instance never outlives its owning factory system).
-  rclcpp::Node::SharedPtr node_;
-  tf2_ros::TransformBroadcaster *tf_broadcaster_{nullptr};
+  // Non-owning -- points at RmagineEmbreeSensorSystem's shared gz-transport
+  // node, set once in Load() and valid for this instance's whole lifetime
+  // (an instance never outlives its owning factory system).
+  gz::transport::Node *gz_node_{nullptr};
   // scan_pubs_[0]/points_pubs_[0] are always the topic_scan_/topic_points_
   // default; any parsed <output> entries follow.
-  std::vector<rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr> scan_pubs_;
-  std::vector<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr> points_pubs_;
+  std::vector<gz::transport::Node::Publisher> scan_pubs_;
+  std::vector<gz::transport::Node::Publisher> points_pubs_;
 
   std::chrono::nanoseconds last_pub_time_{0};
   bool has_published_{false};
@@ -153,8 +153,7 @@ public:
                   const gz::sim::EntityComponentManager &_ecm) override;
 
 private:
-  rclcpp::Node::SharedPtr node_;
-  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  gz::transport::Node gz_node_;
   std::unordered_map<gz::sim::Entity, std::unique_ptr<RmagineEmbreeSensorInstance>> instances_;
 };
 

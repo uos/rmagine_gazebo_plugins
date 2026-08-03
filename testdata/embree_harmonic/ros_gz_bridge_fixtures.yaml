@@ -1,0 +1,30 @@
+# ros_gz_bridge config for the fixture test harness (embree_fixture_harness.py,
+# check_mesh_cache_fixture.py). Every fixture world's sensor uses the bare
+# gz-transport topic names "scan"/"points" (and "scan2"/"points2" for the
+# optix_multi output-fan-out fixture) -- see each world's <topic_scan>/
+# <topic_points>/<output> elements. This bridges them to the same /scan,
+# /points ROS topic names the harness has always subscribed to via rclpy.
+
+- ros_topic_name: "/scan"
+  gz_topic_name: "scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/points"
+  gz_topic_name: "points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/scan2"
+  gz_topic_name: "scan2"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/points2"
+  gz_topic_name: "points2"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS

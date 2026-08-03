@@ -50,12 +50,12 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>ament_cmake</buildtool_depend>
   <exec_depend>ament_index_python</exec_depend>
-  <depend>geometry_msgs</depend>
-  <depend>rclcpp</depend>
   <exec_depend>rclpy</exec_depend>
+  <!-- Only needed by the Python fixture-test harness (subscribes to the
+       ros_gz_bridge-converted /scan, /points topics); the C++ plugin
+       itself is gz-transport-native and has no ROS dependency. -->
   <depend>sensor_msgs</depend>
   <exec_depend>sensor_msgs_py</exec_depend>
-  <depend>tf2_ros</depend>
   <depend>gz-sim8</depend>
   <depend>gz-plugin2</depend>
   <depend>gz-transport13</depend>
@@ -67,6 +67,10 @@
   <depend>ros_gz_sim</depend>
   <depend>rmagine</depend>
   <depend>yaml-cpp</depend>
+  <!-- Robot example (launch/robot_demo.launch.py) -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>urdf</exec_depend>
   <test_depend>ament_cmake_test</test_depend>
 
   <export>

@@ -1,0 +1,47 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Global Options:
+    Fixed Frame: odom
+    Background Color: 48; 48; 48
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Enabled: true
+      Description Topic:
+        Value: /robot_description
+      TF Prefix: ""
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Show Names: true
+      Show Axes: true
+    - Class: rviz_default_plugins/LaserScan
+      Name: LaserScan (scan)
+      Topic:
+        Value: /scan
+      Enabled: true
+      Size (m): 0.05
+      Color: 255; 0; 0
+    - Class: rviz_default_plugins/PointCloud2
+      Name: PointCloud2 (points)
+      Topic:
+        Value: /points
+      Enabled: true
+      Size (m): 0.03
+      Color: 0; 255; 0
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometry
+      Topic:
+        Value: /odom
+      Enabled: true
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+Window Geometry:
+  Height: 900
+  Width: 1400

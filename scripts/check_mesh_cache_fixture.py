@@ -95,6 +95,21 @@ def main() -> int:
         stdout=log_file, stderr=subprocess.STDOUT, preexec_fn=os.setsid,
     )
 
+    # The sensor system only publishes gz-native messages now (see
+    # embree_fixture_harness.py's own identical comment on
+    # ros_gz_bridge_fixtures.yaml) -- bridge "scan"/"points" to /scan,
+    # /points so this fixture's rclpy TopicCollector keeps working unchanged.
+    bridge_log_path = Path("/tmp/rmagine_embree_mesh_cache_bridge.log")
+    bridge_log_file = bridge_log_path.open("w", encoding="utf-8")
+    bridge_config = (
+        share_root() / "testdata" / "embree_harmonic" / "ros_gz_bridge_fixtures.yaml"
+    )
+    bridge_process = subprocess.Popen(
+        ["ros2", "run", "ros_gz_bridge", "parameter_bridge",
+         "--ros-args", "-p", f"config_file:={bridge_config}"],
+        stdout=bridge_log_file, stderr=subprocess.STDOUT, preexec_fn=os.setsid,
+    )
+
     rclpy.init(args=None)
     collector = TopicCollector()
     failures = []
@@ -109,11 +124,15 @@ def main() -> int:
             if process.poll() is not None:
                 print(f"gz sim exited early with code {process.returncode}. See {log_path}", file=sys.stderr)
                 return 1
+            if bridge_process.poll() is not None:
+                print(f"ros_gz_bridge exited early with code {bridge_process.returncode}. "
+                      f"See {bridge_log_path}", file=sys.stderr)
+                return 1
             rclpy.spin_once(collector, timeout_sec=0.1)
             if collector.scan_count >= 3 and collector.points_count >= 3:
                 break
         else:
-            print(f"Timed out waiting for scan/points. See {log_path}", file=sys.stderr)
+            print(f"Timed out waiting for scan/points. See {log_path} and {bridge_log_path}", file=sys.stderr)
             return 1
 
         # Snapshot the count once the initial pass has settled, then let
@@ -131,6 +150,13 @@ def main() -> int:
     finally:
         collector.destroy_node()
         rclpy.shutdown()
+        if bridge_process.poll() is None:
+            os.killpg(bridge_process.pid, signal.SIGINT)
+            try:
+                bridge_process.wait(timeout=5.0)
+            except subprocess.TimeoutExpired:
+                os.killpg(bridge_process.pid, signal.SIGKILL)
+                bridge_process.wait(timeout=5.0)
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGINT)
             try:

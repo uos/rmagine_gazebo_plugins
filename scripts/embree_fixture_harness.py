@@ -412,6 +412,39 @@ def launch_world(world: str, log_path: Path) -> subprocess.Popen:
     )
 
 
+# The sensor systems only ever publish gz-native messages now (gz.msgs.
+# LaserScan/PointCloudPacked over gz-transport, no ROS dependency at all --
+# see rmagine_embree_sensor_system.cpp/sensor_model_publish.hpp). This
+# fixture harness still wants to keep testing via the same /scan, /points
+# rclpy subscriptions and JSON fixtures it always has, so it launches a
+# ros_gz_bridge `parameter_bridge` alongside `gz sim`, converting every
+# fixture world's "scan"/"points" (and "scan2"/"points2", for the
+# optix_multi fan-out fixture) gz-transport topics to the matching ROS
+# topics -- see ros_gz_bridge_fixtures.yaml. This also happens to exercise
+# the exact bridge path the package's own README/robot example documents.
+def bridge_config_path() -> Path:
+    return share_root() / "testdata" / "embree_harmonic" / "ros_gz_bridge_fixtures.yaml"
+
+
+def default_bridge_log_path(world: str) -> Path:
+    return Path("/tmp") / f"rmagine_embree_{world}_bridge.log"
+
+
+def launch_bridge(log_path: Path) -> subprocess.Popen:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_file = log_path.open("w", encoding="utf-8")
+    cmd = [
+        "ros2", "run", "ros_gz_bridge", "parameter_bridge",
+        "--ros-args", "-p", f"config_file:={bridge_config_path()}",
+    ]
+    return subprocess.Popen(
+        cmd,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        preexec_fn=os.setsid,
+    )
+
+
 def stop_world(process: subprocess.Popen) -> None:
     if process.poll() is not None:
         return
@@ -425,7 +458,9 @@ def stop_world(process: subprocess.Popen) -> None:
 
 def capture_world(world: str, output_path: Path, duration_sec: float, timeout_sec: float) -> int:
     log_path = default_log_path(world)
+    bridge_log_path = default_bridge_log_path(world)
     process = launch_world(world, log_path)
+    bridge_process = launch_bridge(bridge_log_path)
     ensure_ros_log_dir()
     rclpy.init(args=None)
     collector = TopicCollector(world)
@@ -436,12 +471,17 @@ def capture_world(world: str, output_path: Path, duration_sec: float, timeout_se
             if process.poll() is not None:
                 print(f"gz sim exited early with code {process.returncode}. See {log_path}", file=sys.stderr)
                 return 1
+            if bridge_process.poll() is not None:
+                print(f"ros_gz_bridge exited early with code {bridge_process.returncode}. "
+                      f"See {bridge_log_path}", file=sys.stderr)
+                return 1
             rclpy.spin_once(collector, timeout_sec=0.1)
             have_scan = (not EXPECTS_SCAN[world]) or bool(collector.scan_messages)
             if have_scan and collector.points_messages:
                 break
         else:
-            print(f"Timed out waiting for /scan and /points. See {log_path}", file=sys.stderr)
+            print(f"Timed out waiting for /scan and /points. See {log_path} and {bridge_log_path}",
+                  file=sys.stderr)
             return 1
 
         capture_end = time.monotonic() + duration_sec
@@ -461,6 +501,7 @@ def capture_world(world: str, output_path: Path, duration_sec: float, timeout_se
         try:
             collector.destroy_node()
         finally:
+            stop_world(bridge_process)
             rclpy.shutdown()
             stop_world(process)
 

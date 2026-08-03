@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<!--
+  Minimal differential-drive robot carrying one rmagine Embree spherical
+  lidar, for `ros2 launch rmagine_gazebo_plugins robot_demo.launch.py`.
+  Structurally modeled on amock/rmcl_examples's rmcl_examples_sim/urdf/
+  ceres.urdf.xacro: 4 wheels (2 driven pairs, for stability, since a bare
+  2-wheel base would tip), inertial macros inline (see wikipedia's list of
+  moment of inertia tensors), gz::sim::systems::DiffDrive for motion, and
+  gz::sim::systems::PosePublisher for TF; this plugin package publishes
+  no TF of its own (see rmagine_embree_sensor_system.hpp's own comment on
+  why), so the whole world->base_footprint->...->lidar_link chain here comes
+  entirely from PosePublisher + DiffDrive, bridged to ROS by
+  config/ros_gz_bridge_robot_demo.yaml.
+-->
+<robot xmlns:xacro="http://ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema" name="rmagine_example_robot">
+
+  <xacro:property name="M_PI" value="3.14159265359"/>
+
+  <xacro:property name="body_length" value="0.4"/>
+  <xacro:property name="body_width" value="0.3"/>
+  <xacro:property name="body_height" value="0.15"/>
+  <xacro:property name="body_mass" value="20.0"/>
+
+  <xacro:property name="wheel_radius" value="0.08"/>
+  <xacro:property name="wheel_thickness" value="0.04"/>
+  <xacro:property name="wheel_mass" value="1.0"/>
+  <xacro:property name="axis_front" value="0.13"/>
+  <xacro:property name="axis_back" value="-0.13"/>
+  <xacro:property name="axis_height" value="-0.05"/>
+  <xacro:property name="wheel_y_offset" value="${body_width/2 + wheel_thickness/2 + 0.02}"/>
+  <xacro:property name="wheel_separation" value="${2.0 * wheel_y_offset}"/>
+
+  <xacro:property name="lidar_radius" value="0.05"/>
+  <xacro:property name="lidar_length" value="0.08"/>
+  <xacro:property name="lidar_mass" value="0.2"/>
+
+  <xacro:macro name="box_inertial" params="x y z mass">
+    <inertial>
+      <mass value="${mass}"/>
+      <origin xyz="0 0 0"/>
+      <inertia
+        ixx="${0.0833333 * mass * (y*y + z*z)}" ixy="0.0" ixz="0.0"
+        iyy="${0.0833333 * mass * (x*x + z*z)}" iyz="0.0"
+        izz="${0.0833333 * mass * (x*x + y*y)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertial" params="radius length mass">
+    <inertial>
+      <mass value="${mass}"/>
+      <origin xyz="0 0 0"/>
+      <inertia
+        ixx="${0.0833333 * mass * (3*radius*radius + length*length)}" ixy="0.0" ixz="0.0"
+        iyy="${0.0833333 * mass * (3*radius*radius + length*length)}" iyz="0.0"
+        izz="${0.5 * mass * radius * radius}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="wheel" params="name x y">
+    <link name="${name}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_thickness}"/>
+        </geometry>
+        <material name="black"><color rgba="0.05 0.05 0.05 1"/></material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_thickness}"/>
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="${wheel_radius}" length="${wheel_thickness}" mass="${wheel_mass}"/>
+    </link>
+
+    <joint name="${name}_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_link"/>
+      <origin xyz="${x} ${y} ${axis_height}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <gazebo reference="${name}_link">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+  </xacro:macro>
+
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+      <material name="silver"><color rgba="0.6 0.6 0.6 1"/></material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertial x="${body_length}" y="${body_width}" z="${body_height}" mass="${body_mass}"/>
+  </link>
+
+  <joint name="base_footprint_to_base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius - axis_height}" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:wheel name="wheel_front_left" x="${axis_front}" y="${wheel_y_offset}"/>
+  <xacro:wheel name="wheel_front_right" x="${axis_front}" y="${-wheel_y_offset}"/>
+  <xacro:wheel name="wheel_rear_left" x="${axis_back}" y="${wheel_y_offset}"/>
+  <xacro:wheel name="wheel_rear_right" x="${axis_back}" y="${-wheel_y_offset}"/>
+
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_length}"/>
+      </geometry>
+      <material name="red"><color rgba="0.8 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_length}"/>
+      </geometry>
+    </collision>
+    <xacro:cylinder_inertial radius="${lidar_radius}" length="${lidar_length}" mass="${lidar_mass}"/>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 ${body_height/2 + lidar_length/2 + 0.05}" rpy="0 0 0"/>
+  </joint>
+
+  <gazebo reference="lidar_link">
+    <sensor name="lidar_sensor" type="custom" gz:type="rmagine_embree">
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <map_key>default</map_key>
+      <frame>lidar_link</frame>
+      <topic_scan>/model/rmagine_example_robot/scan</topic_scan>
+      <topic_points>/model/rmagine_example_robot/points</topic_points>
+      <range_min>0.15</range_min>
+      <range_max>30.0</range_max>
+      <scan>
+        <horizontal>
+          <min_angle>-3.14159</min_angle>
+          <increment>0.01745</increment>
+          <samples>360</samples>
+        </horizontal>
+        <vertical>
+          <min_angle>-0.2618</min_angle>
+          <increment>0.0873</increment>
+          <samples>7</samples>
+        </vertical>
+      </scan>
+    </sensor>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>wheel_front_left_joint</left_joint>
+      <right_joint>wheel_front_right_joint</right_joint>
+      <left_joint>wheel_rear_left_joint</left_joint>
+      <right_joint>wheel_rear_right_joint</right_joint>
+      <wheel_separation>${wheel_separation}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+      <tf_topic>/model/rmagine_example_robot/tf_odom</tf_topic>
+      <topic>/model/rmagine_example_robot/cmd_vel</topic>
+    </plugin>
+
+    <!-- This package's own sensor plugin publishes no TF (see
+         rmagine_embree_sensor_system.hpp); gz-sim's own PosePublisher
+         covers the whole base_link->...->lidar_link chain instead, bridged
+         to ROS by config/ros_gz_bridge_robot_demo.yaml. -->
+    <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+      <use_pose_vector_msg>true</use_pose_vector_msg>
+      <publish_nested_model_pose>true</publish_nested_model_pose>
+      <static_publisher>true</static_publisher>
+      <static_update_frequency>1</static_update_frequency>
+    </plugin>
+  </gazebo>
+
+</robot>

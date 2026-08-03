@@ -1,0 +1,110 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="robot_demo">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics" />
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands" />
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster" />
+
+    <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
+      <ignore_model>rmagine_example_robot</ignore_model>
+      <update>
+        <rate_limit>60</rate_limit>
+        <delta_trans>0.001</delta_trans>
+        <delta_rot>0.001</delta_rot>
+      </update>
+    </plugin>
+
+    <!-- One factory plugin per world (like the map system above) discovers
+         every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
+         this world -- see rmagine_embree_sensor_system.hpp for why. The
+         robot itself (with its lidar sensor) is spawned separately by
+         launch/robot_demo.launch.py from `robot_description`, not embedded
+         here. -->
+    <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
+
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <size>20 20</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- A handful of static boxes to drive around and scan -- reuses the
+         same box-geometry path already exercised by the other fixture
+         worlds (gz_embree_baseline.sdf etc.), just arranged into a small
+         obstacle course instead of one isolated target. -->
+    <model name="box_1">
+      <static>true</static>
+      <pose>3 1 0.5 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1 1 1</size></box></geometry>
+          <material><ambient>0.8 0.2 0.2 1</ambient><diffuse>0.8 0.2 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="box_2">
+      <static>true</static>
+      <pose>3 -1.5 0.5 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1 1 1</size></box></geometry>
+          <material><ambient>0.2 0.2 0.8 1</ambient><diffuse>0.2 0.2 0.8 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="box_3">
+      <static>true</static>
+      <pose>-2 2 0.75 0 0 0.5</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.5 0.5 1.5</size></box></geometry>
+          <material><ambient>0.2 0.8 0.2 1</ambient><diffuse>0.2 0.8 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="cylinder_1">
+      <static>true</static>
+      <pose>-3 -2 0.6 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><cylinder><radius>0.4</radius><length>1.2</length></cylinder></geometry>
+          <material><ambient>0.8 0.8 0.2 1</ambient><diffuse>0.8 0.8 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

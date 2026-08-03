@@ -26,10 +26,6 @@ find_package(gz-msgs10 REQUIRED)
 find_package(gz-rendering8 REQUIRED)
 find_package(ros_gz_bridge REQUIRED)
 find_package(ros_gz_sim REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(tf2_ros REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(rmagine 2.3
 COMPONENTS
@@ -94,13 +90,6 @@ target_link_libraries(rmagine_embree_sensor_system
   gz-rendering8::gz-rendering8
   rmagine::core
   yaml-cpp
-)
-
-ament_target_dependencies(rmagine_embree_sensor_system
-  geometry_msgs
-  rclcpp
-  sensor_msgs
-  tf2_ros
 )
 
 if(TARGET rmagine::embree)
@@ -168,13 +157,6 @@ if(TARGET rmagine::optix)
   else()
     message(WARNING "rmagine::cuda not found -- rmagine_optix_sensor_system will build without noise model support.")
   endif()
-
-  ament_target_dependencies(rmagine_optix_sensor_system
-    geometry_msgs
-    rclcpp
-    sensor_msgs
-    tf2_ros
-  )
 
   install(TARGETS rmagine_optix_sensor_system
     LIBRARY DESTINATION lib/${PROJECT_NAME}
@@ -251,7 +233,7 @@ install(
 )
 
 install(
-  DIRECTORY worlds testdata
+  DIRECTORY worlds testdata urdf launch config rviz
   DESTINATION share/${PROJECT_NAME}
 )
 

@@ -31,6 +31,12 @@
          instead of appearing at their real, distinct poses. -->
     <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
       <ignore_model>sensor_model</ignore_model>
+      <!-- Required here, unlike every other fixture world: check_mesh_cache_fixture.py
+           greps this system's own "(cache miss)" debug line to verify mesh-by-URI
+           caching actually shares one load across all 3 entities referencing it --
+           it's the only fixture whose check depends on debug output, not just
+           published topic values. -->
+      <debug>true</debug>
       <update>
         <rate_limit>30</rate_limit>
         <delta_trans>0.001</delta_trans>
