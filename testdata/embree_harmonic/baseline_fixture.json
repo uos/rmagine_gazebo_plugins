@@ -1,0 +1,61 @@
+{
+  "world": "baseline",
+  "world_file": "gz_embree_baseline.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "scan": {
+      "description": "One fixed box is centered directly in front of the sensor.",
+      "center_value_expected_range": [
+        2.2,
+        2.8
+      ],
+      "center_value_expected_stddev_max": 0.05,
+      "representative_center_window": [
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5
+      ]
+    },
+    "points": {
+      "description": "Finite points should lie on the visible front face of the box.",
+      "bbox_midpoint_x_expected_range": [
+        2.2,
+        2.8
+      ],
+      "bbox_y_span_expected_min": 0.5,
+      "representative_points_description": "A small sample should cluster near x=2.5 with varying y."
+    }
+  },
+  "expected": {
+    "scan": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_count_min": 20,
+      "center_window_finite_min": 5,
+      "center_value_range": {
+        "min": 2.2,
+        "max": 2.8
+      },
+      "center_value_stddev_max": 0.05
+    },
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 20,
+      "bbox_midpoint_x_range": {
+        "min": 2.2,
+        "max": 2.8
+      },
+      "bbox_y_span_min": 0.5
+    }
+  }
+}

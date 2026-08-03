@@ -1,0 +1,29 @@
+{
+  "world": "o1dn",
+  "world_file": "gz_embree_o1dn.sdf",
+  "topics": {
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "points": {
+      "description": "O1Dn model with a single forward-facing ray (see o1dn_single_ray.yaml) from the sensor's shared origin, aimed at a box front face 2.5m away.",
+      "bbox_midpoint_x_expected_range": [2.3, 2.7],
+      "representative_points_description": "Exactly 1 finite point, at x~2.5, y=0, z=0."
+    }
+  },
+  "expected": {
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 1,
+      "bbox_midpoint_x_range": {
+        "min": 2.3,
+        "max": 2.7
+      }
+    }
+  }
+}

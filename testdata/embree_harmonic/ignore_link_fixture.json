@@ -1,0 +1,53 @@
+{
+  "world": "ignore_link",
+  "world_file": "gz_embree_ignore_link.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "scan": {
+      "description": "multi_link_target::shadow_link (a 0.4m box at x=2, closer to the sensor) is in the map system's <ignore_link> list; multi_link_target::real_link (a 1m box at x=3) is not. If ignore_link regresses, shadow_link would occlude real_link and center_value would read ~1.8 (shadow_link's near face) instead of ~2.5 (real_link's near face) -- a tight range around 2.5 is a falsifiable check on the feature itself, not just crash-freedom.",
+      "center_value_expected_range": [
+        2.3,
+        2.7
+      ],
+      "center_value_expected_stddev_max": 0.05
+    },
+    "points": {
+      "description": "Finite points should lie on real_link's front face at x=2.5, not shadow_link's at x=1.8.",
+      "bbox_midpoint_x_expected_range": [
+        2.3,
+        2.7
+      ],
+      "bbox_y_span_expected_min": 0.5
+    }
+  },
+  "expected": {
+    "scan": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_count_min": 20,
+      "center_window_finite_min": 5,
+      "center_value_range": {
+        "min": 2.3,
+        "max": 2.7
+      },
+      "center_value_stddev_max": 0.05
+    },
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 20,
+      "bbox_midpoint_x_range": {
+        "min": 2.3,
+        "max": 2.7
+      },
+      "bbox_y_span_min": 0.5
+    }
+  }
+}

@@ -1,284 +1,142 @@
 [[Code](https://github.com/uos/rmagine_gazebo_plugins)] [[Wiki](https://github.com/uos/rmagine_gazebo_plugins/wiki)]
 
 > [!IMPORTANT]
-> Requires: Gazebo Classic, ROS 2 (Humble)
+> Requires: Gazebo Harmonic (`gz-sim8`), ROS 2 Jazzy
 
-# rmagine_gazebo_plugins (WIP)
+# rmagine_gazebo_plugins
 
-Range sensor plugins for Gazebo using the sensor simulation library [rmagine](https://github.com/uos/rmagine). 
-With rmagine's OptiX backend it is possible to simulate depth sensor data directly on your RTX graphics card. With Embree backend you can simulate any provided sensor online on your CPU.
-Embree and OptiX are libraries for raytracing and build BVH acceleration structures on the scene for faster ray traversals.
-After building these acceleration structures, you can simulate depth sensors on CPU or GPU without getting perfomance issues even in large Gazebo worlds.
+Range sensor plugins for Gazebo using the sensor simulation library [rmagine](https://github.com/uos/rmagine).
+With rmagine's OptiX backend it is possible to simulate depth sensor data directly on your RTX graphics card. With the Embree backend you can simulate any provided sensor on your CPU.
+Embree and OptiX are libraries for raytracing that build BVH acceleration structures over the scene for fast ray traversal. Once built, these structures let you simulate depth sensors on CPU or GPU without performance cliffs even in large Gazebo worlds -- and they're kept in sync with the live simulation incrementally (only what actually changed each tick is added/removed/moved), not rebuilt from scratch on every update.
 
-Youtube-Video:
+## Architecture
 
-<div align="center">
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=IOrBxiW0AmY
-" target="_blank" >
-  <img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" 
-  alt="Rmagine Gazebo Plugin YT Video" width="80%" style="max-width: 500px" height="auto" border="10" />
-</a>
-</div>
+Two plugin roles per backend, mirroring the classic split between a scene-sync world plugin and a raycasting sensor plugin (gz-sim only has one plugin base type, `System`, so both are `System` plugins, but the responsibilities stay separate):
 
+- **Map system** (`rmagine_embree_map_system` / `rmagine_optix_map_system`, attached to `<world>`): builds and incrementally maintains one persistent Embree/OptiX scene from the world's `<visual>` geometry. Publishes the current map through an in-process registry keyed by `map_key` (default `"default"`).
+- **Sensor system** (`rmagine_embree_sensor_system` / `rmagine_optix_sensor_system`, attached once per `<world>`, like the map system): auto-discovers every `<sensor type="custom" gz:type="rmagine_embree|rmagine_optix">` anywhere in the world via gz-sim's `components::CustomSensor` (the closest available analogue to Gazebo Classic's `GZ_REGISTER_STATIC_SENSOR` -- gz-sensors' own plugin-loading mechanism for custom sensor types was removed upstream). For each discovered sensor it looks up the map by `map_key`, raycasts against it (Spherical/Pinhole/O1Dn/OnDn models), and publishes `sensor_msgs/msg/LaserScan` (Spherical, single-ring only) and `sensor_msgs/msg/PointCloud2`, plus a TF broadcast -- all sensors of one backend share a single ROS node/TF broadcaster owned by the factory system.
 
+## Installation
 
-## Examples
+#### rmagine
 
-After compiling 
+Follow rmagine's own build instructions, with the Embree and/or OptiX (CUDA) components enabled. Clone it into your workspace's `src` folder.
 
-### `example.launch.xml`
-
-```console
-ros2 launch rmagine_gazebo_plugins example.launch.xml
-```
-
-Simulates a 3d lidar at 20hz on Embree backend.  
-To use OptiX backend, run
-
-```console
-ros2 launch rmagine_gazebo_plugins example.launch.xml rmagine:=optix
-```
-
-Open RViz set fixed frame to `base_footprint` and visualize topic `laser3d/pcl`.
-
-### `rotating_scanner.launch.xml`
-
-```console
-ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml
-```
-
-or with OptiX backend
-
-```console
-ros2 launch rmagine_gazebo_plugins rotating_laser.launch.xml rmagine:=optix
-```
-
-Open RViz set fixed frame to `base_footprint` and visualize topic `laser2d/scan`.
-In Gazebo-GUI find the `laser2d` link at model `robot_sensor`.
-To let the scanner rotate go to Gazebo-GUI:
-1. Right-click on the `laser2d` link at model `robot_sensor`
-2. Click "Apply Force/Torque"
-3. Set Torque to y=0.5 
-4. Click "Apply Torque"
-
-Now the scanner cylinder should rotate in Gazebo as well as in RViz.
-
-
-## Usage
-
-### 1. Installatio
-
-#### Rmagine
-
-Follow instructions of Rmagine library installation. Compile with Embree or OptiX backends for CPU or GPU support respectively.
-You can clone rmagine into your ROS workspace's src folder: `colcon_ws/src`.
-
-#### Compilation
-Clone this repository to your ROS workspace (src folder), `colcon_ws/src`:
+#### This package
 
 ```console
 git clone git@github.com:uos/rmagine_gazebo_plugins.git
+colcon build --packages-select rmagine_gazebo_plugins
 ```
 
-In `colcon_ws` folder compile with
+Built targets depend on which rmagine components were found:
 
-```console
-colcon build
-```
+- `rmagine::embree` found: `rmagine_embree_map_system`, `rmagine_embree_sensor_system`
+- `rmagine::optix` found: `rmagine_optix_map_system`, `rmagine_optix_sensor_system`
 
-Depending on which backends were installed during Rmagine installation the following plugins are built:
+## Usage
 
-1. Embree
-    - World-Plugins: `rmagine_embree_map_gzplugin`
-    - Sensor-Plugins: `rmagine_embree_spherical`
-2. OptiX
-    - World-Plugins: `rmagine_optix_map_gzplugin`
-    - Sensor-Plugins: `rmagine_optix_spherical`
-
-
-### 2. Sensor Registration
-
-The rmagine sensors are implemented as new gazebo sensors. They need to be registered first. To do that, you need to add `librmagine_embree_sensors_gzregister.so` or `librmagine_optix_sensors_gzregister.so` to the arguments of the gazebo execution call.
-
-
-**Embree Example**
-
-1. Gazebo executable:
-
-```console
-gazebo -s librmagine_embree_sensors_gzregister.so
-```
-
-2. ROS 2 launch file
+### 1. Map system (one per world, per backend)
 
 ```xml
-<executable cmd="gzserver -s librmagine_embree_sensors_gzregister.so ..." />
-<executable cmd="gzclient" />
-```
-
-> [!NOTE]
-> See launch files in this repository for more details.
-
-### 3. Map Plugins
-
-Embree sensor plugins require one Embree map plugin running.
-OptiX sensor plugins require one OptiX map plugin running.
-In world-files the map plugins can be enabled as follows:
-
-```xml
-<world>
-...
-
-<!-- Embree Map Plugin -->
-<plugin name='rmagine_embree_map' filename='librmagine_embree_map_gzplugin.so'>
-</plugin>
-
-<!-- Optix Map Plugin -->
-<plugin name='rmagine_optix_map' filename='librmagine_optix_map_gzplugin.so'>
-</plugin>
-
-</world>
-```
-
-The map plugins construct a acceleration structure over the Gazebo scene.
-As soon as the gazebo scene changes, the acceleration structure is updated accordingly.
-Some other examples are located in the worlds folder.
-
-To increase the performance sdf entities can be marked to be ignored by the map plugins.
-For example, if you know that your 3D lidar never scans the robot it is attached to, you may consider excluding the entire robot of the map plugins.
-
-To achieve that in world-files just add an `rmagine_ignore` tag to the model:
-
-```xml
-<world>
-
-<!-- Exclude single model from map -->
-<model name='plane1_model'>
-    <rmagine_ignore/>
-    ...
-</model>
-
-<!-- Or exclude single link from map -->
-<model name="plane2_model">
+<world name="default">
+  <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
+    <!-- optional -->
+    <ignore_model>my_robot</ignore_model>
+    <ignore_link>my_robot::lidar_link</ignore_link>
+    <update>
+      <rate_limit>200</rate_limit>
+      <delta_trans>0.001</delta_trans>
+      <delta_rot>0.001</delta_rot>
+    </update>
+    <debug>false</debug>
+  </plugin>
   ...
-  <link name="plane2_link">
-    ...
-    <rmagine_ignore/>
-  </link>
-
-</model>
-
 </world>
 ```
 
-How to add ignores in urdf-files will be explained in the next section.
+`ignore_model`/`ignore_link` exclude a model (or a single link of one, `model::link`) from the raytracing scene entirely -- useful for excluding a sensor's own housing, or a robot the sensor is mounted on. `update/rate_limit` caps how often the scene is re-synced (Hz); `delta_trans`/`delta_rot` are the minimum pose change (meters/radians) before a moved entity's transform is pushed into the scene.
 
-### 4. Sensors
-
-**2D Laser**
+### 2. Sensor system (one plugin per world, one `<sensor>` per actual sensor)
 
 ```xml
-<gazebo reference="laser2d">
-    <sensor type="rmagine_embree_spherical" name="laser2d">
-      <pose>0 0 0 0 0 0</pose>
-      <always_on>true</always_on>
-      <update_rate>60</update_rate>
+<world name="default">
+  <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so">
+    <!-- optional, default "rmagine_embree_sensor_system" -->
+    <node_name>my_sensors_node</node_name>
+  </plugin>
+  ...
 
-      <ray>
+  <model name="my_robot">
+    <link name="lidar_link">
+      <sensor name="lidar" type="custom" gz:type="rmagine_embree">
+        <map_key>default</map_key>
+        <frame>lidar_link</frame>
+        <parent_frame>world</parent_frame>
+        <topic_scan>scan</topic_scan>
+        <topic_points>points</topic_points>
+        <update_rate>20</update_rate>
+        <range_min>0.2</range_min>
+        <range_max>100.0</range_max>
+
+        <model_type>spherical</model_type>
         <scan>
           <horizontal>
-            <min_angle>${-M_PI}</min_angle>
-            <increment>${1.0 * M_PI / 180.0}</increment>
+            <min_angle>-3.14159</min_angle>
+            <increment>0.01745</increment>
             <samples>360</samples>
           </horizontal>
-        </scan>
-
-        <range>
-          <min>0.0</min>
-          <max>10.0</max>
-        </range>
-
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.01</stddev>
-        </noise>
-        
-      </ray>
-    </sensor>
-</gazebo>
-```
-
-**3D Laser**
-
-```xml
-<gazebo reference="laser3d">
-    <sensor type="rmagine_embree_spherical" name="laser3d">
-      <pose>0 0 0 0 0 0</pose>
-      <always_on>true</always_on>
-      <update_rate>60</update_rate>
-
-      <ray>
-        <scan>
-          <horizontal>
-            <min_angle>${-M_PI}</min_angle>
-            <increment>${1.0 * M_PI / 180.0}</increment>
-            <samples>360</samples>
-          </horizontal>
+          <!-- optional: omit for a single-ring 2D scan -->
           <vertical>
-            <min_angle>${-60.0 * M_PI / 180.0}</min_angle>
-            <increment>${1.0 * M_PI / 180.0}</increment>
-            <samples>120</samples>
+            <min_angle>-0.2618</min_angle>
+            <increment>0.008727</increment>
+            <samples>60</samples>
           </vertical>
         </scan>
-
-        <range>
-          <min>0.0</min>
-          <max>80.0</max>
-        </range>
-
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.01</stddev>
-        </noise>
-      </ray>
-    </sensor>
-</gazebo>
+      </sensor>
+    </link>
+  </model>
+</world>
 ```
 
-As in world-files, ignores can be added to URDF files:
+`type="custom"` is required (sdformat validates the standard `type` attribute against its own known sensor type names); `gz:type` is the free-form identifier this package's factory plugin looks for (`rmagine_embree` or `rmagine_optix`) -- this is gz-sim's own documented convention for third-party sensor types, the same one used by its shipped `environmental_sensor.sdf` example.
+
+`LaserScan` is only published for a single-ring (`<vertical>` omitted) Spherical model; a multi-ring 3D scan (or any other model type) publishes `PointCloud2` only. Extra output topics can be added with repeated `<output><topic>...</topic><type>scan|points</type></output>` elements.
+
+### 3. Non-spherical sensor models
+
+Set `<model_type>` to `pinhole`, `o1dn`, or `ondn` (default `spherical`):
+
+**Pinhole** (depth camera-style):
 
 ```xml
-<robot>
-...
-
-<!-- Ignore the entire robote-->
-<gazebo>
-    <rmagine_ignore/>
-</gazebo>
-
-<!-- Ignore a link. Useful if you want to ignore the scanner visual -->
-<gazebo reference="my_scanner_link">
-    <rmagine_ignore/>
-</gazebo>
-</robot>
+<model_type>pinhole</model_type>
+<pinhole_width>640</pinhole_width>
+<pinhole_height>480</pinhole_height>
+<pinhole_hfov>1.0472</pinhole_hfov>
 ```
 
-### 5. Noise
+**O1Dn** (one shared ray origin, arbitrary per-pixel directions) / **OnDn** (arbitrary per-pixel origins and directions): both read a `<rays_file>` YAML file with a shared schema:
 
-Currently noise models are implemented as preprocessing steps directly on the simulated ranges data. Any of the following noise models can be chained to generate complex combined noise models.
+```yaml
+width: 8
+height: 4
+rays:
+  - origin: [0, 0, 0]   # O1Dn: only rays[0].origin is used; OnDn: read per-ray
+    dir: [1, 0, 0]
+  - origin: [0, 0, 0]
+    dir: [0.99, 0.01, 0]
+  # ... width * height entries, row-major
+```
 
-1. Gaussian Noise
+```xml
+<model_type>o1dn</model_type>
+<rays_file>/path/to/rays.yaml</rays_file>
+```
 
-Apply gaussian noise $N(\mu, \sigma)$ to simulated ranges.
+### 4. Noise (OptiX/GPU sensor system only)
 
-| Parameter |  Description  |
-|:---------:|:-------------:|
-| `mean` | Mean $\mu$ of normal distributed noise |
-| `stddev` | standard deviation $\sigma$ of normal distributed noise |
-
-Example:
+Repeatable `<noise>` elements, applied in order to the simulated ranges (in VRAM, before download):
 
 ```xml
 <noise>
@@ -286,222 +144,25 @@ Example:
   <mean>0.0</mean>
   <stddev>0.01</stddev>
 </noise>
-```
-
-2. Relative Gaussian Noise
-
-Apply gaussian noise $N(\mu, \sigma_r)$ to simulated ranges. Here, the standard deviation varies depending on distance.
-
-
-| Parameter |  Description  |
-|:---------:|:-------------:|
-| `mean` | Mean $\mu$ of normal distributed noise |
-| `stddev` | standard deviation $\sigma$ of normal distributed noise |
-| `range_exp` | range exponent $c$ to compute range based stddev: $ \sigma_r = \sigma \cdot r^{c} $ |
-
-
-Example:
-
-```xml
 <noise>
   <type>rel_gaussian</type>
-  <mean>0.0</mean>
   <stddev>0.002</stddev>
   <range_exp>1.0</range_exp>
 </noise>
-```
-
-3. Uniform Dust Noise
-
-Apply uniform dust noise to simulated ranges. Assuming some small particles could be hit by the range sensor that are not modeled by the scene, use this noise type. 
-
-Parameters:
-
-| Parameter |  Description  |
-|:---------:|:-------------:|
-| `hit_prob` | Probability of a ray hitting a particle in one meter free space. |
-| `return_prob` | Probability of a ray hitting dust returns to sender depending on particle distance |
-
-Example:
-
-```xml
 <noise>
   <type>uniform_dust</type>
   <hit_prob>0.0000001</hit_prob>
   <return_prob>0.5</return_prob>
-</noise> 
-```
-
-
-**Noise Chaining**
-
-Example of using the gaussian model first and the uniform dust model second:
-
-```xml
-<noise>
-  <type>gaussian</type>
-  <mean>0.0</mean>
-  <stddev>0.002</stddev>
 </noise>
-
-<noise>
-  <type>uniform_dust</type>
-  <hit_prob>0.0000001</hit_prob>
-  <return_prob>0.5</return_prob>
-</noise> 
 ```
 
+## Testing
 
-## ROS Plugin
-
-This plugin generates ROS-messages of the simulated data and writes them to specified ROS-topics.
-The following ROS-Adapter are available dependend on your sensor type:
-
-
-`librmagine_optix_ros_gzplugin.so`
-- sensor types: `rmagine_optix_spherical`
-
-`librmagine_embree_ros_gzplugin.so`
-- sensor types: `rmagine_embree_spherical`
-
-
-
-Supported `output` messages are:
-- `sensor_msgs/msg/LaserScan`
-- `sensor_msgs/msg/PointCloud`
-- `sensor_msgs/msg/PointCloud2`
-
-Examples - this time using OptiX.
-
-**2D Laser**
-
-```xml
-<gazebo reference="laser2d">
-    <sensor type="rmagine_optix_spherical" name="laser2d">
-      <pose>0 0 0 0 0 0</pose>
-      <always_on>true</always_on>
-      <update_rate>60</update_rate>
-
-      <ray>
-        <scan>
-          <horizontal>
-            <min_angle>${-M_PI}</min_angle>
-            <increment>${1.0 * M_PI / 180.0}</increment>
-            <samples>360</samples>
-          </horizontal>
-        </scan>
-
-        <range>
-          <min>0.0</min>
-          <max>10.0</max>
-        </range>
-
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.01</stddev>
-        </noise>
-        
-      </ray>
-
-      <plugin name="rmagine_ros_laser2d" filename="librmagine_optix_ros_gzplugin.so">
-          <frame>laser2d</frame>
-          <outputs>
-            <output name="scan">
-              <msg>sensor_msgs/LaserScan</msg>
-              <topic>laser2d/scan</topic>
-            </output>
-
-            <output name="pcl">
-              <msg>sensor_msgs/PointCloud</msg>
-              <topic>laser2d/pcl</topic>
-            </output>
-          </outputs>
-      </plugin>
-    </sensor>
-</gazebo>
-```
-
-**3D Laser**
-
-```xml
-<gazebo reference="laser3d">
-    <sensor type="rmagine_optix_spherical" name="laser3d">
-      <pose>0 0 0 0 0 0</pose>
-      <always_on>true</always_on>
-      <update_rate>60</update_rate>
-
-      <ray>
-        <scan>
-          <horizontal>
-            <min_angle>${-M_PI}</min_angle>
-            <increment>${1.0 * M_PI / 180.0}</increment>
-            <samples>360</samples>
-          </horizontal>
-          <vertical>
-            <min_angle>${-60.0 * M_PI / 180.0}</min_angle>
-            <increment>${1.0 * M_PI / 180.0}</increment>
-            <samples>120</samples>
-          </vertical>
-        </scan>
-
-        <range>
-          <min>0.0</min>
-          <max>80.0</max>
-        </range>
-
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.01</stddev>
-        </noise>
-      </ray>
-
-      <plugin name="rmagine_ros_laser3d" filename="librmagine_optix_ros_gzplugin.so">
-          <frame>laser3d</frame>
-          <outputs>
-            <output name="pcl">
-              <msg>sensor_msgs/PointCloud</msg>
-              <topic>laser3d/pcl</topic>
-            </output>
-
-            <output name="pcl2">
-              <msg>sensor_msgs/PointCloud2</msg>
-              <topic>laser3d/pcl2</topic>
-            </output>
-          </outputs>
-      </plugin>
-    </sensor>
-</gazebo>
-```
-
-## Work in Progress
-
-This is a pre-release. There is still some work to do for the first stable release:
-
-- Implemented: SphericalModel. TODO: PinholeModel, O1DnModel, OnDnModel
-- Tests: More tests on different devices. Let me know, if you had problems integrating the rmagine_gazebo_plugins into your project.
-
-Nice-to-Have:
-- Add segmenting functionallity: Store labeled sensor data from a list of poses in a commonly used file format
-
-Known Issues:
-
-- Sometimes the Gazebo simulation needs to be started twice in order to get everything started (blocking threads?)
-- "Core dumped" on exit:
-```bash
-[Dbg] [rmagine_embree_map_gzplugin.cpp:52] [RmagineEmbreeMap] Destroyed.
-terminate called after throwing an instance of 'boost::wrapexcept<boost::lock_error>'
-terminate called recursively
-  what():  boost: mutex lock failed in pthread_mutex_lock: Invalid argument
-Aborted (core dumped)
-```
-
-
-### Known Bug-Fixes:
-
-On my system, Gazebo finds all rmagine libraries automatically. If that is not the case for you, try appending your ROS workspace `your_ws` to the Gazebo search pathes:
+`worlds/gz_embree_*.sdf` / `gz_optix_*.sdf` are minimal fixture worlds, each paired with a captured reference in `testdata/embree_harmonic/*_fixture.json` and wired into `colcon test` via `scripts/embree_fixture_harness.py` (`capture_embree_fixture`/`compare_embree_fixture`). Run with:
 
 ```console
-export GAZEBO_PLUGIN_PATH=~/your_ws/devel/lib:$GAZEBO_PLUGIN_PATH
+colcon test --packages-select rmagine_gazebo_plugins
+colcon test-result --all --verbose
 ```
+
+Covers: static geometry (box/sphere/cylinder/plane/mesh/heightmap), a dynamically moving box (proving the incremental scene sync tracks pose changes correctly), Pinhole/O1Dn/OnDn models, `ignore_model`/`ignore_link`, mesh-by-URI caching, a same-tick spawn+delete regression (`zombie`), a multi-ring 3D scan (`vertical`), and OptiX/GPU parity for the baseline/dynamic/noise/multi-topic cases.

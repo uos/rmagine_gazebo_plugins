@@ -1,0 +1,61 @@
+{
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "expected": {
+    "points": {
+      "bbox_midpoint_x_range": {
+        "max": 2.8,
+        "min": 2.2
+      },
+      "bbox_y_span_min": 0.5,
+      "latest_finite_points_min": 20,
+      "min_messages": 3,
+      "min_rate_hz": 4.0
+    },
+    "scan": {
+      "center_value_range": {
+        "max": 2.8,
+        "min": 2.2
+      },
+      "center_value_stddev_max": 0.05,
+      "center_window_finite_min": 5,
+      "latest_finite_count_min": 20,
+      "min_messages": 3,
+      "min_rate_hz": 4.0
+    }
+  },
+  "reference_summary": {
+    "points": {
+      "bbox_midpoint_x_expected_range": [
+        2.2,
+        2.8
+      ],
+      "bbox_y_span_expected_min": 0.5,
+      "description": "Finite points should lie on the visible front face of the box.",
+      "representative_points_description": "A small sample should cluster near x=2.5 with varying y."
+    },
+    "scan": {
+      "center_value_expected_range": [
+        2.2,
+        2.8
+      ],
+      "center_value_expected_stddev_max": 0.05,
+      "description": "One fixed box is centered directly in front of the sensor.",
+      "representative_center_window": [
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5
+      ]
+    }
+  },
+  "topics": {
+    "points": "points",
+    "scan": "scan"
+  },
+  "world": "optix_baseline",
+  "world_file": "gz_optix_baseline.sdf"
+}

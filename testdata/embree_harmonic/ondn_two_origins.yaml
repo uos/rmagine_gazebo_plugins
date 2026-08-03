@@ -1,0 +1,16 @@
+# Fixture rays_file for gz_embree_ondn.sdf. Deliberately uses two rays with
+# genuinely different origins (not just two different directions from a
+# shared origin, which O1Dn already covers) -- ray 0 starts 2m closer to the
+# target box along its own travel direction than ray 1 does. If the
+# per-ray origin were ever silently dropped (e.g. treated as O1Dn's single
+# shared origin, or ignored entirely), ray 0 would incorrectly report the
+# same ~2.5m range as ray 1 instead of ~0.5m -- this is what actually
+# distinguishes OnDn from O1Dn, so the fixture is built to catch a
+# regression there, not just confirm the plumbing runs.
+width: 2
+height: 1
+rays:
+  - origin: [2.0, 0.3, 0]
+    dir: [1, 0, 0]
+  - origin: [0, -0.3, 0]
+    dir: [1, 0, 0]

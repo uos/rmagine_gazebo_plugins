@@ -1,0 +1,86 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="default">
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics" />
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands" />
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster" />
+
+    <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
+      <ignore_model>sensor_model</ignore_model>
+      <debug>true</debug>
+      <update>
+        <rate_limit>30</rate_limit>
+        <delta_trans>0.001</delta_trans>
+        <delta_rot>0.001</delta_rot>
+        <delta_scale>0.001</delta_scale>
+      </update>
+    </plugin>
+
+    <!-- One factory plugin per world (like the map system above) discovers
+         every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
+         this world -- see rmagine_embree_sensor_system.hpp for why. -->
+    <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
+
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="target_box">
+      <static>true</static>
+      <pose>3 0 1 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="sensor_model">
+      <static>true</static>
+      <pose>0 0 1 0 0 0</pose>
+      <link name="sensor_link">
+        <sensor name="sensor_model_sensor" type="custom" gz:type="rmagine_embree">
+          <map_key>default</map_key>
+          <frame>sensor_link</frame>
+          <topic_scan>scan</topic_scan>
+          <topic_points>points</topic_points>
+          <update_rate>5</update_rate>
+          <model_type>o1dn</model_type>
+          <rays_file>RAYS_FILE_PLACEHOLDER</rays_file>
+          <range_min>0.2</range_min>
+          <range_max>50.0</range_max>
+          <debug>true</debug>
+        </sensor>
+        <visual name="sensor_visual">
+          <geometry>
+            <box>
+              <size>0.2 0.2 0.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

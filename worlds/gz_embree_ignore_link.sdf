@@ -1,0 +1,114 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="default">
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics" />
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands" />
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster" />
+
+    <!-- Regression coverage for per-link ignore (README.md, "Per-link
+         self-tagging ignore mechanism"). multi_link_target has two links:
+         shadow_link (closer to the sensor, at x=2, ignored) and real_link
+         (farther, at x=3, not ignored). If ignore_link is broken, the
+         closer shadow_link box would occlude real_link and center_value
+         would read ~1.8m instead of ~2.5m -- a clear, falsifiable
+         numeric distinction, not just "does it crash". -->
+    <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
+      <ignore_model>sensor_model</ignore_model>
+      <ignore_link>multi_link_target::shadow_link</ignore_link>
+      <debug>true</debug>
+      <update>
+        <rate_limit>30</rate_limit>
+        <delta_trans>0.001</delta_trans>
+        <delta_rot>0.001</delta_rot>
+        <delta_scale>0.001</delta_scale>
+      </update>
+    </plugin>
+
+    <!-- One factory plugin per world (like the map system above) discovers
+         every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
+         this world -- see rmagine_embree_sensor_system.hpp for why. -->
+    <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
+
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="multi_link_target">
+      <static>true</static>
+      <pose>0 0 1 0 0 0</pose>
+      <link name="shadow_link">
+        <pose>2 0 0 0 0 0</pose>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.4 0.4 0.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.8 1</ambient>
+            <diffuse>0.2 0.2 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <link name="real_link">
+        <pose>3 0 0 0 0 0</pose>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="sensor_model">
+      <static>true</static>
+      <pose>0 0 1 0 0 0</pose>
+      <link name="sensor_link">
+        <sensor name="sensor_model_sensor" type="custom" gz:type="rmagine_embree">
+          <map_key>default</map_key>
+          <frame>sensor_link</frame>
+          <topic_scan>scan</topic_scan>
+          <topic_points>points</topic_points>
+          <update_rate>5</update_rate>
+          <scan>
+            <horizontal>
+              <min_angle>-1.0472</min_angle>
+              <increment>0.0052486216</increment>
+              <samples>400</samples>
+            </horizontal>
+          </scan>
+          <range_min>0.2</range_min>
+          <range_max>50.0</range_max>
+          <debug>true</debug>
+        </sensor>
+        <visual name="sensor_visual">
+          <geometry>
+            <box>
+              <size>0.2 0.2 0.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

@@ -1,0 +1,53 @@
+{
+  "world": "heightmap",
+  "world_file": "gz_embree_heightmap.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "scan": {
+      "description": "A committed grayscale PNG (a deterministic pyramid gradient, brightest/tallest at center) triangulated into a heightmap via BuildHeightmapEmbreeMesh(). The sensor sits at z=1 in front of the rising terrain, so the center beam should hit partway into the heightmap once its height crosses z=1.",
+      "center_value_expected_range": [
+        2.5,
+        3.5
+      ],
+      "center_value_expected_stddev_max": 0.05
+    },
+    "points": {
+      "description": "Finite points should lie on the heightmap surface, roughly x in [2.5, 3.5].",
+      "bbox_midpoint_x_expected_range": [
+        2.5,
+        3.5
+      ],
+      "bbox_y_span_expected_min": 1.0
+    }
+  },
+  "expected": {
+    "scan": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_count_min": 30,
+      "center_window_finite_min": 5,
+      "center_value_range": {
+        "min": 2.5,
+        "max": 3.5
+      },
+      "center_value_stddev_max": 0.05
+    },
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 30,
+      "bbox_midpoint_x_range": {
+        "min": 2.5,
+        "max": 3.5
+      },
+      "bbox_y_span_min": 1.0
+    }
+  }
+}

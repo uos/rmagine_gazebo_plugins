@@ -1,0 +1,33 @@
+{
+  "world": "vertical",
+  "world_file": "gz_embree_vertical.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {
+    "points": {
+      "description": "9-ring vertical scan (restored <scan><vertical> parsing) against the same target_box as 'baseline' -- expect several times baseline's single-ring finite point count, and a real vertical (z) spread across rings, not just the horizontal (y) spread a single-ring scan gives.",
+      "bbox_midpoint_x_expected_range": [
+        2.2,
+        2.8
+      ]
+    }
+  },
+  "expected": {
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 100,
+      "bbox_midpoint_x_range": {
+        "min": 2.2,
+        "max": 2.8
+      },
+      "bbox_y_span_min": 0.5
+    }
+  }
+}

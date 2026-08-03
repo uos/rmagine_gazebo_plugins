@@ -1,0 +1,44 @@
+{
+  "world": "optix_multi",
+  "world_file": "gz_optix_multi.sdf",
+  "topics": {
+    "scan": "scan",
+    "points": "points"
+  },
+  "capture_defaults": {
+    "duration_sec": 4.0,
+    "message_timeout_sec": 20.0
+  },
+  "reference_summary": {},
+  "expected": {
+    "scan": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_count_min": 20,
+      "center_window_finite_min": 5,
+      "center_value_range": {
+        "min": 2.2,
+        "max": 2.8
+      },
+      "center_value_stddev_max": 0.05
+    },
+    "points": {
+      "min_messages": 3,
+      "min_rate_hz": 4.0,
+      "latest_finite_points_min": 20,
+      "bbox_midpoint_x_range": {
+        "min": 2.2,
+        "max": 2.8
+      },
+      "bbox_y_span_min": 0.5
+    },
+    "extra_topics": {
+      "scan": {
+        "scan2": 3
+      },
+      "points": {
+        "points2": 3
+      }
+    }
+  }
+}
