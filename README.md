@@ -17,14 +17,6 @@ Embree and OptiX are libraries for raytracing that build BVH acceleration struct
 </a>
 </div>
 
-## Architecture
-
-Two plugin roles per backend, mirroring the classic split between a scene-sync world plugin and a raycasting sensor plugin (gz-sim only has one plugin base type, `System`, so both are `System` plugins, but the responsibilities stay separate):
-
-- **Map system** (`rmagine_embree_map_system` / `rmagine_optix_map_system`, attached to `<world>`): builds and incrementally maintains one persistent Embree/OptiX scene from the world's `<visual>` geometry. Publishes the current map through an in-process registry keyed by `map_key` (default `"default"`).
-- **Sensor system** (`rmagine_embree_sensor_system` / `rmagine_optix_sensor_system`, attached once per `<world>`, like the map system): auto-discovers every `<sensor type="custom" gz:type="rmagine_embree|rmagine_optix">` anywhere in the world via gz-sim's `components::CustomSensor` (the closest available analogue to Gazebo Classic's `GZ_REGISTER_STATIC_SENSOR` -- gz-sensors' own plugin-loading mechanism for custom sensor types was removed upstream). For each discovered sensor it looks up the map by `map_key`, raycasts against it (Spherical/Pinhole/O1Dn/OnDn models), and publishes `gz.msgs.LaserScan` (Spherical, single-ring only) and `gz.msgs.PointCloudPacked` over plain **gz-transport** -- all sensors of one backend share a single `gz::transport::Node` owned by the factory system.
-
-This plugin has **no ROS dependency at all** (map and sensor systems alike). If you want the data in ROS, bridge it with [`ros_gz_bridge`](https://github.com/gazebosim/ros_gz) -- see "Bridging to ROS" below. TF isn't published by this plugin either: attach gz-sim's own `gz::sim::systems::PosePublisher` to your robot and bridge its `gz.msgs.Pose_V` output to `tf2_msgs/msg/TFMessage`, exactly as shown in the mobile-robot example.
 
 ## Installation
 
@@ -297,3 +289,14 @@ colcon test-result --all --verbose
 ```
 
 Covers: static geometry (box/sphere/cylinder/plane/mesh/heightmap), a dynamically moving box (proving the incremental scene sync tracks pose changes correctly), Pinhole/O1Dn/OnDn models, `ignore_model`/`ignore_link`, mesh-by-URI caching, a same-tick spawn+delete regression (`zombie`), a multi-ring 3D scan (`vertical`), and OptiX/GPU parity for the baseline/dynamic/noise/multi-topic cases.
+
+
+## Architecture
+
+Two plugin roles per backend, mirroring the classic split between a scene-sync world plugin and a raycasting sensor plugin (gz-sim only has one plugin base type, `System`, so both are `System` plugins, but the responsibilities stay separate):
+
+- **Map system** (`rmagine_embree_map_system` / `rmagine_optix_map_system`, attached to `<world>`): builds and incrementally maintains one persistent Embree/OptiX scene from the world's `<visual>` geometry. Publishes the current map through an in-process registry keyed by `map_key` (default `"default"`).
+- **Sensor system** (`rmagine_embree_sensor_system` / `rmagine_optix_sensor_system`, attached once per `<world>`, like the map system): auto-discovers every `<sensor type="custom" gz:type="rmagine_embree|rmagine_optix">` anywhere in the world via gz-sim's `components::CustomSensor` (the closest available analogue to Gazebo Classic's `GZ_REGISTER_STATIC_SENSOR` -- gz-sensors' own plugin-loading mechanism for custom sensor types was removed upstream). For each discovered sensor it looks up the map by `map_key`, raycasts against it (Spherical/Pinhole/O1Dn/OnDn models), and publishes `gz.msgs.LaserScan` (Spherical, single-ring only) and `gz.msgs.PointCloudPacked` over plain **gz-transport** -- all sensors of one backend share a single `gz::transport::Node` owned by the factory system.
+
+This plugin has **no ROS dependency at all** (map and sensor systems alike). If you want the data in ROS, bridge it with [`ros_gz_bridge`](https://github.com/gazebosim/ros_gz) -- see "Bridging to ROS" below. TF isn't published by this plugin either: attach gz-sim's own `gz::sim::systems::PosePublisher` to your robot and bridge its `gz.msgs.Pose_V` output to `tf2_msgs/msg/TFMessage`, exactly as shown in the mobile-robot example.
+
