@@ -65,7 +65,7 @@ Built targets depend on which rmagine components were found:
 </world>
 ```
 
-`ignore_model`/`ignore_link` exclude a model (or a single link of one, `model::link`) from the raytracing scene entirely -- useful for excluding a sensor's own housing, or a robot the sensor is mounted on. `update/rate_limit` caps how often the scene is re-synced (Hz); `delta_trans`/`delta_rot` are the minimum pose change (meters/radians) before a moved entity's transform is pushed into the scene.
+`ignore_model`/`ignore_link` exclude a model (or a single link of one, `model::link`) from the raytracing scene entirely; useful for excluding a sensor's own housing, or a robot the sensor is mounted on. `update/rate_limit` caps how often the scene is re-synced (Hz); `delta_trans`/`delta_rot` are the minimum pose change (meters/radians) before a moved entity's transform is pushed into the scene.
 
 ### 2. Sensor system (one plugin per world, one `<sensor>` per actual sensor)
 
@@ -199,16 +199,18 @@ Set `<model_type>` to `pinhole`, `o1dn`, or `ondn` (default `spherical`):
 <pinhole_hfov>1.0472</pinhole_hfov>
 ```
 
-**O1Dn** (one shared ray origin, arbitrary per-pixel directions) / **OnDn** (arbitrary per-pixel origins and directions): both read a `<rays_file>` YAML file with a shared schema:
+**O1Dn** (one shared ray origin, arbitrary ray directions) 
+
+read a `<rays_file>` YAML file with a shared schema:
 
 ```yaml
 width: 8
 height: 4
 rays:
-  - origin: [0, 0, 0]   # O1Dn: only rays[0].origin is used; OnDn: read per-ray
-    dir: [1, 0, 0]
-  - origin: [0, 0, 0]
-    dir: [0.99, 0.01, 0]
+  orig: [0, 0, 0]
+  dirs:
+    - [1, 0, 0]
+    - [0.99, 0.01, 0]
   # ... width * height entries, row-major
 ```
 
@@ -216,6 +218,27 @@ rays:
 <model_type>o1dn</model_type>
 <rays_file>/path/to/rays.yaml</rays_file>
 ```
+
+**OnDn** (arbitrary ray origins and directions)
+
+read a `<rays_file>` YAML file with a shared schema:
+
+```yaml
+width: 8
+height: 4
+ray:
+  origs:
+    - [0, 0, 0]
+    - [0, 0, 0]
+  dirs: 
+    - [1, 0, 0]
+    - [0.99, 0.01, 0]
+  # ... width * height entries, row-major
+```
+
+```xml
+<model_type>o1dn</model_type>
+<rays_file>/path/to/rays.yaml</rays_file>
 
 ### 4. Noise (OptiX/GPU sensor system only)
 
