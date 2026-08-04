@@ -7,7 +7,7 @@
 
 Range sensor plugins for Gazebo using the sensor simulation library [rmagine](https://github.com/uos/rmagine).
 With rmagine's OptiX backend it is possible to simulate depth sensor data directly on your RTX graphics card. With the Embree backend you can simulate any provided sensor on your CPU.
-Embree and OptiX are libraries for raytracing that build BVH acceleration structures over the scene for fast ray traversal. Once built, these structures let you simulate depth sensors on CPU or GPU without performance cliffs even in large Gazebo worlds -- and they're kept in sync with the live simulation incrementally (only what actually changed each tick is added/removed/moved), not rebuilt from scratch on every update.
+Embree and OptiX are libraries for raytracing that build BVH acceleration structures over the scene for fast ray traversal. Once built, these structures let you simulate depth sensors on CPU or GPU without performance drops even in large Gazebo worlds.
 
 <div align="center">
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=IOrBxiW0AmY
