@@ -9,6 +9,14 @@ Range sensor plugins for Gazebo using the sensor simulation library [rmagine](ht
 With rmagine's OptiX backend it is possible to simulate depth sensor data directly on your RTX graphics card. With the Embree backend you can simulate any provided sensor on your CPU.
 Embree and OptiX are libraries for raytracing that build BVH acceleration structures over the scene for fast ray traversal. Once built, these structures let you simulate depth sensors on CPU or GPU without performance cliffs even in large Gazebo worlds -- and they're kept in sync with the live simulation incrementally (only what actually changed each tick is added/removed/moved), not rebuilt from scratch on every update.
 
+<div align="center">
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=IOrBxiW0AmY
+" target="_blank" >
+  <img src="https://i.ytimg.com/vi/IOrBxiW0AmY/maxresdefault.jpg" 
+  alt="Rmagine Gazebo Plugin YT Video" width="80%" style="max-width: 500px" height="auto" border="10" />
+</a>
+</div>
+
 ## Architecture
 
 Two plugin roles per backend, mirroring the classic split between a scene-sync world plugin and a raycasting sensor plugin (gz-sim only has one plugin base type, `System`, so both are `System` plugins, but the responsibilities stay separate):
