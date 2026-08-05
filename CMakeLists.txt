@@ -185,7 +185,7 @@ endif()
 
 # Ground Truth Localization Node
 add_library(gt_localization SHARED
- src/gt_localization.cpp)
+ src/ros/gt_localization.cpp)
 
 target_include_directories(gt_localization
  PRIVATE

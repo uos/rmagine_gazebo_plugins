@@ -1,4 +1,4 @@
-#include "rmagine_gazebo_plugins/gt_localization.hpp"
+#include "rmagine_gazebo_plugins/ros/gt_localization.hpp"
 
 #include <tf2/exceptions.h>
 #include <tf2/LinearMath/Transform.h>
