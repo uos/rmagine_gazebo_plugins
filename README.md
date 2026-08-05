@@ -46,6 +46,8 @@ See [Architecture](#architecture) for the technical details.
 > |---|---|
 > | Jazzy | Harmonic (`gz-sim8`) |
 > | Humble | Fortress (`ignition-gazebo6`) |
+>
+> For older versions checkout the branch `noetic` or `humble-gazebo-classic`
 
 Clone both packages into your ROS 2 workspace's `src` folder and build:
 
