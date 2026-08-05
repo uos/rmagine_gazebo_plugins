@@ -134,23 +134,27 @@ Once you've run the quickstart, these are the building blocks for wiring rmagine
         <topic_scan>/model/my_robot/scan</topic_scan>
         <topic_points>/model/my_robot/points</topic_points>
         <update_rate>20</update_rate>
-        <range_min>0.2</range_min>
-        <range_max>100.0</range_max>
 
         <model_type>spherical</model_type>
-        <scan>
-          <horizontal>
-            <min_angle>-3.14159</min_angle>
-            <increment>0.01745</increment>
-            <samples>360</samples>
-          </horizontal>
-          <!-- optional: omit for a single-ring 2D scan -->
-          <vertical>
-            <min_angle>-0.2618</min_angle>
-            <increment>0.008727</increment>
-            <samples>60</samples>
-          </vertical>
-        </scan>
+        <lidar>
+          <scan>
+            <horizontal>
+              <min_angle>-3.14159</min_angle>
+              <increment>0.01745</increment>
+              <samples>360</samples>
+            </horizontal>
+            <!-- optional: omit for a single-ring 2D scan -->
+            <vertical>
+              <min_angle>-0.2618</min_angle>
+              <increment>0.008727</increment>
+              <samples>60</samples>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.2</min>
+            <max>100.0</max>
+          </range>
+        </lidar>
       </sensor>
     </link>
   </model>
@@ -186,10 +190,21 @@ Switching an existing robot from gz-sim's built-in `gpu_lidar` sensor to rmagine
   <frame_id>lidar_link</frame_id>
   <lidar>
     <scan>
-      <horizontal><samples>360</samples><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
-      <vertical><samples>16</samples><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+      <horizontal>
+        <samples>360</samples>
+        <min_angle>-3.14159</min_angle>
+        <max_angle>3.14159</max_angle>
+      </horizontal>
+      <vertical>
+        <samples>16</samples>
+        <min_angle>-0.261799</min_angle>
+        <max_angle>0.261799</max_angle>
+      </vertical>
     </scan>
-    <range><min>0.2</min><max>30.0</max></range>
+    <range>
+      <min>0.2</min>
+      <max>30.0</max>
+    </range>
   </lidar>
 </sensor>
 ```
@@ -202,12 +217,24 @@ Switching an existing robot from gz-sim's built-in `gpu_lidar` sensor to rmagine
   <topic_points>scan/points</topic_points>
   <update_rate>10</update_rate>
   <frame>lidar_link</frame>
-  <range_min>0.2</range_min>
-  <range_max>30.0</range_max>
-  <scan>
-    <horizontal><min_angle>-3.14159</min_angle><increment>0.0175019</increment><samples>360</samples></horizontal>
-    <vertical><min_angle>-0.261799</min_angle><increment>0.0349065</increment><samples>16</samples></vertical>
-  </scan>
+  <lidar>
+    <scan>
+      <horizontal>
+        <min_angle>-3.14159</min_angle>
+        <increment>0.0175019</increment>
+        <samples>360</samples>
+      </horizontal>
+      <vertical>
+        <min_angle>-0.261799</min_angle>
+        <increment>0.0349065</increment>
+        <samples>16</samples>
+      </vertical>
+    </scan>
+    <range>
+      <min>0.2</min>
+      <max>30.0</max>
+    </range>
+  </lidar>
 </sensor>
 ```
 
@@ -218,18 +245,26 @@ Everything else (`<map_key>`, `<model_type>`, `<debug>`, Pinhole/O1Dn/OnDn-speci
 <details>
 <summary><strong>Non-spherical sensor models</strong></summary>
 
-Set `<model_type>` to `pinhole`, `o1dn`, or `ondn` (default `spherical`):
+Set `<model_type>` to `pinhole`, `o1dn`, or `ondn` (default `spherical`). Every model type follows the same shape as Spherical's `<lidar>` above: a type-named wrapper containing a `<scan>` (how that model scans) and a `<range><min>/<max></range>`.
 
 **Pinhole** (depth camera-style):
 
 ```xml
 <model_type>pinhole</model_type>
-<pinhole_width>640</pinhole_width>
-<pinhole_height>480</pinhole_height>
-<pinhole_hfov>1.0472</pinhole_hfov>
+<pinhole>
+  <scan>
+    <width>640</width>
+    <height>480</height>
+    <hfov>1.0472</hfov>
+  </scan>
+  <range>
+    <min>0.2</min>
+    <max>100.0</max>
+  </range>
+</pinhole>
 ```
 
-**O1Dn** (one shared ray origin, arbitrary ray directions), reads a `<rays_file>` YAML file with a shared schema:
+**O1Dn** (one shared ray origin, arbitrary ray directions), reads its rays from a `<rays_file>` YAML file:
 
 ```yaml
 width: 8
@@ -244,10 +279,40 @@ rays:
 
 ```xml
 <model_type>o1dn</model_type>
-<rays_file>/path/to/rays.yaml</rays_file>
+<o1dn>
+  <scan>
+    <rays_file>/path/to/rays.yaml</rays_file>
+  </scan>
+  <range>
+    <min>0.2</min>
+    <max>100.0</max>
+  </range>
+</o1dn>
 ```
 
-**OnDn** (arbitrary ray origins and directions), reads a `<rays_file>` YAML file with a shared schema:
+...or inline, for small hand-authored ray sets that don't warrant a separate file (same `orig`/`dirs` shape as the YAML, just as nested SDF elements, one `<dir>` per ray):
+
+```xml
+<o1dn>
+  <scan>
+    <width>2</width>
+    <height>1</height>
+    <rays>
+      <orig>0 0 0</orig>
+      <dirs>
+        <dir>1 0 0</dir>
+        <dir>0.99 0.01 0</dir>
+      </dirs>
+    </rays>
+  </scan>
+  <range>
+    <min>0.2</min>
+    <max>100.0</max>
+  </range>
+</o1dn>
+```
+
+**OnDn** (arbitrary ray origins and directions), same `<rays_file>`-or-inline choice, with a per-ray `origs` list instead of a single shared `orig`:
 
 ```yaml
 width: 8
@@ -264,7 +329,39 @@ rays:
 
 ```xml
 <model_type>ondn</model_type>
-<rays_file>/path/to/rays.yaml</rays_file>
+<ondn>
+  <scan>
+    <rays_file>/path/to/rays.yaml</rays_file>
+  </scan>
+  <range>
+    <min>0.2</min>
+    <max>100.0</max>
+  </range>
+</ondn>
+```
+
+```xml
+<!-- ...or inline: -->
+<ondn>
+  <scan>
+    <width>2</width>
+    <height>1</height>
+    <rays>
+      <origs>
+        <orig>0 0 0</orig>
+        <orig>0 0 0</orig>
+      </origs>
+      <dirs>
+        <dir>1 0 0</dir>
+        <dir>0.99 0.01 0</dir>
+      </dirs>
+    </rays>
+  </scan>
+  <range>
+    <min>0.2</min>
+    <max>100.0</max>
+  </range>
+</ondn>
 ```
 
 </details>

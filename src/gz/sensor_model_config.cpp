@@ -2,10 +2,13 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <gz/math/Vector3.hh>
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace rmagine_gazebo_plugins
 {
@@ -27,6 +30,81 @@ rmagine::Vector VectorFromYaml(const YAML::Node &node)
   v.y = node[1].as<float>();
   v.z = node[2].as<float>();
   return v;
+}
+
+// Reads a "x y z" space-separated vector from a single SDF element's own
+// text content -- gz-sim's own established convention for vector-valued
+// SDF elements (e.g. <axis><xyz>0 0 1</xyz></axis>).
+rmagine::Vector VectorFromSdf(const std::shared_ptr<sdf::Element> &elem)
+{
+  const gz::math::Vector3d v = elem->Get<gz::math::Vector3d>();
+  return rmagine::Vector{
+    static_cast<float>(v.X()), static_cast<float>(v.Y()), static_cast<float>(v.Z())};
+}
+
+// Inline alternative to <rays_file>, for small hand-authored ray sets that
+// don't warrant a separate YAML file. Mirrors the YAML schema's `rays: {
+// orig|origs, dirs }` shape as nested SDF elements, one repeated <dir>/
+// <orig> per ray instead of a YAML list:
+//
+//   <rays>
+//     <orig>0 0 0</orig>        <!-- O1Dn only: one shared origin -->
+//     <origs>                   <!-- OnDn only: one <orig> per ray -->
+//       <orig>0 0 0</orig>
+//       <orig>0 0 0</orig>
+//     </origs>
+//     <dirs>
+//       <dir>1 0 0</dir>
+//       <dir>0.99 0.01 0</dir>
+//     </dirs>
+//   </rays>
+std::vector<rmagine::Vector> LoadInlineVectorList(
+  const std::shared_ptr<sdf::Element> &parent_elem,
+  const std::string &list_tag,
+  const std::string &item_tag)
+{
+  std::vector<rmagine::Vector> vecs;
+  if(!parent_elem->HasElement(list_tag))
+  {
+    return vecs;
+  }
+  auto list_elem = parent_elem->GetElement(list_tag);
+  if(!list_elem->HasElement(item_tag))
+  {
+    return vecs;
+  }
+  for(auto item_elem = list_elem->GetElement(item_tag); item_elem;
+      item_elem = item_elem->GetNextElement(item_tag))
+  {
+    vecs.push_back(VectorFromSdf(item_elem));
+  }
+  return vecs;
+}
+
+// Reads <range><min>/<max></range> from the given wrapper element (mirrors
+// gz-sim's own <lidar><range> convention), defaulting to the given values
+// if <range>, or the wrapper element itself, is absent.
+void LoadRange(
+  const std::shared_ptr<sdf::Element> &wrapper_elem,
+  rmagine::Interval &range,
+  float default_min,
+  float default_max)
+{
+  range.min = default_min;
+  range.max = default_max;
+  if(!wrapper_elem || !wrapper_elem->HasElement("range"))
+  {
+    return;
+  }
+  auto range_elem = wrapper_elem->GetElement("range");
+  if(range_elem->HasElement("min"))
+  {
+    range.min = range_elem->Get<float>("min");
+  }
+  if(range_elem->HasElement("max"))
+  {
+    range.max = range_elem->Get<float>("max");
+  }
 }
 
 // YAML schema for O1Dn ("one shared origin, N directions"):
@@ -54,11 +132,13 @@ rmagine::Vector VectorFromYaml(const YAML::Node &node)
 //       - [1, 0, 0]
 //       - [0.99, 0.01, 0]
 //       ...
+// Empty rays_file (no <rays_file> given) is not an error here -- the caller
+// falls back to inline <rays> under <scan> in that case, see LoadO1Dn/
+// LoadOnDn.
 YAML::Node LoadRaysFile(const std::string &rays_file)
 {
   if(rays_file.empty())
   {
-    std::cerr << "[SensorModelConfig] rays_file is required for O1Dn/OnDn model types." << std::endl;
     return YAML::Node();
   }
 
@@ -83,38 +163,85 @@ void LoadO1Dn(
   model.orig = {0.0, 0.0, 0.0};
   model.dirs.resize(1);
   model.dirs[0] = {1.0, 0.0, 0.0};
+  model.range.min = 0.2f;
+  model.range.max = 100.0f;
 
-  const std::string rays_file = _sdf->HasElement("rays_file")
-    ? _sdf->Get<std::string>("rays_file") : std::string("");
-  YAML::Node root = LoadRaysFile(rays_file);
-  if(!root || !root["rays"] || !root["rays"]["dirs"] || !root["rays"]["dirs"].IsSequence())
+  if(!_sdf || !_sdf->HasElement("o1dn"))
   {
-    std::cerr << "[SensorModelConfig] rays_file '" << rays_file
-               << "' missing a 'rays.dirs' sequence -- falling back to a single forward-facing ray."
-               << std::endl;
+    return;
+  }
+  auto sdf_mut = const_cast<sdf::Element*>(_sdf.get());
+  auto o1dn_elem = sdf_mut->GetElement("o1dn");
+  LoadRange(o1dn_elem, model.range, 0.2f, 100.0f);
+
+  if(!o1dn_elem->HasElement("scan"))
+  {
+    return;
+  }
+  auto scan_elem = o1dn_elem->GetElement("scan");
+  const uint32_t width = scan_elem->HasElement("width") ? scan_elem->Get<uint32_t>("width") : 1;
+  const uint32_t height = scan_elem->HasElement("height") ? scan_elem->Get<uint32_t>("height") : 1;
+  const size_t expected = static_cast<size_t>(width) * static_cast<size_t>(height);
+
+  const std::string rays_file = scan_elem->HasElement("rays_file")
+    ? scan_elem->Get<std::string>("rays_file") : std::string("");
+  if(!rays_file.empty())
+  {
+    YAML::Node root = LoadRaysFile(rays_file);
+    if(!root || !root["rays"] || !root["rays"]["dirs"] || !root["rays"]["dirs"].IsSequence())
+    {
+      std::cerr << "[SensorModelConfig] rays_file '" << rays_file
+                 << "' missing a 'rays.dirs' sequence -- falling back to a single forward-facing ray."
+                 << std::endl;
+      return;
+    }
+
+    const YAML::Node rays = root["rays"];
+    const YAML::Node dirs = rays["dirs"];
+    if(dirs.size() != expected)
+    {
+      std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << dirs.size()
+                 << " dirs but width*height=" << expected << " -- using what's there." << std::endl;
+    }
+
+    model.width = width;
+    model.height = height;
+    model.orig = rays["orig"] ? VectorFromYaml(rays["orig"]) : rmagine::Vector{0.0, 0.0, 0.0};
+    model.dirs.resize(dirs.size());
+    for(size_t i = 0; i < dirs.size(); ++i)
+    {
+      model.dirs[i] = VectorFromYaml(dirs[i]);
+    }
     return;
   }
 
-  const uint32_t width = root["width"] ? root["width"].as<uint32_t>() : 1;
-  const uint32_t height = root["height"] ? root["height"].as<uint32_t>() : 1;
-  const YAML::Node rays = root["rays"];
-  const YAML::Node dirs = rays["dirs"];
-  const size_t expected = static_cast<size_t>(width) * static_cast<size_t>(height);
-
-  if(dirs.size() != expected)
+  // No <rays_file>: fall back to inline <rays> directly under <scan>.
+  if(scan_elem->HasElement("rays"))
   {
-    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << dirs.size()
-               << " dirs but width*height=" << expected << " -- using what's there." << std::endl;
+    auto rays_elem = scan_elem->GetElement("rays");
+    std::vector<rmagine::Vector> dirs = LoadInlineVectorList(rays_elem, "dirs", "dir");
+    if(!dirs.empty())
+    {
+      if(dirs.size() != expected)
+      {
+        std::cerr << "[SensorModelConfig] inline rays has " << dirs.size()
+                   << " dirs but width*height=" << expected << " -- using what's there." << std::endl;
+      }
+      model.width = width;
+      model.height = height;
+      model.orig = rays_elem->HasElement("orig")
+        ? VectorFromSdf(rays_elem->GetElement("orig")) : rmagine::Vector{0.0, 0.0, 0.0};
+      model.dirs.resize(dirs.size());
+      for(size_t i = 0; i < dirs.size(); ++i)
+      {
+        model.dirs[i] = dirs[i];
+      }
+      return;
+    }
   }
 
-  model.width = width;
-  model.height = height;
-  model.orig = rays["orig"] ? VectorFromYaml(rays["orig"]) : rmagine::Vector{0.0, 0.0, 0.0};
-  model.dirs.resize(dirs.size());
-  for(size_t i = 0; i < dirs.size(); ++i)
-  {
-    model.dirs[i] = VectorFromYaml(dirs[i]);
-  }
+  std::cerr << "[SensorModelConfig] o1dn sensor has neither a rays_file nor inline rays under "
+               "<scan> -- falling back to a single forward-facing ray." << std::endl;
 }
 
 void LoadOnDn(
@@ -127,78 +254,152 @@ void LoadOnDn(
   model.origs[0] = {0.0, 0.0, 0.0};
   model.dirs.resize(1);
   model.dirs[0] = {1.0, 0.0, 0.0};
+  model.range.min = 0.2f;
+  model.range.max = 100.0f;
 
-  const std::string rays_file = _sdf->HasElement("rays_file")
-    ? _sdf->Get<std::string>("rays_file") : std::string("");
-  YAML::Node root = LoadRaysFile(rays_file);
-  if(!root || !root["rays"] || !root["rays"]["origs"] || !root["rays"]["dirs"]
-     || !root["rays"]["origs"].IsSequence() || !root["rays"]["dirs"].IsSequence())
+  if(!_sdf || !_sdf->HasElement("ondn"))
   {
-    std::cerr << "[SensorModelConfig] rays_file '" << rays_file
-               << "' missing 'rays.origs'/'rays.dirs' sequences -- falling back to a single forward-facing ray."
-               << std::endl;
+    return;
+  }
+  auto sdf_mut = const_cast<sdf::Element*>(_sdf.get());
+  auto ondn_elem = sdf_mut->GetElement("ondn");
+  LoadRange(ondn_elem, model.range, 0.2f, 100.0f);
+
+  if(!ondn_elem->HasElement("scan"))
+  {
+    return;
+  }
+  auto scan_elem = ondn_elem->GetElement("scan");
+  const uint32_t width = scan_elem->HasElement("width") ? scan_elem->Get<uint32_t>("width") : 1;
+  const uint32_t height = scan_elem->HasElement("height") ? scan_elem->Get<uint32_t>("height") : 1;
+  const size_t expected = static_cast<size_t>(width) * static_cast<size_t>(height);
+
+  const std::string rays_file = scan_elem->HasElement("rays_file")
+    ? scan_elem->Get<std::string>("rays_file") : std::string("");
+  if(!rays_file.empty())
+  {
+    YAML::Node root = LoadRaysFile(rays_file);
+    if(!root || !root["rays"] || !root["rays"]["origs"] || !root["rays"]["dirs"]
+       || !root["rays"]["origs"].IsSequence() || !root["rays"]["dirs"].IsSequence())
+    {
+      std::cerr << "[SensorModelConfig] rays_file '" << rays_file
+                 << "' missing 'rays.origs'/'rays.dirs' sequences -- falling back to a single forward-facing ray."
+                 << std::endl;
+      return;
+    }
+
+    const YAML::Node rays = root["rays"];
+    const YAML::Node origs = rays["origs"];
+    const YAML::Node dirs = rays["dirs"];
+    if(origs.size() != dirs.size())
+    {
+      std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << origs.size()
+                 << " origs but " << dirs.size() << " dirs -- using the shorter count." << std::endl;
+    }
+    const size_t count = std::min(origs.size(), dirs.size());
+    if(count != expected)
+    {
+      std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << count
+                 << " rays but width*height=" << expected << " -- using what's there." << std::endl;
+    }
+
+    model.width = width;
+    model.height = height;
+    model.origs.resize(count);
+    model.dirs.resize(count);
+    for(size_t i = 0; i < count; ++i)
+    {
+      model.origs[i] = VectorFromYaml(origs[i]);
+      model.dirs[i] = VectorFromYaml(dirs[i]);
+    }
     return;
   }
 
-  const uint32_t width = root["width"] ? root["width"].as<uint32_t>() : 1;
-  const uint32_t height = root["height"] ? root["height"].as<uint32_t>() : 1;
-  const YAML::Node rays = root["rays"];
-  const YAML::Node origs = rays["origs"];
-  const YAML::Node dirs = rays["dirs"];
-  const size_t expected = static_cast<size_t>(width) * static_cast<size_t>(height);
+  // No <rays_file>: fall back to inline <rays> directly under <scan>.
+  if(scan_elem->HasElement("rays"))
+  {
+    auto rays_elem = scan_elem->GetElement("rays");
+    std::vector<rmagine::Vector> origs = LoadInlineVectorList(rays_elem, "origs", "orig");
+    std::vector<rmagine::Vector> dirs = LoadInlineVectorList(rays_elem, "dirs", "dir");
+    if(!origs.empty() && !dirs.empty())
+    {
+      if(origs.size() != dirs.size())
+      {
+        std::cerr << "[SensorModelConfig] inline rays has " << origs.size()
+                   << " origs but " << dirs.size() << " dirs -- using the shorter count." << std::endl;
+      }
+      const size_t count = std::min(origs.size(), dirs.size());
+      if(count != expected)
+      {
+        std::cerr << "[SensorModelConfig] inline rays has " << count
+                   << " rays but width*height=" << expected << " -- using what's there." << std::endl;
+      }
+      model.width = width;
+      model.height = height;
+      model.origs.resize(count);
+      model.dirs.resize(count);
+      for(size_t i = 0; i < count; ++i)
+      {
+        model.origs[i] = origs[i];
+        model.dirs[i] = dirs[i];
+      }
+      return;
+    }
+  }
 
-  if(origs.size() != dirs.size())
-  {
-    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << origs.size()
-               << " origs but " << dirs.size() << " dirs -- using the shorter count." << std::endl;
-  }
-  const size_t count = std::min(origs.size(), dirs.size());
-  if(count != expected)
-  {
-    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << count
-               << " rays but width*height=" << expected << " -- using what's there." << std::endl;
-  }
-
-  model.width = width;
-  model.height = height;
-  model.origs.resize(count);
-  model.dirs.resize(count);
-  for(size_t i = 0; i < count; ++i)
-  {
-    model.origs[i] = VectorFromYaml(origs[i]);
-    model.dirs[i] = VectorFromYaml(dirs[i]);
-  }
+  std::cerr << "[SensorModelConfig] ondn sensor has neither a rays_file nor inline rays under "
+               "<scan> -- falling back to a single forward-facing ray." << std::endl;
 }
 
 void LoadPinhole(
   const std::shared_ptr<const sdf::Element> &_sdf,
-  rmagine::PinholeModel &model,
-  float range_min,
-  float range_max)
+  rmagine::PinholeModel &model)
 {
   model.width = 100;
   model.height = 100;
-  model.range.min = range_min;
-  model.range.max = range_max;
-
-  if(_sdf->HasElement("pinhole_width"))
-  {
-    model.width = _sdf->Get<unsigned int>("pinhole_width");
-  }
-  if(_sdf->HasElement("pinhole_height"))
-  {
-    model.height = _sdf->Get<unsigned int>("pinhole_height");
-  }
+  model.range.min = 0.2f;
+  model.range.max = 100.0f;
 
   double hfov = 1.0472;  // ~60 degrees
-  if(_sdf->HasElement("pinhole_hfov"))
+  double vfov = -1.0;    // < 0: derive from hfov and the aspect ratio below
+
+  if(!_sdf || !_sdf->HasElement("pinhole"))
   {
-    hfov = _sdf->Get<double>("pinhole_hfov");
+    vfov = hfov * static_cast<double>(model.height) / static_cast<double>(model.width);
+    model.f[0] = static_cast<float>(model.width) / (2.0f * std::tan(static_cast<float>(hfov) / 2.0f));
+    model.f[1] = static_cast<float>(model.height) / (2.0f * std::tan(static_cast<float>(vfov) / 2.0f));
+    model.c[0] = static_cast<float>(model.width) / 2.0f;
+    model.c[1] = static_cast<float>(model.height) / 2.0f;
+    return;
   }
-  double vfov = hfov * static_cast<double>(model.height) / static_cast<double>(model.width);
-  if(_sdf->HasElement("pinhole_vfov"))
+  auto sdf_mut = const_cast<sdf::Element*>(_sdf.get());
+  auto pinhole_elem = sdf_mut->GetElement("pinhole");
+  LoadRange(pinhole_elem, model.range, 0.2f, 100.0f);
+
+  if(pinhole_elem->HasElement("scan"))
   {
-    vfov = _sdf->Get<double>("pinhole_vfov");
+    auto scan_elem = pinhole_elem->GetElement("scan");
+    if(scan_elem->HasElement("width"))
+    {
+      model.width = scan_elem->Get<unsigned int>("width");
+    }
+    if(scan_elem->HasElement("height"))
+    {
+      model.height = scan_elem->Get<unsigned int>("height");
+    }
+    if(scan_elem->HasElement("hfov"))
+    {
+      hfov = scan_elem->Get<double>("hfov");
+    }
+    if(scan_elem->HasElement("vfov"))
+    {
+      vfov = scan_elem->Get<double>("vfov");
+    }
+  }
+
+  if(vfov < 0.0)
+  {
+    vfov = hfov * static_cast<double>(model.height) / static_cast<double>(model.width);
   }
 
   model.f[0] = static_cast<float>(model.width) / (2.0f * std::tan(static_cast<float>(hfov) / 2.0f));
@@ -235,12 +436,10 @@ void LoadScanAxis(
 
 void LoadSpherical(
   const std::shared_ptr<const sdf::Element> &_sdf,
-  rmagine::SphericalModel &model,
-  float range_min,
-  float range_max)
+  rmagine::SphericalModel &model)
 {
-  // Defaults: a 400-sample horizontal ring, single vertical row -- matches
-  // a common 2D rotating lidar and keeps every world that omits <scan>
+  // Defaults: a 400-sample horizontal ring, single vertical row. Matches a
+  // common 2D rotating lidar and keeps every world that omits <lidar>
   // entirely in a valid, usable state.
   model.phi.min = 0.0f;
   model.phi.inc = 1.0f;
@@ -248,24 +447,29 @@ void LoadSpherical(
   model.theta.min = -1.0472f;
   model.theta.inc = 0.01f;
   model.theta.size = 400;
-  model.range.min = range_min;
-  model.range.max = range_max;
+  model.range.min = 0.2f;
+  model.range.max = 100.0f;
 
-  if(!_sdf || !_sdf->HasElement("scan"))
+  if(!_sdf || !_sdf->HasElement("lidar"))
   {
     return;
   }
 
   auto sdf_mut = const_cast<sdf::Element*>(_sdf.get());
-  auto scan_elem = sdf_mut->GetElement("scan");
+  auto lidar_elem = sdf_mut->GetElement("lidar");
+  LoadRange(lidar_elem, model.range, 0.2f, 100.0f);
 
-  if(scan_elem->HasElement("horizontal"))
+  if(lidar_elem->HasElement("scan"))
   {
-    LoadScanAxis(scan_elem->GetElement("horizontal"), model.theta);
-  }
-  if(scan_elem->HasElement("vertical"))
-  {
-    LoadScanAxis(scan_elem->GetElement("vertical"), model.phi);
+    auto scan_elem = lidar_elem->GetElement("scan");
+    if(scan_elem->HasElement("horizontal"))
+    {
+      LoadScanAxis(scan_elem->GetElement("horizontal"), model.theta);
+    }
+    if(scan_elem->HasElement("vertical"))
+    {
+      LoadScanAxis(scan_elem->GetElement("vertical"), model.phi);
+    }
   }
 }
 
@@ -275,24 +479,10 @@ SensorModelConfig LoadSensorModelConfig(const std::shared_ptr<const sdf::Element
 {
   SensorModelConfig cfg;
 
-  float range_min = 0.2f;
-  float range_max = 100.0f;
   std::string model_type_str = "spherical";
-
-  if(_sdf)
+  if(_sdf && _sdf->HasElement("model_type"))
   {
-    if(_sdf->HasElement("range_min"))
-    {
-      range_min = _sdf->Get<double>("range_min");
-    }
-    if(_sdf->HasElement("range_max"))
-    {
-      range_max = _sdf->Get<double>("range_max");
-    }
-    if(_sdf->HasElement("model_type"))
-    {
-      model_type_str = ToLower(_sdf->Get<std::string>("model_type"));
-    }
+    model_type_str = ToLower(_sdf->Get<std::string>("model_type"));
   }
 
   if(model_type_str == "pinhole")
@@ -306,30 +496,26 @@ SensorModelConfig LoadSensorModelConfig(const std::shared_ptr<const sdf::Element
     if(model_type_str != "spherical")
     {
       std::cerr << "[SensorModelConfig] Unknown model_type '" << model_type_str
-                << "' -- falling back to 'spherical'." << std::endl;
+                << "', falling back to 'spherical'." << std::endl;
     }
     cfg.type = SensorModelType::Spherical;
   }
 
-  // Populate every model's defaults regardless of which is active -- keeps
+  // Populate every model's defaults regardless of which is active; keeps
   // each one always in a valid, usable state (harmless: only the active
   // model is ever handed to a simulator).
-  LoadSpherical(_sdf, cfg.spherical, range_min, range_max);
-  if(_sdf && cfg.type == SensorModelType::Pinhole)
+  LoadSpherical(_sdf, cfg.spherical);
+  if(cfg.type == SensorModelType::Pinhole)
   {
-    LoadPinhole(_sdf, cfg.pinhole, range_min, range_max);
+    LoadPinhole(_sdf, cfg.pinhole);
   }
-  if(_sdf && cfg.type == SensorModelType::O1Dn)
+  if(cfg.type == SensorModelType::O1Dn)
   {
     LoadO1Dn(_sdf, cfg.o1dn);
-    cfg.o1dn.range.min = range_min;
-    cfg.o1dn.range.max = range_max;
   }
-  if(_sdf && cfg.type == SensorModelType::OnDn)
+  if(cfg.type == SensorModelType::OnDn)
   {
     LoadOnDn(_sdf, cfg.ondn);
-    cfg.ondn.range.min = range_min;
-    cfg.ondn.range.max = range_max;
   }
 
   return cfg;

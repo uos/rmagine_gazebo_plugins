@@ -40,20 +40,25 @@ struct SensorModelConfig
 // elements. Unknown `model_type` values fall back to spherical (logged to
 // stderr) rather than failing sensor construction outright.
 //
-// Spherical: `<scan><horizontal>`/`<vertical>`, each with `<min_angle>`,
-// `<increment>`, `<samples>` (Classic-style nested scan axes -- `vertical`
-// is optional and defaults to a single ring, i.e. a 2D scan), plus
-// `range_min`/`range_max`.
+// Every model type is configured the same shape, mirroring gz-sim's own
+// `<lidar>` sensor element: a type-named wrapper (`<lidar>`, `<pinhole>`,
+// `<o1dn>`, `<ondn>`) containing a `<scan>` (how that model type scans) and
+// a `<range><min>/<max></range>` (minimum/maximum reliable measurement).
 //
-// Pinhole: `pinhole_width`/`pinhole_height` (pixel resolution),
-// `pinhole_hfov` (radians; `pinhole_vfov` optional, derived from the
-// aspect ratio if omitted), `range_min`/`range_max`.
+// Spherical (`<lidar>`): `<scan><horizontal>`/`<vertical>`, each with
+// `<min_angle>`, `<increment>`, `<samples>` (Classic-style nested scan
+// axes; `vertical` is optional and defaults to a single ring, i.e. a 2D
+// scan).
 //
-// O1Dn/OnDn: `rays_file`, a YAML file (see sensor_model_config.cpp for the
-// exact per-model format); these two models are
-// defined by an arbitrary per-pixel ray set, not a closed-form formula
-// like Spherical/Pinhole, so there's no reasonable small set of SDF
-// scalars to expose instead.
+// Pinhole (`<pinhole>`): `<scan><width>`/`<height>` (pixel resolution),
+// `<hfov>` (radians; `<vfov>` optional, derived from the aspect ratio if
+// omitted).
+//
+// O1Dn/OnDn (`<o1dn>`/`<ondn>`): `<scan><rays_file>`, a YAML file (see
+// sensor_model_config.cpp for the exact per-model format); these two
+// models are defined by an arbitrary per-pixel ray set, not a closed-form
+// formula like Spherical/Pinhole, so there's no reasonable small set of
+// SDF scalars to expose instead.
 SensorModelConfig LoadSensorModelConfig(const std::shared_ptr<const sdf::Element> &_sdf);
 
 }  // namespace rmagine_gazebo_plugins

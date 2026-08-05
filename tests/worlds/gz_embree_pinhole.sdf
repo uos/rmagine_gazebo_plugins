@@ -63,11 +63,17 @@
           <topic_points>points</topic_points>
           <update_rate>5</update_rate>
           <model_type>pinhole</model_type>
-          <pinhole_width>20</pinhole_width>
-          <pinhole_height>20</pinhole_height>
-          <pinhole_hfov>0.2</pinhole_hfov>
-          <range_min>0.2</range_min>
-          <range_max>50.0</range_max>
+          <pinhole>
+            <scan>
+              <width>20</width>
+              <height>20</height>
+              <hfov>0.2</hfov>
+            </scan>
+            <range>
+              <min>0.2</min>
+              <max>50.0</max>
+            </range>
+          </pinhole>
         </sensor>
         <visual name="sensor_visual">
           <geometry>

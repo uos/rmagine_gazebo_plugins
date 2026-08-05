@@ -63,9 +63,17 @@
           <topic_points>points</topic_points>
           <update_rate>5</update_rate>
           <model_type>ondn</model_type>
-          <rays_file>RAYS_FILE_PLACEHOLDER</rays_file>
-          <range_min>0.2</range_min>
-          <range_max>50.0</range_max>
+          <ondn>
+            <scan>
+              <width>2</width>
+              <height>1</height>
+              <rays_file>RAYS_FILE_PLACEHOLDER</rays_file>
+            </scan>
+            <range>
+              <min>0.2</min>
+              <max>50.0</max>
+            </range>
+          </ondn>
         </sensor>
         <visual name="sensor_visual">
           <geometry>

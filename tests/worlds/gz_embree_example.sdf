@@ -72,15 +72,19 @@
           <topic_scan>scan</topic_scan>
           <topic_points>points</topic_points>
           <update_rate>5</update_rate>
-          <scan>
-            <horizontal>
-              <min_angle>-1.0472</min_angle>
-              <increment>0.0052486216</increment>
-              <samples>400</samples>
-            </horizontal>
-          </scan>
-          <range_min>0.2</range_min>
-          <range_max>50.0</range_max>
+          <lidar>
+            <scan>
+              <horizontal>
+                <min_angle>-1.0472</min_angle>
+                <increment>0.0052486216</increment>
+                <samples>400</samples>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.2</min>
+              <max>50.0</max>
+            </range>
+          </lidar>
         </sensor>
         <visual name="sensor_visual">
           <geometry>

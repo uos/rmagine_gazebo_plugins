@@ -169,20 +169,24 @@
       <frame>lidar3d</frame>
       <topic_scan>/model/robot/lidar3d/rmagine</topic_scan>
       <topic_points>/model/robot/lidar3d/rmagine/points</topic_points>
-      <range_min>0.15</range_min>
-      <range_max>30.0</range_max>
-      <scan>
-        <horizontal>
-          <min_angle>${-M_PI}</min_angle>
-          <increment>${1.0 * M_PI / 180.0}</increment>
-          <samples>360</samples>
-        </horizontal>
-        <vertical>
-          <min_angle>${-15.0 * M_PI / 180.0}</min_angle>
-          <increment>${2.0 * M_PI / 180.0}</increment>
-          <samples>16</samples>
-        </vertical>
-      </scan>
+      <lidar>
+        <scan>
+          <horizontal>
+            <min_angle>${-M_PI}</min_angle>
+            <increment>${1.0 * M_PI / 180.0}</increment>
+            <samples>360</samples>
+          </horizontal>
+          <vertical>
+            <min_angle>${-15.0 * M_PI / 180.0}</min_angle>
+            <increment>${2.0 * M_PI / 180.0}</increment>
+            <samples>16</samples>
+          </vertical>
+        </scan>
+        <range>
+          <min>0.15</min>
+          <max>30.0</max>
+        </range>
+      </lidar>
     </sensor>
 
   </gazebo>
