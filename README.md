@@ -14,16 +14,6 @@ rmagine_gazebo_plugins
   <br />
 </div>
 
-> [!IMPORTANT]
-> Tested with:
->
-> | ROS 2 | Gazebo |
-> |---|---|
-> | Jazzy | Harmonic (`gz-sim8`) |
-> | Humble | Fortress (`ignition-gazebo6`) |
-
-## Description
-
 Range sensor plugins for Gazebo, built on the ray tracing sensor simulation library [rmagine](https://github.com/uos/rmagine). With rmagine's OptiX backend you can simulate depth sensor data directly on an RTX graphics card; with the Embree backend you can simulate any provided sensor on the CPU. Both backends build a BVH acceleration structure over the scene once, so simulating dense depth sensors stays fast even in large Gazebo worlds.
 
 Conceptually, two kinds of plugins work together, one pair per backend (Embree/CPU, OptiX/GPU):
@@ -42,6 +32,14 @@ See [Architecture](#architecture) for the technical details.
 </div>
 
 ## Installation
+
+> [!IMPORTANT]
+> Tested with
+>
+> | ROS 2 | Gazebo |
+> |---|---|
+> | Jazzy | Harmonic (`gz-sim8`) |
+> | Humble | Fortress (`ignition-gazebo6`) |
 
 Clone both packages into your ROS 2 workspace's `src` folder and build:
 
