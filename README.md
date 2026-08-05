@@ -24,7 +24,7 @@ Conceptually, two kinds of plugins work together, one pair per backend (Embree/C
 - **Sensor plugins** use the synced acceleration structure to do raycasting with rmagine's sensor models: Spherical, Pinhole, O1Dn and OnDn 
 
 Currently supported rmagine backends are
-- **embree**: Intel Embree-based. Runs smootly even on low-end hardware
+- **embree**: Intel Embree-based. Runs smoothly even on low-end hardware
 - **optix**: Ultra-fast hardware-accelerated lidar simulation. Requires your system to be compatible with Nvidia CUDA and OptiX
 
 See [Architecture](#architecture) for the technical details.
