@@ -20,7 +20,7 @@ Range sensor plugins for Gazebo, built on the ray tracing sensor simulation libr
 
 Conceptually, two kinds of plugins work together, one pair per backend (Embree/CPU, OptiX/GPU):
 
-- **Map plugin** sync an rmagine "scene" with Gazebo's world, as geometry moves, appears, or disappears.
+- **Map plugin** syncs rmagine's scenes with Gazebo's world, as geometry moves, appears, or disappears.
 - **Sensor plugins** use the synced acceleration structure to do raycasting with rmagine's sensor models: Spherical, Pinhole, O1Dn and OnDn 
 
 Currently supported rmagine backends are
