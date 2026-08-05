@@ -319,10 +319,11 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
   if(BUILD_TESTING)
     find_package(ament_cmake_test REQUIRED)
 
-    # /usr/local/lib is where the libiomp5.so workaround symlink lives (see
-    # rmagine_gazebo_plugins_pr's MIGRATION_HANDOFF.md, "Known Environment
-    # Issues") -- APPEND_LIBRARY_DIRS puts it on LD_LIBRARY_PATH for the test
-    # process.
+    # APPEND_LIBRARY_DIRS "/usr/local/lib" below is a harmless leftover from
+    # an earlier libiomp5.so-via-manual-symlink workaround; the real fix is
+    # the libomp-dev package.xml dependency (see rmagine's embree backend --
+    # its downloaded Embree+TBB binary expects libiomp5.so on the loader
+    # path at runtime), which installs it into the standard system lib dir.
     ament_add_test(embree_fixture_baseline
       COMMAND bash -c "ros2 run rmagine_gazebo_plugins capture_embree_fixture baseline && ros2 run rmagine_gazebo_plugins compare_embree_fixture baseline"
       APPEND_LIBRARY_DIRS "/usr/local/lib"
