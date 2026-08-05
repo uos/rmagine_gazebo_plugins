@@ -213,12 +213,11 @@ install(TARGETS gt_localization
 if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
 
   add_library(test_box_mover_system SHARED
-    src/gz/test_box_mover_system.cpp
+    tests/gz/test_box_mover_system.cpp
   )
 
-  target_include_directories(test_box_mover_system PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+  target_include_directories(test_box_mover_system PRIVATE
+    tests/include
   )
 
   target_link_libraries(test_box_mover_system
@@ -236,12 +235,11 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
   )
 
   add_library(test_spawn_delete_system SHARED
-    src/gz/test_spawn_delete_system.cpp
+    tests/gz/test_spawn_delete_system.cpp
   )
 
-  target_include_directories(test_spawn_delete_system PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+  target_include_directories(test_spawn_delete_system PRIVATE
+    tests/include
   )
 
   target_link_libraries(test_spawn_delete_system
@@ -260,27 +258,41 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
 
   install(
     PROGRAMS
-      scripts/embree_fixture_harness.py
+      tests/scripts/embree_fixture_harness.py
     DESTINATION lib/${PROJECT_NAME}
     RENAME capture_embree_fixture
   )
 
   install(
     PROGRAMS
-      scripts/embree_fixture_harness.py
+      tests/scripts/embree_fixture_harness.py
     DESTINATION lib/${PROJECT_NAME}
     RENAME compare_embree_fixture
   )
 
   install(
     PROGRAMS
-      scripts/check_mesh_cache_fixture.py
+      tests/scripts/check_mesh_cache_fixture.py
     DESTINATION lib/${PROJECT_NAME}
     RENAME check_mesh_cache_fixture
   )
 
   install(
-    DIRECTORY worlds testdata urdf launch config rviz
+    DIRECTORY worlds urdf launch config rviz
+    DESTINATION share/${PROJECT_NAME}
+  )
+
+  # test fixture worlds/data live under tests/, but still land in the same
+  # installed share/worlds and share/testdata dirs as the demo worlds above --
+  # the fixture harness (tests/scripts/embree_fixture_harness.py) resolves
+  # both by name from the installed share directory, not by source location.
+  install(
+    DIRECTORY tests/worlds/
+    DESTINATION share/${PROJECT_NAME}/worlds
+  )
+
+  install(
+    DIRECTORY tests/testdata
     DESTINATION share/${PROJECT_NAME}
   )
 
