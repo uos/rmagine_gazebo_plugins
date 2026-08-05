@@ -79,7 +79,7 @@
   <!-- rmagine's embree backend downloads a prebuilt Embree+TBB binary;
        that TBB build expects libiomp5.so on the loader path at runtime
        (dlopen'd as a gz-sim plugin, it hard-fails to load without it).
-       libomp-dev (LLVM's OpenMP runtime) ships a genuine libiomp5.so --
+       libomp-dev (LLVM's OpenMP runtime) ships a genuine libiomp5.so;
        not Humble-specific, just easy to miss on a fresh install since
        many dev setups pull it in transitively already. -->
   <exec_depend>libomp-dev</exec_depend>

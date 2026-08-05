@@ -22,7 +22,7 @@ find_package(ament_cmake REQUIRED)
 # already ship gz::-namespaced headers identical to Harmonic's (ignition::
 # is kept only as a forwarding compatibility layer on Fortress, confirmed
 # against the actual installed headers, not just docs), so the only thing
-# that differs at the C++ level is the plugin-registration macro -- see
+# that differs at the C++ level is the plugin-registration macro; see
 # include/rmagine_gazebo_plugins/gz/gz_compat.hpp.
 find_package(gz-sim8 QUIET)
 if(gz-sim8_FOUND)
@@ -294,7 +294,7 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
   )
 
   # test fixture worlds/data live under tests/, but still land in the same
-  # installed share/worlds and share/testdata dirs as the demo worlds above --
+  # installed share/worlds and share/testdata dirs as the demo worlds above;
   # the fixture harness (tests/scripts/embree_fixture_harness.py) resolves
   # both by name from the installed share directory, not by source location.
   install(
@@ -321,7 +321,7 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
 
     # APPEND_LIBRARY_DIRS "/usr/local/lib" below is a harmless leftover from
     # an earlier libiomp5.so-via-manual-symlink workaround; the real fix is
-    # the libomp-dev package.xml dependency (see rmagine's embree backend --
+    # the libomp-dev package.xml dependency (see rmagine's embree backend:
     # its downloaded Embree+TBB binary expects libiomp5.so on the loader
     # path at runtime), which installs it into the standard system lib dir.
     ament_add_test(embree_fixture_baseline

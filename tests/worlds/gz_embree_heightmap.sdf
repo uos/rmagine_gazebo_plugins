@@ -35,7 +35,7 @@
     </light>
 
     <!-- Regression coverage for heightmap geometry support (README.md,
-         "Heightmap geometry support") -- a real committed grayscale PNG
+         "Heightmap geometry support"): a real committed grayscale PNG
          (testdata/embree_harmonic/heightmap_fixture.png, a deterministic
          pyramid-shaped gradient), loaded via gz::common::Image and
          triangulated by BuildHeightmapEmbreeMesh(). -->

@@ -3,9 +3,9 @@
 
 // Bridges the one real API difference between Gazebo Harmonic (gz-sim8,
 // Jazzy's default) and Gazebo Fortress (ignition-gazebo6, Humble's default):
-// the plugin-registration macro. Everything else this package touches --
+// the plugin-registration macro. Everything else this package touches,
 // the gz::sim/gz::common/gz::math/gz::msgs/gz::transport namespaces and
-// <gz/...> include paths -- is identical on both, since Fortress's own
+// <gz/...> include paths, is identical on both, since Fortress's own
 // packages ship gz::-namespaced headers with ignition:: kept only as a
 // forwarding compatibility layer. RMAGINE_GZ_IGNITION_ERA is set by
 // CMakeLists.txt based on which generation of packages was found.

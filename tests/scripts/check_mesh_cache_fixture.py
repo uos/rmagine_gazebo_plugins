@@ -88,7 +88,7 @@ class TopicCollector(Node):
 
 def gz_sim_command() -> list:
     """`gz sim` on Harmonic+ (Jazzy); Fortress (Humble) only ships the `ign`
-    CLI, invoked as `ign gazebo` -- same flags, same behavior."""
+    CLI, invoked as `ign gazebo`; same flags, same behavior."""
     if shutil.which("gz"):
         return ["gz", "sim"]
     return ["ign", "gazebo"]
