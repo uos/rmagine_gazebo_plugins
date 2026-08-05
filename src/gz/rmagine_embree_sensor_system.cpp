@@ -1,6 +1,6 @@
 #include "rmagine_gazebo_plugins/gz/rmagine_embree_sensor_system.hpp"
 
-#include <gz/plugin/Register.hh>
+#include "rmagine_gazebo_plugins/gz/gz_compat.hpp"
 #include <gz/sim/Util.hh>
 #include <gz/sim/components/Name.hh>
 #include <gz/sim/components/Pose.hh>
@@ -375,10 +375,10 @@ void RmagineEmbreeSensorSystem::PostUpdate(
 
 }  // namespace rmagine_gazebo_plugins
 
-GZ_ADD_PLUGIN(rmagine_gazebo_plugins::RmagineEmbreeSensorSystem,
+RMAGINE_GZ_ADD_PLUGIN(rmagine_gazebo_plugins::RmagineEmbreeSensorSystem,
               gz::sim::System,
               rmagine_gazebo_plugins::RmagineEmbreeSensorSystem::ISystemConfigure,
               rmagine_gazebo_plugins::RmagineEmbreeSensorSystem::ISystemPostUpdate)
 
-GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::RmagineEmbreeSensorSystem,
+RMAGINE_GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::RmagineEmbreeSensorSystem,
                     "rmagine_embree_sensor_system")

@@ -17,16 +17,55 @@ endif()
 ## find ament and dependencies
 find_package(ament_cmake REQUIRED)
 
-find_package(gz-sim8 REQUIRED)
-find_package(gz-plugin2 REQUIRED)
-find_package(gz-transport13 REQUIRED)
-find_package(gz-common5 REQUIRED)
+# Locate the ROS distro's standard Gazebo generation: Harmonic (gz-sim8,
+# Jazzy+) or Fortress (ignition-gazebo6, Humble). Fortress's own packages
+# already ship gz::-namespaced headers identical to Harmonic's (ignition::
+# is kept only as a forwarding compatibility layer on Fortress, confirmed
+# against the actual installed headers, not just docs), so the only thing
+# that differs at the C++ level is the plugin-registration macro -- see
+# include/rmagine_gazebo_plugins/gz/gz_compat.hpp.
+find_package(gz-sim8 QUIET)
+if(gz-sim8_FOUND)
+  set(RMAGINE_GZ_SIM gz-sim8)
+  set(RMAGINE_GZ_PLUGIN gz-plugin2)
+  set(RMAGINE_GZ_TRANSPORT gz-transport13)
+  set(RMAGINE_GZ_COMMON gz-common5)
+  set(RMAGINE_GZ_MATH gz-math7)
+  set(RMAGINE_GZ_MSGS gz-msgs10)
+  set(RMAGINE_GZ_RENDERING gz-rendering8)
+  set(RMAGINE_GZ_IGNITION_ERA 0)
+else()
+  find_package(ignition-gazebo6 REQUIRED)
+  set(RMAGINE_GZ_SIM ignition-gazebo6)
+  set(RMAGINE_GZ_PLUGIN ignition-plugin1)
+  set(RMAGINE_GZ_TRANSPORT ignition-transport11)
+  set(RMAGINE_GZ_COMMON ignition-common4)
+  set(RMAGINE_GZ_MATH ignition-math6)
+  set(RMAGINE_GZ_MSGS ignition-msgs8)
+  set(RMAGINE_GZ_RENDERING ignition-rendering6)
+  set(RMAGINE_GZ_IGNITION_ERA 1)
+endif()
+
+find_package(${RMAGINE_GZ_PLUGIN} REQUIRED)
+find_package(${RMAGINE_GZ_TRANSPORT} REQUIRED)
+find_package(${RMAGINE_GZ_COMMON} REQUIRED)
 # Mesh/SubMesh/MeshManager (gz-common-native mesh loader fallback) live in a
-# separate component from the base gz-common5 target.
-find_package(gz-common5 REQUIRED COMPONENTS graphics)
-find_package(gz-math7 REQUIRED)
-find_package(gz-msgs10 REQUIRED)
-find_package(gz-rendering8 REQUIRED)
+# separate component from the base target.
+find_package(${RMAGINE_GZ_COMMON} REQUIRED COMPONENTS graphics)
+find_package(${RMAGINE_GZ_MATH} REQUIRED)
+find_package(${RMAGINE_GZ_MSGS} REQUIRED)
+find_package(${RMAGINE_GZ_RENDERING} REQUIRED)
+
+set(RMAGINE_GZ_CORE_LIBS
+  ${RMAGINE_GZ_SIM}::${RMAGINE_GZ_SIM}
+  ${RMAGINE_GZ_PLUGIN}::${RMAGINE_GZ_PLUGIN}
+  ${RMAGINE_GZ_TRANSPORT}::${RMAGINE_GZ_TRANSPORT}
+  ${RMAGINE_GZ_COMMON}::${RMAGINE_GZ_COMMON}
+  ${RMAGINE_GZ_MATH}::${RMAGINE_GZ_MATH}
+  ${RMAGINE_GZ_MSGS}::${RMAGINE_GZ_MSGS}
+  ${RMAGINE_GZ_RENDERING}::${RMAGINE_GZ_RENDERING}
+)
+
 find_package(ros_gz_bridge REQUIRED)
 find_package(ros_gz_sim REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -71,16 +110,12 @@ if(TARGET rmagine::embree)
   )
 
   target_link_libraries(rmagine_embree_map_system
-    gz-sim8::gz-sim8
-    gz-plugin2::gz-plugin2
-    gz-transport13::gz-transport13
-    gz-common5::gz-common5
-    gz-common5::graphics
-    gz-math7::gz-math7
-    gz-msgs10::gz-msgs10
-    gz-rendering8::gz-rendering8
+    ${RMAGINE_GZ_CORE_LIBS}
+    ${RMAGINE_GZ_COMMON}::graphics
     rmagine::core
   )
+  target_compile_definitions(rmagine_embree_map_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
 
   target_link_libraries(rmagine_embree_map_system rmagine::embree)
 
@@ -99,16 +134,12 @@ if(TARGET rmagine::embree)
   )
 
   target_link_libraries(rmagine_embree_sensor_system
-    gz-sim8::gz-sim8
-    gz-plugin2::gz-plugin2
-    gz-transport13::gz-transport13
-    gz-common5::gz-common5
-    gz-math7::gz-math7
-    gz-msgs10::gz-msgs10
-    gz-rendering8::gz-rendering8
+    ${RMAGINE_GZ_CORE_LIBS}
     rmagine::core
     yaml-cpp
   )
+  target_compile_definitions(rmagine_embree_sensor_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
 
   target_link_libraries(rmagine_embree_sensor_system rmagine::embree)
 
@@ -135,17 +166,13 @@ if(TARGET rmagine::optix AND TARGET rmagine::cuda)
   )
 
   target_link_libraries(rmagine_optix_map_system
-    gz-sim8::gz-sim8
-    gz-plugin2::gz-plugin2
-    gz-transport13::gz-transport13
-    gz-common5::gz-common5
-    gz-common5::graphics
-    gz-math7::gz-math7
-    gz-msgs10::gz-msgs10
-    gz-rendering8::gz-rendering8
+    ${RMAGINE_GZ_CORE_LIBS}
+    ${RMAGINE_GZ_COMMON}::graphics
     rmagine::core
     rmagine::optix
   )
+  target_compile_definitions(rmagine_optix_map_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
 
   install(TARGETS rmagine_optix_map_system
     LIBRARY DESTINATION lib/${PROJECT_NAME}
@@ -162,17 +189,13 @@ if(TARGET rmagine::optix AND TARGET rmagine::cuda)
   )
 
   target_link_libraries(rmagine_optix_sensor_system
-    gz-sim8::gz-sim8
-    gz-plugin2::gz-plugin2
-    gz-transport13::gz-transport13
-    gz-common5::gz-common5
-    gz-math7::gz-math7
-    gz-msgs10::gz-msgs10
-    gz-rendering8::gz-rendering8
+    ${RMAGINE_GZ_CORE_LIBS}
     rmagine::core
     rmagine::optix
     yaml-cpp
   )
+  target_compile_definitions(rmagine_optix_sensor_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
 
   target_link_libraries(rmagine_optix_sensor_system rmagine::cuda)
 
@@ -220,15 +243,9 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
     tests/include
   )
 
-  target_link_libraries(test_box_mover_system
-    gz-sim8::gz-sim8
-    gz-plugin2::gz-plugin2
-    gz-transport13::gz-transport13
-    gz-common5::gz-common5
-    gz-math7::gz-math7
-    gz-msgs10::gz-msgs10
-    gz-rendering8::gz-rendering8
-  )
+  target_link_libraries(test_box_mover_system ${RMAGINE_GZ_CORE_LIBS})
+  target_compile_definitions(test_box_mover_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
 
   install(TARGETS test_box_mover_system
     LIBRARY DESTINATION lib/${PROJECT_NAME}
@@ -242,15 +259,9 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
     tests/include
   )
 
-  target_link_libraries(test_spawn_delete_system
-    gz-sim8::gz-sim8
-    gz-plugin2::gz-plugin2
-    gz-transport13::gz-transport13
-    gz-common5::gz-common5
-    gz-math7::gz-math7
-    gz-msgs10::gz-msgs10
-    gz-rendering8::gz-rendering8
-  )
+  target_link_libraries(test_spawn_delete_system ${RMAGINE_GZ_CORE_LIBS})
+  target_compile_definitions(test_spawn_delete_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
 
   install(TARGETS test_spawn_delete_system
     LIBRARY DESTINATION lib/${PROJECT_NAME}

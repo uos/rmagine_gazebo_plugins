@@ -1,6 +1,6 @@
 #include "rmagine_gazebo_plugins/gz/test_spawn_delete_system.hpp"
 
-#include <gz/plugin/Register.hh>
+#include "rmagine_gazebo_plugins/gz/gz_compat.hpp"
 #include <gz/sim/components/Pose.hh>
 #include <gz/sim/components/ParentEntity.hh>
 #include <gz/sim/components/Name.hh>
@@ -65,10 +65,10 @@ void TestSpawnDeleteSystem::PreUpdate(
 
 }  // namespace rmagine_gazebo_plugins
 
-GZ_ADD_PLUGIN(rmagine_gazebo_plugins::TestSpawnDeleteSystem,
+RMAGINE_GZ_ADD_PLUGIN(rmagine_gazebo_plugins::TestSpawnDeleteSystem,
               gz::sim::System,
               rmagine_gazebo_plugins::TestSpawnDeleteSystem::ISystemConfigure,
               rmagine_gazebo_plugins::TestSpawnDeleteSystem::ISystemPreUpdate)
 
-GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::TestSpawnDeleteSystem,
+RMAGINE_GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::TestSpawnDeleteSystem,
                     "test_spawn_delete_system")

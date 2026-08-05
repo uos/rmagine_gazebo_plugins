@@ -1,6 +1,6 @@
 #include "rmagine_gazebo_plugins/gz/rmagine_optix_map_system.hpp"
 
-#include <gz/plugin/Register.hh>
+#include "rmagine_gazebo_plugins/gz/gz_compat.hpp"
 #include <gz/sim/World.hh>
 #include <gz/sim/components/Geometry.hh>
 #include <gz/sim/components/Name.hh>
@@ -410,7 +410,7 @@ rmagine::OptixGeometryPtr RmagineOptixMapSystem::BuildVisualInstance(
       // caller's tracked `last_pose` always matches the baked transform.
       const gz::math::Vector3d normal = plane->Normal().Normalized();
       gz::math::Quaterniond normal_rot;
-      normal_rot.SetFrom2Axes(gz::math::Vector3d(0, 0, 1), normal);
+      normal_rot.From2Axes(gz::math::Vector3d(0, 0, 1), normal);
       pose = pose * gz::math::Pose3d(gz::math::Vector3d::Zero, normal_rot);
       auto instance = geom_scene->instantiate();
       instance->setScale(rmagine::Vector3{
@@ -655,7 +655,7 @@ bool RmagineOptixMapSystem::SyncPoses(
         {
           const gz::math::Vector3d normal = plane->Normal().Normalized();
           gz::math::Quaterniond normal_rot;
-          normal_rot.SetFrom2Axes(gz::math::Vector3d(0, 0, 1), normal);
+          normal_rot.From2Axes(gz::math::Vector3d(0, 0, 1), normal);
           pose = pose * gz::math::Pose3d(gz::math::Vector3d::Zero, normal_rot);
         }
       }
@@ -1000,10 +1000,10 @@ rmagine::OptixScenePtr RmagineOptixMapSystem::PrimitiveScene(PrimitiveSceneId id
 
 }  // namespace rmagine_gazebo_plugins
 
-GZ_ADD_PLUGIN(rmagine_gazebo_plugins::RmagineOptixMapSystem,
+RMAGINE_GZ_ADD_PLUGIN(rmagine_gazebo_plugins::RmagineOptixMapSystem,
               gz::sim::System,
               rmagine_gazebo_plugins::RmagineOptixMapSystem::ISystemConfigure,
               rmagine_gazebo_plugins::RmagineOptixMapSystem::ISystemPostUpdate)
 
-GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::RmagineOptixMapSystem,
+RMAGINE_GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::RmagineOptixMapSystem,
                     "rmagine_optix_map_system")

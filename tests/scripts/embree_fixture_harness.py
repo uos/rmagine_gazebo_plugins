@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 import signal
 import statistics
 import subprocess
@@ -391,12 +392,18 @@ def resolved_world_path(world: str) -> Path:
     return resolved
 
 
+def gz_sim_command() -> List[str]:
+    """`gz sim` on Harmonic+ (Jazzy); Fortress (Humble) only ships the `ign`
+    CLI, invoked as `ign gazebo` -- same flags, same behavior."""
+    if shutil.which("gz"):
+        return ["gz", "sim"]
+    return ["ign", "gazebo"]
+
+
 def launch_world(world: str, log_path: Path) -> subprocess.Popen:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = log_path.open("w", encoding="utf-8")
-    cmd = [
-        "gz",
-        "sim",
+    cmd = gz_sim_command() + [
         "-s",
         "-r",
         "--headless-rendering",

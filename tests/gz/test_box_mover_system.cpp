@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include <gz/plugin/Register.hh>
+#include "rmagine_gazebo_plugins/gz/gz_compat.hpp"
 #include <gz/sim/Util.hh>
 #include <gz/sim/components/PoseCmd.hh>
 
@@ -72,7 +72,7 @@ void TestBoxMoverSystem::PreUpdate(
   }
 
   const double t = std::chrono::duration<double>(_info.simTime).count();
-  const double phase = 2.0 * GZ_PI * t / period_;
+  const double phase = 2.0 * M_PI * t / period_;
   const double offset = amplitude_ * std::sin(phase);
   const double angle = angular_amplitude_ * std::sin(phase);
 
@@ -96,10 +96,10 @@ void TestBoxMoverSystem::PreUpdate(
 
 }  // namespace rmagine_gazebo_plugins
 
-GZ_ADD_PLUGIN(rmagine_gazebo_plugins::TestBoxMoverSystem,
+RMAGINE_GZ_ADD_PLUGIN(rmagine_gazebo_plugins::TestBoxMoverSystem,
               gz::sim::System,
               rmagine_gazebo_plugins::TestBoxMoverSystem::ISystemConfigure,
               rmagine_gazebo_plugins::TestBoxMoverSystem::ISystemPreUpdate)
 
-GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::TestBoxMoverSystem,
+RMAGINE_GZ_ADD_PLUGIN_ALIAS(rmagine_gazebo_plugins::TestBoxMoverSystem,
                     "test_box_mover_system")

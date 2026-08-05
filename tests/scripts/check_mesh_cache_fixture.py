@@ -37,6 +37,7 @@ two things:
 """
 
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -85,13 +86,21 @@ class TopicCollector(Node):
         self.points_count += 1
 
 
+def gz_sim_command() -> list:
+    """`gz sim` on Harmonic+ (Jazzy); Fortress (Humble) only ships the `ign`
+    CLI, invoked as `ign gazebo` -- same flags, same behavior."""
+    if shutil.which("gz"):
+        return ["gz", "sim"]
+    return ["ign", "gazebo"]
+
+
 def main() -> int:
     world_path, mesh_path = resolved_world_path()
     log_path = Path("/tmp/rmagine_embree_mesh_cache_gz.log")
     log_file = log_path.open("w", encoding="utf-8")
 
     process = subprocess.Popen(
-        ["gz", "sim", "-s", "-r", "--headless-rendering", "-v", "1", str(world_path)],
+        gz_sim_command() + ["-s", "-r", "--headless-rendering", "-v", "1", str(world_path)],
         stdout=log_file, stderr=subprocess.STDOUT, preexec_fn=os.setsid,
     )
 
