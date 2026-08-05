@@ -20,8 +20,12 @@ Range sensor plugins for Gazebo, built on the ray tracing sensor simulation libr
 
 Conceptually, two kinds of plugins work together, one pair per backend (Embree/CPU, OptiX/GPU):
 
-- **Map plugins** keep an acceleration structure (an rmagine "scene") in sync with Gazebo's world, as geometry moves, appears, or disappears.
-- **Sensor plugins** only ever read from that acceleration structure: they cast rays against it to simulate a sensor's scan, with no awareness of Gazebo's world state themselves.
+- **Map plugin** sync an rmagine "scene" with Gazebo's world, as geometry moves, appears, or disappears.
+- **Sensor plugins** use the synced acceleration structure to do raycasting with rmagine's sensor models: Spherical, Pinhole, O1Dn and OnDn 
+
+Currently supported rmagine backends are
+- **embree**: Intel Embree-based. Runs smootly even on low-end hardware
+- **optix**: Ultra-fast hardware-accelerated lidar simulation. Requires your system to be compatible with Nvidia CUDA and OptiX
 
 See [Architecture](#architecture) for the technical details.
 
