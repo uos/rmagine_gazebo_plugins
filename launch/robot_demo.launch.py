@@ -37,18 +37,24 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "enable_map_transform",
             description="Enable map transform for the robot",
-            default_value="true",
+            default_value="True",
         ),
         DeclareLaunchArgument(
             "start_rviz",
             description="Start RViz2 with the robot demo configuration",
-            default_value="true",
+            default_value="True",
+        ),
+        DeclareLaunchArgument(
+            "enable_gazebo_scan",
+            description="Enable Gazebo scan plugin for the robot",
+            default_value="True",
         ),
     ]
 
     rmagine_backend = LaunchConfiguration("rmagine")
     enable_map_transform = LaunchConfiguration("enable_map_transform")
     start_rviz = LaunchConfiguration("start_rviz")
+    enable_gazebo_scan = LaunchConfiguration("enable_gazebo_scan")
 
     world_path = PathJoinSubstitution(
         [pkg_share, "worlds", PythonExpression(["'gz_' + '", rmagine_backend, "' + '_robot_demo.sdf'"])]
@@ -59,7 +65,11 @@ def generate_launch_description():
             [
                 PathJoinSubstitution([FindExecutable(name="xacro")]),
                 " ",
-                PathJoinSubstitution([pkg_share, "urdf", PythonExpression(["'example_robot_' + '", rmagine_backend, "' + '.urdf.xacro'"])]),
+                PathJoinSubstitution([pkg_share, "urdf/example_robot.urdf.xacro"]),
+                " ",
+                PythonExpression(['" enable_gazebo_scan:=true" if ', enable_gazebo_scan, ' else " enable_gazebo_scan:=false"']),
+                " ",
+                PythonExpression(['" rmagine_backend:=" + "', rmagine_backend, '"']),
             ]
         ),
         value_type=str,
