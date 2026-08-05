@@ -72,25 +72,16 @@ to drive around and scan), and bridges everything to ROS via
 `config/ros_gz_bridge_robot_demo.yaml`:
 
 ```bash
-ros2 launch rmagine_gazebo_plugins robot_demo.launch.py
+ros2 launch rmagine_gazebo_plugins robot_demo.launch.py rmagine:=embree
 ```
 
-Then, in another terminal:
+Will launch a Gazebo server and GUI with embree backend enabled (you can switch it to `optix`). Additionally it launches a preconfigured RViz with the standard `gpu_lidar` (Ogre2) colored in white and the rmagine version colored by object id:
 
-```bash
-ros2 run rviz2 rviz2 -d $(ros2 pkg prefix --share rmagine_gazebo_plugins)/rviz/robot_demo.rviz
-```
+![image info](./img/robot_demo.png)
 
-Drive it with any `geometry_msgs/msg/Twist` publisher on `/cmd_vel` (e.g.
-`ros2 run teleop_twist_keyboard teleop_twist_keyboard`). The robot carries
-both the rmagine sensor and gz-sim's built-in `gpu_lidar` side by side for
-comparison, bridged to `/lidar3d/rmagine/points` and `/lidar3d/gazebo/points`.
-`/odom` and `/tf` come from gz-sim's own `gz::sim::systems::DiffDrive` and
-`gz::sim::systems::PosePublisher` systems (see the xacro's `<gazebo>`
-blocks); this package's own plugin publishes neither, by design (see
-[Architecture](#architecture)).
+You can drive it with any keyboard teleop of choice. Switch the fixed frame to see how the scans look like with or without localization.
 
-## Usage
+## Integration
 
 Once you've run the quickstart, these are the building blocks for wiring rmagine sensors into your own world/robot.
 
