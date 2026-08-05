@@ -59,7 +59,7 @@
        Harmonic (gz-*) on Jazzy+. See CMakeLists.txt's find_package cascade
        and include/rmagine_gazebo_plugins/gz/gz_compat.hpp. -->
   <depend condition="$ROS_DISTRO == 'humble'">ignition-gazebo6</depend>
-  <depend condition="$ROS_DISTRO == 'humble'">ignition-plugin1</depend>
+  <depend condition="$ROS_DISTRO == 'humble'">ignition-plugin</depend>
   <depend condition="$ROS_DISTRO == 'humble'">ignition-transport11</depend>
   <depend condition="$ROS_DISTRO == 'humble'">ignition-common4</depend>
   <depend condition="$ROS_DISTRO == 'humble'">ignition-math6</depend>
