@@ -49,8 +49,8 @@ struct SensorModelConfig
 // `pinhole_hfov` (radians; `pinhole_vfov` optional, derived from the
 // aspect ratio if omitted), `range_min`/`range_max`.
 //
-// O1Dn/OnDn: `rays_file`, a YAML file with a shared per-model schema (see
-// sensor_model_config.cpp for the exact format) -- these two models are
+// O1Dn/OnDn: `rays_file`, a YAML file (see sensor_model_config.cpp for the
+// exact per-model format); these two models are
 // defined by an arbitrary per-pixel ray set, not a closed-form formula
 // like Spherical/Pinhole, so there's no reasonable small set of SDF
 // scalars to expose instead.

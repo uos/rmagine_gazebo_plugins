@@ -4,5 +4,6 @@
 width: 1
 height: 1
 rays:
-  - origin: [0, 0, 0]
-    dir: [1, 0, 0]
+  orig: [0, 0, 0]
+  dirs:
+    - [1, 0, 0]

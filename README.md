@@ -247,7 +247,7 @@ rays:
 ```yaml
 width: 8
 height: 4
-ray:
+rays:
   origs:
     - [0, 0, 0]
     - [0, 0, 0]

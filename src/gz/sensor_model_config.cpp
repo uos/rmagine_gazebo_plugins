@@ -29,23 +29,31 @@ rmagine::Vector VectorFromYaml(const YAML::Node &node)
   return v;
 }
 
-// Shared YAML schema for both O1Dn ("one origin, N directions") and OnDn
-// ("N origins, N directions"):
+// YAML schema for O1Dn ("one shared origin, N directions"):
 //
 //   width: 8
 //   height: 4
 //   rays:
-//     - origin: [0, 0, 0]   # O1Dn: only the first ray's origin is used
-//                           # (all rays share one origin); OnDn: read per ray
-//       dir: [1, 0, 0]
-//     - origin: [0, 0, 0]
-//       dir: [0.99, 0.01, 0]
-//     ...                   # width * height entries, row-major
-//                           # (vid * width + hid), matching getBufferId()
+//     orig: [0, 0, 0]
+//     dirs:
+//       - [1, 0, 0]
+//       - [0.99, 0.01, 0]
+//       ...               # width * height entries, row-major
+//                         # (vid * width + hid), matching getBufferId()
 //
-// A single shared file format (rather than two subtly different ones) so
-// the same file can be repurposed between O1Dn and OnDn by just switching
-// `model_type` -- O1Dn simply ignores every origin but the first.
+// and for OnDn ("N origins, N directions"), same top-level `rays` key but
+// a per-ray `origs` list instead of a single shared `orig`:
+//
+//   width: 8
+//   height: 4
+//   rays:
+//     origs:
+//       - [0, 0, 0]
+//       - [0, 0, 0]
+//     dirs:
+//       - [1, 0, 0]
+//       - [0.99, 0.01, 0]
+//       ...
 YAML::Node LoadRaysFile(const std::string &rays_file)
 {
   if(rays_file.empty())
@@ -79,10 +87,10 @@ void LoadO1Dn(
   const std::string rays_file = _sdf->HasElement("rays_file")
     ? _sdf->Get<std::string>("rays_file") : std::string("");
   YAML::Node root = LoadRaysFile(rays_file);
-  if(!root || !root["rays"] || !root["rays"].IsSequence())
+  if(!root || !root["rays"] || !root["rays"]["dirs"] || !root["rays"]["dirs"].IsSequence())
   {
     std::cerr << "[SensorModelConfig] rays_file '" << rays_file
-               << "' missing a 'rays' sequence -- falling back to a single forward-facing ray."
+               << "' missing a 'rays.dirs' sequence -- falling back to a single forward-facing ray."
                << std::endl;
     return;
   }
@@ -90,21 +98,22 @@ void LoadO1Dn(
   const uint32_t width = root["width"] ? root["width"].as<uint32_t>() : 1;
   const uint32_t height = root["height"] ? root["height"].as<uint32_t>() : 1;
   const YAML::Node rays = root["rays"];
+  const YAML::Node dirs = rays["dirs"];
   const size_t expected = static_cast<size_t>(width) * static_cast<size_t>(height);
 
-  if(rays.size() != expected)
+  if(dirs.size() != expected)
   {
-    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << rays.size()
-               << " rays but width*height=" << expected << " -- using what's there." << std::endl;
+    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << dirs.size()
+               << " dirs but width*height=" << expected << " -- using what's there." << std::endl;
   }
 
   model.width = width;
   model.height = height;
-  model.dirs.resize(rays.size());
-  model.orig = rays[0]["origin"] ? VectorFromYaml(rays[0]["origin"]) : rmagine::Vector{0.0, 0.0, 0.0};
-  for(size_t i = 0; i < rays.size(); ++i)
+  model.orig = rays["orig"] ? VectorFromYaml(rays["orig"]) : rmagine::Vector{0.0, 0.0, 0.0};
+  model.dirs.resize(dirs.size());
+  for(size_t i = 0; i < dirs.size(); ++i)
   {
-    model.dirs[i] = VectorFromYaml(rays[i]["dir"]);
+    model.dirs[i] = VectorFromYaml(dirs[i]);
   }
 }
 
@@ -122,10 +131,11 @@ void LoadOnDn(
   const std::string rays_file = _sdf->HasElement("rays_file")
     ? _sdf->Get<std::string>("rays_file") : std::string("");
   YAML::Node root = LoadRaysFile(rays_file);
-  if(!root || !root["rays"] || !root["rays"].IsSequence())
+  if(!root || !root["rays"] || !root["rays"]["origs"] || !root["rays"]["dirs"]
+     || !root["rays"]["origs"].IsSequence() || !root["rays"]["dirs"].IsSequence())
   {
     std::cerr << "[SensorModelConfig] rays_file '" << rays_file
-               << "' missing a 'rays' sequence -- falling back to a single forward-facing ray."
+               << "' missing 'rays.origs'/'rays.dirs' sequences -- falling back to a single forward-facing ray."
                << std::endl;
     return;
   }
@@ -133,22 +143,30 @@ void LoadOnDn(
   const uint32_t width = root["width"] ? root["width"].as<uint32_t>() : 1;
   const uint32_t height = root["height"] ? root["height"].as<uint32_t>() : 1;
   const YAML::Node rays = root["rays"];
+  const YAML::Node origs = rays["origs"];
+  const YAML::Node dirs = rays["dirs"];
   const size_t expected = static_cast<size_t>(width) * static_cast<size_t>(height);
 
-  if(rays.size() != expected)
+  if(origs.size() != dirs.size())
   {
-    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << rays.size()
+    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << origs.size()
+               << " origs but " << dirs.size() << " dirs -- using the shorter count." << std::endl;
+  }
+  const size_t count = std::min(origs.size(), dirs.size());
+  if(count != expected)
+  {
+    std::cerr << "[SensorModelConfig] rays_file '" << rays_file << "' has " << count
                << " rays but width*height=" << expected << " -- using what's there." << std::endl;
   }
 
   model.width = width;
   model.height = height;
-  model.origs.resize(rays.size());
-  model.dirs.resize(rays.size());
-  for(size_t i = 0; i < rays.size(); ++i)
+  model.origs.resize(count);
+  model.dirs.resize(count);
+  for(size_t i = 0; i < count; ++i)
   {
-    model.origs[i] = rays[i]["origin"] ? VectorFromYaml(rays[i]["origin"]) : rmagine::Vector{0.0, 0.0, 0.0};
-    model.dirs[i] = VectorFromYaml(rays[i]["dir"]);
+    model.origs[i] = VectorFromYaml(origs[i]);
+    model.dirs[i] = VectorFromYaml(dirs[i]);
   }
 }
 
