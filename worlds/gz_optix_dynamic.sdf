@@ -23,7 +23,7 @@
 
     <!-- One factory plugin per world (like the map system above) discovers
          every `<sensor type="custom" gz:type="rmagine_optix">` anywhere in
-         this world -- see rmagine_optix_sensor_system.hpp for why. -->
+         this world; see rmagine_optix_sensor_system.hpp for why. -->
     <plugin name="rmagine_optix_sensor_system" filename="librmagine_optix_sensor_system.so"/>
 
     <light name="sun" type="directional">

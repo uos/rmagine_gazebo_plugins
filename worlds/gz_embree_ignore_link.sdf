@@ -16,7 +16,7 @@
          shadow_link (closer to the sensor, at x=2, ignored) and real_link
          (farther, at x=3, not ignored). If ignore_link is broken, the
          closer shadow_link box would occlude real_link and center_value
-         would read ~1.8m instead of ~2.5m -- a clear, falsifiable
+         would read ~1.8m instead of ~2.5m; a clear, falsifiable
          numeric distinction, not just "does it crash". -->
     <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
       <ignore_model>sensor_model</ignore_model>
@@ -31,7 +31,7 @@
 
     <!-- One factory plugin per world (like the map system above) discovers
          every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
-         this world -- see rmagine_embree_sensor_system.hpp for why. -->
+         this world; see rmagine_embree_sensor_system.hpp for why. -->
     <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
 
     <light name="sun" type="directional">

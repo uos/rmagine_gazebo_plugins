@@ -279,17 +279,6 @@ are the bridged lidar output; `/odom` and `/tf` come from gz-sim's own
 (see the xacro's `<gazebo>` blocks) -- this package's own plugin publishes
 neither, by design (see "Architecture" above).
 
-## Testing
-
-`worlds/gz_embree_*.sdf` / `gz_optix_*.sdf` are minimal fixture worlds, each paired with a captured reference in `testdata/embree_harmonic/*_fixture.json` and wired into `colcon test` via `scripts/embree_fixture_harness.py` (`capture_embree_fixture`/`compare_embree_fixture`), which also launches a `ros_gz_bridge parameter_bridge` (`testdata/embree_harmonic/ros_gz_bridge_fixtures.yaml`) alongside each world so the harness can keep subscribing to `/scan`/`/points` via `rclpy` exactly as before. Run with:
-
-```console
-colcon test --packages-select rmagine_gazebo_plugins
-colcon test-result --all --verbose
-```
-
-Covers: static geometry (box/sphere/cylinder/plane/mesh/heightmap), a dynamically moving box (proving the incremental scene sync tracks pose changes correctly), Pinhole/O1Dn/OnDn models, `ignore_model`/`ignore_link`, mesh-by-URI caching, a same-tick spawn+delete regression (`zombie`), a multi-ring 3D scan (`vertical`), and OptiX/GPU parity for the baseline/dynamic/noise/multi-topic cases.
-
 
 ## Architecture
 

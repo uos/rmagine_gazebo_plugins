@@ -54,7 +54,6 @@
   <!-- Only needed by the Python fixture-test harness (subscribes to the
        ros_gz_bridge-converted /scan, /points topics); the C++ plugin
        itself is gz-transport-native and has no ROS dependency. -->
-  <depend>sensor_msgs</depend>
   <exec_depend>sensor_msgs_py</exec_depend>
   <depend>gz-sim8</depend>
   <depend>gz-plugin2</depend>
@@ -67,6 +66,15 @@
   <depend>ros_gz_sim</depend>
   <depend>rmagine</depend>
   <depend>yaml-cpp</depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_msgs</depend>
+  <depend>tf2</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+
   <!-- Robot example (launch/robot_demo.launch.py) -->
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>xacro</exec_depend>

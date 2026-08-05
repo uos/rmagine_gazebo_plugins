@@ -16,16 +16,42 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, Command, FindExecutable, PathJoinSubstitution, PythonExpression
+from launch.conditions import IfCondition
 
 
 def generate_launch_description():
     pkg_share = get_package_share_directory("rmagine_gazebo_plugins")
 
+
+    # Launch arguments
+    launch_args = [
+        DeclareLaunchArgument(
+            "rmagine",
+            description="Rmagine backend used for simulation",
+            default_value="embree",
+            choices=["embree", "optix"],
+        ),
+        DeclareLaunchArgument(
+            "enable_map_transform",
+            description="Enable map transform for the robot",
+            default_value="true",
+        ),
+        DeclareLaunchArgument(
+            "start_rviz",
+            description="Start RViz2 with the robot demo configuration",
+            default_value="true",
+        ),
+    ]
+
+    rmagine_backend = LaunchConfiguration("rmagine")
+    enable_map_transform = LaunchConfiguration("enable_map_transform")
+    start_rviz = LaunchConfiguration("start_rviz")
+
     world_path = PathJoinSubstitution(
-        [pkg_share, "worlds", "gz_embree_robot_demo.sdf"]
+        [pkg_share, "worlds", PythonExpression(["'gz_' + '", rmagine_backend, "' + '_robot_demo.sdf'"])]
     )
 
     robot_description = ParameterValue(
@@ -33,7 +59,7 @@ def generate_launch_description():
             [
                 PathJoinSubstitution([FindExecutable(name="xacro")]),
                 " ",
-                PathJoinSubstitution([pkg_share, "urdf", "example_robot.urdf.xacro"]),
+                PathJoinSubstitution([pkg_share, "urdf", PythonExpression(["'example_robot_' + '", rmagine_backend, "' + '.urdf.xacro'"])]),
             ]
         ),
         value_type=str,
@@ -68,12 +94,7 @@ def generate_launch_description():
         output="screen",
         arguments=[
             "-topic", "robot_description",
-            # Must match <ignore_model> in gz_embree_robot_demo.sdf and the
-            # /model/rmagine_example_robot/... topic names in
-            # example_robot.urdf.xacro/ros_gz_bridge_robot_demo.yaml --
-            # `create -name` sets the spawned entity's name regardless of
-            # the URDF's own <robot name="...">.
-            "-name", "rmagine_example_robot",
+            "-name", "robot",
             "-z", "0.2",
         ],
         parameters=[{"use_sim_time": True}],
@@ -91,5 +112,28 @@ def generate_launch_description():
         ],
         output="screen",
     )
+    
+    gt_localization_node = Node(
+        package="rmagine_gazebo_plugins",
+        executable="gt_localization_node",
+        name="gt_localization",
+        output="screen",
+        parameters=[
+            PathJoinSubstitution([pkg_share, "config", "gt_localization.yaml"])
+        ],
+        condition=IfCondition(enable_map_transform),
+    )
 
-    return LaunchDescription([gz_sim, robot_state_publisher, spawn_robot, bridge])
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+        arguments=[
+            "-d",
+            PathJoinSubstitution([pkg_share, "rviz", "robot_demo.rviz"]),
+        ],
+        condition=IfCondition(start_rviz),
+    )
+
+    return LaunchDescription(launch_args + [gz_sim, robot_state_publisher, spawn_robot, bridge, gt_localization_node, rviz])

@@ -12,20 +12,20 @@
       name="gz::sim::systems::SceneBroadcaster" />
 
     <!-- Regression coverage for mesh-by-URI caching (README.md, "Mesh-by-URI
-         caching") -- three separate static entities all referencing the
+         caching"); three separate static entities all referencing the
          SAME mesh file (testdata/embree_harmonic/box_test.ply), at three
          different poses, plus an unrelated moving box (below) to force
          many rebuild passes over the capture window.
 
          Expected: exactly 1 cache-miss load of that mesh file, total,
-         ever -- shared across all 3 entities and every rebuild pass the
+         ever; shared across all 3 entities and every rebuild pass the
          mover forces. See check_mesh_cache_fixture.py, and
          rmagine_embree_map_system.cpp's own comment on the real bug this
          fixture found (a per-pass first-use guard was blocking legitimate
          cache hits whenever 2+ entities shared an already-cached mesh,
          fixed on both the Embree and OptiX map systems).
          Separately, instancing still gives each entity its own
-         independent transform -- if the cache/instance system regressed
+         independent transform; if the cache/instance system regressed
          to sharing a raw (non-instanced) geometry, these 3 boxes would
          collapse onto whichever entity's transform was applied last,
          instead of appearing at their real, distinct poses. -->
@@ -33,7 +33,7 @@
       <ignore_model>sensor_model</ignore_model>
       <!-- Required here, unlike every other fixture world: check_mesh_cache_fixture.py
            greps this system's own "(cache miss)" debug line to verify mesh-by-URI
-           caching actually shares one load across all 3 entities referencing it --
+           caching actually shares one load across all 3 entities referencing it;
            it's the only fixture whose check depends on debug output, not just
            published topic values. -->
       <debug>true</debug>
@@ -47,7 +47,7 @@
 
     <!-- One factory plugin per world (like the map system above) discovers
          every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
-         this world -- see rmagine_embree_sensor_system.hpp for why. -->
+         this world; see rmagine_embree_sensor_system.hpp for why. -->
     <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
 
     <light name="sun" type="directional">
@@ -103,7 +103,7 @@
       </link>
     </model>
 
-    <!-- The 3 mesh-sharing entities above are all static -- on their own
+    <!-- The 3 mesh-sharing entities above are all static; on their own
          they'd only ever trigger ONE rebuild pass total (the initial
          scene build), which isn't enough to distinguish "caches across
          passes" from "never rebuilds a static scene at all". This mover

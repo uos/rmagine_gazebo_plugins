@@ -21,8 +21,8 @@
       name="gz::sim::systems::Sensors">
       <render_engine>ogre2</render_engine>
     </plugin>
-    
-    <plugin name="rmagine_embree_map_system" filename="librmagine_embree_map_system.so">
+
+    <plugin name="rmagine_optix_map_system" filename="librmagine_optix_map_system.so">
       <ignore_model>robot</ignore_model>
       <update>
         <rate_limit>100</rate_limit>
@@ -31,7 +31,7 @@
       </update>
     </plugin>
 
-    <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
+    <plugin name="rmagine_optix_sensor_system" filename="librmagine_optix_sensor_system.so"/>
 
     <light name="sun" type="directional">
       <cast_shadows>true</cast_shadows>

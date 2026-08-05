@@ -1,0 +1,256 @@
+<?xml version="1.0"?>
+<robot
+  xmlns:xacro="http://ros.org/wiki/xacro"
+  xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+  xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+  xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+  xmlns:gz="http://gazebosim.org/schema"
+  name="robot">
+
+  <xacro:include filename="$(find rmagine_gazebo_plugins)/urdf/common.urdf.xacro" />
+  <xacro:include filename="$(find rmagine_gazebo_plugins)/urdf/wheel.urdf.xacro" />
+
+  <!-- Args -->  
+  <xacro:arg name="lidar3d" default="true"/>
+  <xacro:arg name="lidar2d" default="false"/>
+  <xacro:arg name="rgbd_camera" default="false"/>
+
+  <xacro:property name="M_PI" value="3.14159265359"/>
+  
+  <xacro:property name="imu_stdev" value="0.0001" />
+  
+  <xacro:property name="body_height" value="0.15"/>
+  <xacro:property name="body_length" value="0.38"/>
+  <xacro:property name="body_width" value="0.32"/>
+  
+  <xacro:property name="axis_front" value="0.14"/>
+  <xacro:property name="axis_back" value="-0.14"/>
+  
+  <xacro:property name="wheel_thickness" value="0.08"/>
+  <xacro:property name="wheel_body_offset" value="${wheel_thickness/2 + 0.035}"/>
+  <xacro:property name="wheel_radius" value="0.125"/>
+  <xacro:property name="axis_height" value="-0.03"/>
+  <xacro:property name="axis_right" value="${-body_width/2 - wheel_body_offset}"/>
+  <xacro:property name="axis_left" value="${body_width/2 + wheel_body_offset}"/>
+  <xacro:property name="axis_length" value="${body_width + 2 * wheel_body_offset}" />
+  <xacro:property name="turning_adaptation" value="2.95" />
+
+  <xacro:property name="body_mass" value="25.0"/>
+  <xacro:property name="wheel_mass" value="5.0"/>
+
+  <xacro:property name="imu_width" value="0.036"/>
+  <xacro:property name="imu_length" value="0.038"/>
+  <xacro:property name="imu_height" value="0.012"/>
+
+  <xacro:property name="imu_offset_x" value="0"/>
+  <xacro:property name="imu_offset_y" value="0"/>
+  <xacro:property name="imu_offset_z" value="${- body_height/2 + 0.005 + 0.007}"/>
+  
+  <xacro:property name="em_body_length" value="0.11"/>
+  <xacro:property name="em_body_width" value="0.04"/>
+  <xacro:property name="em_body_height" value="0.03"/>
+  
+  <xacro:property name="em_button_radius" value="0.0125"/>
+  <xacro:property name="em_button_depth" value="0.02" />
+ 
+  <link name="base_footprint"/>
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+      <material name="silver" >
+        <color rgba="0.5 0.5 0.5 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertial
+      x="${body_length}"
+      y="${body_width}"
+      z="${body_height}"
+      mass="${body_mass}"/>
+  </link>
+  
+  <joint name="base_footprint_to_base_joint" type="fixed">
+    <origin xyz="0 0 ${wheel_radius - axis_height}" rpy="0 0 0" />
+    <parent link="base_footprint"/>
+    <child link="base_link" />
+  </joint>
+
+  <xacro:wheel name="left_front_wheel" parent="base_link">
+    <origin xyz="${axis_front} ${axis_left} ${axis_height}" rpy="0 0 0"/>
+  </xacro:wheel>
+
+  <xacro:wheel name="left_rear_wheel" parent="base_link">
+    <origin xyz="${axis_back} ${axis_left} ${axis_height}" rpy="0 0 0" />
+  </xacro:wheel>
+  
+  <xacro:wheel name="right_front_wheel" parent="base_link">
+    <origin xyz="${axis_front} ${axis_right} ${axis_height}" rpy="0 0 0"/>
+  </xacro:wheel>
+
+  <xacro:wheel name="right_rear_wheel" parent="base_link">
+    <origin xyz="${axis_back} ${axis_right} ${axis_height}" rpy="0 0 0" />
+  </xacro:wheel>
+
+  <!-- Gazebo Plugins -->
+  
+  <link name="lidar3d">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.05" length="0.1"/>
+      </geometry>
+      <material name="red" >
+        <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.05" length="0.1"/>
+      </geometry>
+    </collision>
+    <xacro:cylinder_inertial
+      radius="0.05" 
+      length="0.1" 
+      mass="0.1"
+      />
+  </link>
+
+  <joint name="lidar3d_to_base_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="lidar3d" />
+    <origin xyz="0 0 ${body_height/2 + 0.4}"/>
+  </joint>
+
+  <gazebo reference="lidar3d">
+    <sensor name="lidar3d_gazebo_sensor" type="gpu_lidar">
+      <pose relative_to="lidar3d">0 0 0 0 0 0</pose>
+      <topic>/model/robot/lidar3d/gazebo</topic>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>${-M_PI}</min_angle>
+            <max_angle>${M_PI}</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>16</samples>
+            <resolution>0.01</resolution>
+            <min_angle>-${15.0 * M_PI/180.0}</min_angle>
+            <max_angle> ${15.0 * M_PI/180.0}</max_angle>
+          </vertical>
+        </scan>
+        <range>
+          <min>0.2</min>
+          <max>100.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </ray>
+      <always_on>1</always_on>
+      <visualize>true</visualize>
+      <frame_id>lidar3d</frame_id>
+      <gz_frame_id>lidar3d</gz_frame_id>
+      <ign_frame_id>lidar3d</ign_frame_id>
+    </sensor>
+
+    <sensor name="lidar3d_rmagine_sensor" type="custom" gz:type="rmagine_embree">
+      <always_on>true</always_on>
+      <update_rate>20</update_rate>
+      <map_key>default</map_key>
+      <frame>lidar3d</frame>
+      <topic_scan>/model/robot/lidar3d/rmagine</topic_scan>
+      <topic_points>/model/robot/lidar3d/rmagine/points</topic_points>
+      <range_min>0.15</range_min>
+      <range_max>30.0</range_max>
+      <scan>
+        <horizontal>
+          <min_angle>${-M_PI}</min_angle>
+          <increment>${1.0 * M_PI / 180.0}</increment>
+          <samples>360</samples>
+        </horizontal>
+        <vertical>
+          <min_angle>${-15.0 * M_PI / 180.0}</min_angle>
+          <increment>${2.0 * M_PI / 180.0}</increment>
+          <samples>16</samples>
+        </vertical>
+      </scan>
+    </sensor>
+
+  </gazebo>
+
+  <gazebo>
+    <plugin
+        filename="libignition-gazebo-diff-drive-system.so"
+        name="ignition::gazebo::systems::DiffDrive">
+
+      <num_wheel_pairs>2</num_wheel_pairs>
+      <!-- wheels0 -->
+      <left_joint>left_front_wheel</left_joint>
+      <right_joint>right_front_wheel</right_joint>
+      <wheel_separation>${axis_length}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+
+      <!-- wheels1-->
+      <left_joint>left_rear_wheel</left_joint>
+      <right_joint>right_rear_wheel</right_joint>
+      <wheel_separation>${axis_length}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+      <tf_topic>/model/robot/tf_odom</tf_topic>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      filename="libignition-gazebo-joint-state-publisher-system.so"
+      name="ignition::gazebo::systems::JointStatePublisher">
+      <joint_name>right_front_wheel</joint_name>
+      <topic>/model/robot/joint_states</topic>
+    </plugin>
+
+    <plugin
+      filename="libignition-gazebo-joint-state-publisher-system.so"
+      name="ignition::gazebo::systems::JointStatePublisher">
+      <joint_name>left_front_wheel</joint_name>
+      <topic>/model/robot/joint_states</topic>
+    </plugin>
+
+    <plugin
+      filename="libignition-gazebo-joint-state-publisher-system.so"
+      name="ignition::gazebo::systems::JointStatePublisher">
+      <joint_name>right_rear_wheel</joint_name>
+      <topic>/model/robot/joint_states</topic>
+    </plugin>
+
+    <plugin
+      filename="libignition-gazebo-joint-state-publisher-system.so"
+      name="ignition::gazebo::systems::JointStatePublisher">
+      <joint_name>left_rear_wheel</joint_name>
+      <topic>/model/robot/joint_states</topic>
+    </plugin>
+
+  </gazebo>
+
+  <gazebo>
+    <plugin
+      filename="ignition-gazebo-pose-publisher-system"
+      name="gz::sim::systems::PosePublisher">
+      <use_pose_vector_msg>true</use_pose_vector_msg>
+      <publish_nested_model_pose>true</publish_nested_model_pose>
+      <static_publisher>true</static_publisher>
+    </plugin>
+  </gazebo>
+
+</robot>

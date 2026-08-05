@@ -23,7 +23,7 @@
 
     <!-- One factory plugin per world (like the map system above) discovers
          every `<sensor type="custom" gz:type="rmagine_optix">` anywhere in
-         this world -- see rmagine_optix_sensor_system.hpp for why. -->
+         this world; see rmagine_optix_sensor_system.hpp for why. -->
     <plugin name="rmagine_optix_sensor_system" filename="librmagine_optix_sensor_system.so"/>
 
     <light name="sun" type="directional">
@@ -53,10 +53,10 @@
     </model>
 
     <!-- Regression coverage for GPU multi-topic fan-out (README.md,
-         "Multi-topic fan-out") -- identical scene to gz_optix_baseline.sdf,
+         "Multi-topic fan-out"); identical scene to gz_optix_baseline.sdf,
          plus two extra <output> topics. The falsifiable check: the extra
          topics must ALSO receive messages, not just the primary
-         topic_scan/topic_points -- proving the fan-out itself works, not
+         topic_scan/topic_points; proving the fan-out itself works, not
          just that the primary path still does. -->
     <model name="sensor_model">
       <static>true</static>

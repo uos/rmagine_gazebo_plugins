@@ -23,7 +23,7 @@
 
     <!-- One factory plugin per world (like the map system above) discovers
          every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
-         this world -- see rmagine_embree_sensor_system.hpp for why. -->
+         this world; see rmagine_embree_sensor_system.hpp for why. -->
     <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
 
     <light name="sun" type="directional">
@@ -35,12 +35,12 @@
     </light>
 
     <!-- Regression coverage for plane geometry support (README.md,
-         "Plane geometry support") -- a non-default normal (-1 0 0, a
+         "Plane geometry support"); a non-default normal (-1 0 0, a
          vertical wall facing back toward the sensor) so this actually
          exercises the SetFrom2Axes rotation-from-default-Z-normal path,
          not just a trivial default-normal ground plane, and also the
          HasSceneChanged() fix for non-identity plane rotations (previously
-         an infinite rebuild loop -- see MIGRATION_HANDOFF.md). -->
+         an infinite rebuild loop; see MIGRATION_HANDOFF.md). -->
     <model name="target_plane">
       <static>true</static>
       <pose>3 0 1 0 0 0</pose>

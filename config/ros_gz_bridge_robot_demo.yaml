@@ -1,53 +1,48 @@
-# ros_gz_bridge config for launch/robot_demo.launch.py. Modeled on
-# amock/rmcl_examples's rmcl_examples_sim/config/ros_gazebo_bridge.yaml,
-# trimmed to what this example robot actually has (one lidar, no IMU/camera).
-#
-# TF note: this package's own sensor plugin publishes no TF at all (see
-# rmagine_embree_sensor_system.hpp) -- both entries below feed the same
-# /tf topic instead, exactly like the reference example does with its own
-# separate /tf_gt (ground-truth link poses, from gz::sim::systems::
-# PosePublisher) and /tf_odom (from gz::sim::systems::DiffDrive) topics.
-# tf2 has no problem with multiple publishers each contributing a subset of
-# the same tree.
-
-- ros_topic_name: "/scan"
-  gz_topic_name: "/model/rmagine_example_robot/scan"
-  ros_type_name: "sensor_msgs/msg/LaserScan"
-  gz_type_name: "gz.msgs.LaserScan"
-  direction: GZ_TO_ROS
-
-- ros_topic_name: "/points"
-  gz_topic_name: "/model/rmagine_example_robot/scan/points"
-  ros_type_name: "sensor_msgs/msg/PointCloud2"
-  gz_type_name: "gz.msgs.PointCloudPacked"
+- topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "ignition.msgs.Clock"
   direction: GZ_TO_ROS
 
 - ros_topic_name: "/odom"
-  gz_topic_name: "/model/rmagine_example_robot/odometry"
+  gz_topic_name: "model/robot/odometry"
   ros_type_name: "nav_msgs/msg/Odometry"
-  gz_type_name: "gz.msgs.Odometry"
+  gz_type_name: "ignition.msgs.Odometry"
   direction: GZ_TO_ROS
 
-# DiffDrive's own odom -> base_footprint transform.
-- ros_topic_name: "/tf"
-  gz_topic_name: "/model/rmagine_example_robot/tf_odom"
-  ros_type_name: "tf2_msgs/msg/TFMessage"
-  gz_type_name: "gz.msgs.Pose_V"
+- ros_topic_name: "/lidar3d/rmagine/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_topic_name: "/model/robot/lidar3d/rmagine/points"
+  gz_type_name: "ignition.msgs.PointCloudPacked"
   direction: GZ_TO_ROS
 
-# gz::sim::systems::PosePublisher's static_publisher output -- the rest of
-# the tree (base_footprint -> base_link -> wheels/lidar_link), all fixed
-# joints.
-- ros_topic_name: "/tf"
-  gz_topic_name: "/model/rmagine_example_robot/pose_static"
-  ros_type_name: "tf2_msgs/msg/TFMessage"
-  gz_type_name: "gz.msgs.Pose_V"
+- ros_topic_name: "/lidar3d/gazebo/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_topic_name: "/model/robot/lidar3d/gazebo/points"
+  gz_type_name: "ignition.msgs.PointCloudPacked"
   direction: GZ_TO_ROS
 
-# Teleop (e.g. `ros2 run teleop_twist_keyboard teleop_twist_keyboard
-# --ros-args -r /cmd_vel:=/cmd_vel`, or any Twist-publishing node).
+- ros_topic_name: "/joint_states"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_topic_name: "/model/robot/joint_states"
+  gz_type_name: "ignition.msgs.Model"
+  direction: GZ_TO_ROS
+
 - ros_topic_name: "/cmd_vel"
-  gz_topic_name: "/model/rmagine_example_robot/cmd_vel"
-  ros_type_name: "geometry_msgs/msg/Twist"
-  gz_type_name: "gz.msgs.Twist"
+  ros_type_name: "geometry_msgs/msg/TwistStamped"
+  gz_topic_name: "/model/robot/cmd_vel"
+  gz_type_name: "ignition.msgs.Twist"
   direction: ROS_TO_GZ
+
+# GT Poses
+- ros_topic_name: "/tf_gt"
+  gz_topic_name: "model/robot/pose_static"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  gz_type_name: "gz.msgs.Pose_V"
+  direction: GZ_TO_ROS
+
+# DiffDrive Odom TF
+- ros_topic_name: "/tf_odom"
+  gz_topic_name: "model/robot/tf_odom"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  gz_type_name: "gz.msgs.Pose_V"
+  direction: GZ_TO_ROS

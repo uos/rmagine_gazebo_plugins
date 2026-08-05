@@ -1,0 +1,7 @@
+gt_localization:
+  ros__parameters:
+    use_sim_time: True
+    gz_parent_frame: robot_demo
+    gz_child_frame: robot
+    ros_parent_frame: map
+    ros_child_frame: base_footprint

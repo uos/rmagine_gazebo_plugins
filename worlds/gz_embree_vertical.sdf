@@ -23,7 +23,7 @@
 
     <!-- One factory plugin per world (like the map system above) discovers
          every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
-         this world -- see rmagine_embree_sensor_system.hpp for why. -->
+         this world; see rmagine_embree_sensor_system.hpp for why. -->
     <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
 
     <light name="sun" type="directional">
@@ -55,7 +55,7 @@
     <model name="sensor_model">
       <static>true</static>
       <pose>0 0 1 0 0 0</pose>
-      <!-- Restored, Classic-style nested <scan><horizontal>/<vertical> --
+      <!-- Restored, Classic-style nested <scan><horizontal>/<vertical>;
            a real 9-ring 3D scan, not the single-ring 2D scan every other
            fixture world uses. Proves LoadSpherical's <vertical> parsing
            (dropped in the initial gz-sim port, restored per the port

@@ -23,7 +23,7 @@
 
     <!-- One factory plugin per world (like the map system above) discovers
          every `<sensor type="custom" gz:type="rmagine_embree">` anywhere in
-         this world -- see rmagine_embree_sensor_system.hpp for why. -->
+         this world; see rmagine_embree_sensor_system.hpp for why. -->
     <plugin name="rmagine_embree_sensor_system" filename="librmagine_embree_sensor_system.so"/>
 
     <!-- Regression driver for the same-tick spawn+delete case (see
@@ -32,7 +32,7 @@
          created. If the map system ever left a zombie instance behind
          (wrong EachNew/EachRemoved ordering), this box would occlude
          target_box and the scan's center_value would read ~0.75m instead
-         of the real target's ~2.5m -- see zombie_fixture.json. -->
+         of the real target's ~2.5m; see zombie_fixture.json. -->
     <plugin name="test_spawn_delete_system" filename="libtest_spawn_delete_system.so">
       <pose>1 0 1 0 0 0</pose>
       <size>0.5 0.5 0.5</size>
