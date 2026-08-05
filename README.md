@@ -49,10 +49,11 @@ See [Architecture](#architecture) for the technical details.
 
 Clone both packages into your ROS 2 workspace's `src` folder and build:
 
-```console
-git clone git@github.com:uos/rmagine.git
-git clone git@github.com:uos/rmagine_gazebo_plugins.git
-colcon build --packages-select rmagine rmagine_gazebo_plugins
+```bash
+user@pc:~/ros_ws/src$ git clone git@github.com:uos/rmagine.git
+user@pc:~/ros_ws/src$ git clone git@github.com:uos/rmagine_gazebo_plugins.git
+user@pc:~/ros_ws/src$ cd ..
+user@pc:~/ros_ws$ colcon build --packages-select rmagine rmagine_gazebo_plugins
 ```
 
 rmagine needs a few common system libraries (TBB, Boost, Eigen, Assimp, CMake) and, for the OptiX backend, CUDA. If `colcon build` complains about a missing dependency, see rmagine's own [installation instructions](https://github.com/uos/rmagine#installation-and-usage).
@@ -70,13 +71,13 @@ lidar into `worlds/gz_embree_robot_demo.sdf` (a few static boxes/a cylinder
 to drive around and scan), and bridges everything to ROS via
 `config/ros_gz_bridge_robot_demo.yaml`:
 
-```console
+```bash
 ros2 launch rmagine_gazebo_plugins robot_demo.launch.py
 ```
 
 Then, in another terminal:
 
-```console
+```bash
 ros2 run rviz2 rviz2 -d $(ros2 pkg prefix --share rmagine_gazebo_plugins)/rviz/robot_demo.rviz
 ```
 
@@ -300,7 +301,7 @@ Two plugin roles per backend, mirroring the classic split between a scene-sync w
 - **Map system** (`rmagine_embree_map_system` / `rmagine_optix_map_system`, attached to `<world>`): builds and incrementally maintains one persistent Embree/OptiX scene from the world's `<visual>` geometry. Publishes the current map through an in-process registry keyed by `map_key` (default `"default"`).
 - **Sensor system** (`rmagine_embree_sensor_system` / `rmagine_optix_sensor_system`, attached once per `<world>`, like the map system): auto-discovers every `<sensor type="custom" gz:type="rmagine_embree|rmagine_optix">` anywhere in the world via gz-sim's `components::CustomSensor` (the closest available analogue to Gazebo Classic's `GZ_REGISTER_STATIC_SENSOR`; gz-sensors' own plugin-loading mechanism for custom sensor types was removed upstream). For each discovered sensor it looks up the map by `map_key`, raycasts against it (Spherical/Pinhole/O1Dn/OnDn models), and publishes `gz.msgs.LaserScan` (Spherical, single-ring only) and `gz.msgs.PointCloudPacked` over plain **gz-transport**; all sensors of one backend share a single `gz::transport::Node` owned by the factory system.
 
-This plugin has **no ROS dependency at all** (map and sensor systems alike). If you want the data in ROS, bridge it with [`ros_gz_bridge`](https://github.com/gazebosim/ros_gz), see [Bridging to ROS](#usage) above. TF isn't published by this plugin either: attach gz-sim's own `gz::sim::systems::PosePublisher` to your robot and bridge its `gz.msgs.Pose_V` output to `tf2_msgs/msg/TFMessage`, exactly as shown in the quickstart.
+This plugins are ROS-agnostic (map and sensor systems alike). If you want the data in ROS, bridge it with [`ros_gz_bridge`](https://github.com/gazebosim/ros_gz), see [Bridging to ROS](#usage) above. TF isn't published by this plugin either: attach gz-sim's own `gz::sim::systems::PosePublisher` to your robot and bridge its `gz.msgs.Pose_V` output to `tf2_msgs/msg/TFMessage`, exactly as shown in the quickstart.
 
 ## Citation
 
