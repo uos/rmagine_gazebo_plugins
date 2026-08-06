@@ -206,6 +206,59 @@ else()
   message(WARNING "rmagine::optix not found -- rmagine_optix_map_system/rmagine_optix_sensor_system will not be built.")
 endif()
 
+
+################
+ ##  VULKAN  ##
+################
+if(TARGET rmagine::vulkan)
+  add_library(rmagine_vulkan_map_system SHARED
+    src/gz/rmagine_vulkan_map_system.cpp
+  )
+
+  target_include_directories(rmagine_vulkan_map_system PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+
+  target_link_libraries(rmagine_vulkan_map_system
+    ${RMAGINE_GZ_CORE_LIBS}
+    ${RMAGINE_GZ_COMMON}::graphics
+    rmagine::core
+    rmagine::vulkan
+  )
+  target_compile_definitions(rmagine_vulkan_map_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
+
+  install(TARGETS rmagine_vulkan_map_system
+    LIBRARY DESTINATION lib/${PROJECT_NAME}
+  )
+
+  add_library(rmagine_vulkan_sensor_system SHARED
+    src/gz/rmagine_vulkan_sensor_system.cpp
+    src/gz/sensor_model_config.cpp
+  )
+
+  target_include_directories(rmagine_vulkan_sensor_system PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+
+  target_link_libraries(rmagine_vulkan_sensor_system
+    ${RMAGINE_GZ_CORE_LIBS}
+    rmagine::core
+    rmagine::vulkan
+    yaml-cpp
+  )
+  target_compile_definitions(rmagine_vulkan_sensor_system PRIVATE
+    RMAGINE_GZ_IGNITION_ERA=${RMAGINE_GZ_IGNITION_ERA})
+
+  install(TARGETS rmagine_vulkan_sensor_system
+    LIBRARY DESTINATION lib/${PROJECT_NAME}
+  )
+else()
+  message(WARNING "rmagine::vulkan not found -- rmagine_vulkan_map_system/rmagine_vulkan_sensor_system will not be built.")
+endif()
+
 # Ground Truth Localization Node
 add_library(gt_localization SHARED
  src/ros/gt_localization.cpp)
@@ -421,6 +474,22 @@ if(RMAGINE_GAZEBO_PLUGINS_BUILD_TESTING)
         APPEND_LIBRARY_DIRS "/usr/local/lib"
         GENERATE_RESULT_FOR_RETURN_CODE_ZERO
         TIMEOUT 120
+      )
+    endif()
+
+    if(TARGET rmagine::vulkan)
+      ament_add_test(vulkan_fixture_baseline
+        COMMAND bash -c "ros2 run rmagine_gazebo_plugins capture_embree_fixture vulkan_baseline && ros2 run rmagine_gazebo_plugins compare_embree_fixture vulkan_baseline"
+        APPEND_LIBRARY_DIRS "/usr/local/lib"
+        GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+        TIMEOUT 120
+      )
+
+      ament_add_test(vulkan_fixture_dynamic
+        COMMAND bash -c "ros2 run rmagine_gazebo_plugins capture_embree_fixture vulkan_dynamic && ros2 run rmagine_gazebo_plugins compare_embree_fixture vulkan_dynamic"
+        APPEND_LIBRARY_DIRS "/usr/local/lib"
+        GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+        TIMEOUT 180
       )
     endif()
 

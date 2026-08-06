@@ -1,0 +1,103 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="default">
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics" />
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands" />
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster" />
+
+    <plugin name="rmagine_vulkan_map_system" filename="librmagine_vulkan_map_system.so">
+      <ignore_model>sensor_model</ignore_model>
+      <update>
+        <rate_limit>30</rate_limit>
+        <delta_trans>0.001</delta_trans>
+        <delta_rot>0.001</delta_rot>
+        <delta_scale>0.001</delta_scale>
+      </update>
+    </plugin>
+
+    <!-- One factory plugin per world (like the map system above) discovers
+         every `<sensor type="custom" gz:type="rmagine_vulkan">` anywhere in
+         this world; see rmagine_vulkan_sensor_system.hpp for why. -->
+    <plugin name="rmagine_vulkan_sensor_system" filename="librmagine_vulkan_sensor_system.so"/>
+
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="target_box">
+      <static>false</static>
+      <pose>3 0 1 0 0 0</pose>
+      <plugin name="test_box_mover_system" filename="libtest_box_mover_system.so">
+        <axis>1 0 0</axis>
+        <amplitude>0.75</amplitude>
+        <period>6.0</period>
+      </plugin>
+      <link name="link">
+        <gravity>false</gravity>
+        <velocity_decay>
+          <linear>1.0</linear>
+          <angular>1.0</angular>
+        </velocity_decay>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="sensor_model">
+      <static>true</static>
+      <pose>0 0 1 0 0 0</pose>
+      <link name="sensor_link">
+        <sensor name="sensor_model_sensor" type="custom" gz:type="rmagine_vulkan">
+          <map_key>default</map_key>
+          <frame>sensor_link</frame>
+          <topic_scan>scan</topic_scan>
+          <topic_points>points</topic_points>
+          <update_rate>5</update_rate>
+          <lidar>
+            <scan>
+              <horizontal>
+                <min_angle>-1.0472</min_angle>
+                <increment>0.0052486216</increment>
+                <samples>400</samples>
+              </horizontal>
+            </scan>
+            <range>
+              <min>0.2</min>
+              <max>50.0</max>
+            </range>
+          </lidar>
+        </sensor>
+        <visual name="sensor_visual">
+          <geometry>
+            <box>
+              <size>0.2 0.2 0.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

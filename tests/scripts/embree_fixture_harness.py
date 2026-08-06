@@ -34,6 +34,8 @@ FIXTURE_NAMES = {
     "optix_dynamic": "optix_dynamic_fixture.json",
     "optix_noise": "optix_noise_fixture.json",
     "optix_multi": "optix_multi_fixture.json",
+    "vulkan_baseline": "vulkan_baseline_fixture.json",
+    "vulkan_dynamic": "vulkan_dynamic_fixture.json",
     "vertical": "vertical_fixture.json",
     "zombie": "zombie_fixture.json",
 }
@@ -57,6 +59,11 @@ WORLD_NAMES = {
     "optix_dynamic": "gz_optix_dynamic.sdf",
     "optix_noise": "gz_optix_noise.sdf",
     "optix_multi": "gz_optix_multi.sdf",
+    # Same target_box/sensor_model layout as their embree/optix counterparts,
+    # just the Vulkan backend's plugin filenames/gz:type -- see
+    # rmagine_vulkan_map_system/rmagine_vulkan_sensor_system.
+    "vulkan_baseline": "gz_vulkan_baseline.sdf",
+    "vulkan_dynamic": "gz_vulkan_dynamic.sdf",
     # Same target_box/sensor_model layout as "baseline" -- see their own
     # world files' comments for what each adds on top of it.
     "vertical": "gz_embree_vertical.sdf",
@@ -80,6 +87,8 @@ EXPECTS_SCAN = {
     "optix_dynamic": True,
     "optix_noise": True,
     "optix_multi": True,
+    "vulkan_baseline": True,
+    "vulkan_dynamic": True,
     # phi.size == 9 (a real multi-ring 3D scan) -- LaserScan is only
     # published for a single-ring (2D) spherical model, see
     # PublishLaserScanIfApplicable in sensor_model_publish.hpp.

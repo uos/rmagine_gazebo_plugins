@@ -32,7 +32,7 @@ def generate_launch_description():
             "rmagine",
             description="Rmagine backend used for simulation",
             default_value="embree",
-            choices=["embree", "optix"],
+            choices=["embree", "optix", "vulkan"],
         ),
         DeclareLaunchArgument(
             "enable_map_transform",

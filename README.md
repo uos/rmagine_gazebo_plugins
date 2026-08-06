@@ -16,9 +16,9 @@ rmagine_gazebo_plugins
 
 <br/>
 
-Range sensor plugins for Gazebo, built on the ray tracing sensor simulation library [rmagine](https://github.com/uos/rmagine). With rmagine's OptiX backend you can simulate depth sensor data directly on an RTX graphics card; with the Embree backend you can simulate any provided sensor on the CPU. Both backends build a BVH acceleration structure over the scene once, so simulating dense depth sensors stays fast even in large Gazebo worlds.
+Range sensor plugins for Gazebo, built on the ray tracing sensor simulation library [rmagine](https://github.com/uos/rmagine). With rmagine's OptiX or Vulkan backends you can simulate depth sensor data directly on a GPU (OptiX requires an RTX card and CUDA; Vulkan runs on any Vulkan-ray-tracing-capable GPU); with the Embree backend you can simulate any provided sensor on the CPU. All backends build an acceleration structure over the scene once and refit it in place as objects move, so simulating dense depth sensors stays fast even in large Gazebo worlds.
 
-Conceptually, two kinds of plugins work together, one pair per backend (Embree/CPU, OptiX/GPU):
+Conceptually, two kinds of plugins work together, one pair per backend (Embree/CPU, OptiX/GPU, Vulkan/GPU):
 
 - **Map plugin** syncs rmagine's scenes with Gazebo's world, as geometry moves, appears, or disappears.
 - **Sensor plugins** use the synced acceleration structure to do raycasting with rmagine's sensor models: Spherical, Pinhole, O1Dn and OnDn 
@@ -26,6 +26,7 @@ Conceptually, two kinds of plugins work together, one pair per backend (Embree/C
 Currently supported rmagine backends are
 - **embree**: Intel Embree-based. Runs smoothly even on low-end hardware
 - **optix**: Ultra-fast hardware-accelerated lidar simulation. Requires your system to be compatible with Nvidia CUDA and OptiX
+- **vulkan**: Hardware-accelerated lidar simulation on any Vulkan-ray-tracing-capable GPU (not limited to Nvidia/CUDA). No noise model support yet (only OptiX has that currently).
 
 See [Architecture](#architecture) for the technical details.
 
@@ -58,12 +59,13 @@ user@pc:~/ros_ws/src$ cd ..
 user@pc:~/ros_ws$ colcon build --packages-select rmagine rmagine_gazebo_plugins
 ```
 
-rmagine needs a few common system libraries (TBB, Boost, Eigen, Assimp, CMake) and, for the OptiX backend, CUDA. If `colcon build` complains about a missing dependency, see rmagine's own [installation instructions](https://github.com/uos/rmagine#installation-and-usage).
+rmagine needs a few common system libraries (TBB, Boost, Eigen, Assimp, CMake); for the OptiX backend, CUDA; for the Vulkan backend, a Vulkan loader/SDK (`libvulkan-dev`, `glslang-tools`). If `colcon build` complains about a missing dependency, see rmagine's own [installation instructions](https://github.com/uos/rmagine#installation-and-usage).
 
 Built targets depend on which rmagine components were found:
 
 - `rmagine::embree` found: `rmagine_embree_map_system`, `rmagine_embree_sensor_system`
 - `rmagine::optix` found: `rmagine_optix_map_system`, `rmagine_optix_sensor_system`
+- `rmagine::vulkan` found: `rmagine_vulkan_map_system`, `rmagine_vulkan_sensor_system`
 
 ## Quickstart
 
@@ -77,7 +79,7 @@ to drive around and scan), and bridges everything to ROS via
 ros2 launch rmagine_gazebo_plugins robot_demo.launch.py rmagine:=embree
 ```
 
-Will launch a Gazebo server and GUI with embree backend enabled (you can switch it to `optix`). Additionally it launches a preconfigured RViz with the standard `gpu_lidar` (Ogre2) colored in white and the rmagine version colored by object id:
+Will launch a Gazebo server and GUI with embree backend enabled (you can switch it to `optix` or `vulkan`). Additionally it launches a preconfigured RViz with the standard `gpu_lidar` (Ogre2) colored in white and the rmagine version colored by object id:
 
 ![image info](./img/robot_demo.png)
 
@@ -154,7 +156,7 @@ Once you've run the quickstart, these are the building blocks for wiring rmagine
 </world>
 ```
 
-`type="custom"` is required (sdformat validates the standard `type` attribute against its own known sensor type names); `gz:type` is the free-form identifier this package's factory plugin looks for (`rmagine_embree` or `rmagine_optix`), gz-sim's own documented convention for third-party sensor types, the same one used by its shipped `environmental_sensor.sdf` example.
+`type="custom"` is required (sdformat validates the standard `type` attribute against its own known sensor type names); `gz:type` is the free-form identifier this package's factory plugin looks for (`rmagine_embree`, `rmagine_optix`, or `rmagine_vulkan`), gz-sim's own documented convention for third-party sensor types, the same one used by its shipped `environmental_sensor.sdf` example.
 
 `<topic_scan>`/`<topic_points>` are plain gz-transport topic names (this plugin does no automatic `/model/<name>/...` namespacing the way gz-sim's built-in sensors do): write the full path you want if you're bridging into a namespaced robot, or a bare name like `scan` if not.
 
@@ -360,7 +362,7 @@ rays:
 </details>
 
 <details>
-<summary><strong>Noise</strong> (OptiX/GPU sensor system only)</summary>
+<summary><strong>Noise</strong> (OptiX/GPU sensor system only -- not yet available on Vulkan)</summary>
 
 Repeatable `<noise>` elements, applied in order to the simulated ranges (in VRAM, before download):
 
@@ -388,8 +390,8 @@ Repeatable `<noise>` elements, applied in order to the simulated ranges (in VRAM
 
 Two plugin roles per backend, mirroring the classic split between a scene-sync world plugin and a raycasting sensor plugin (gz-sim only has one plugin base type, `System`, so both are `System` plugins, but the responsibilities stay separate):
 
-- **Map system** (`rmagine_embree_map_system` / `rmagine_optix_map_system`, attached to `<world>`): builds and incrementally maintains one persistent Embree/OptiX scene from the world's `<visual>` geometry. Publishes the current map through an in-process registry keyed by `map_key` (default `"default"`).
-- **Sensor system** (`rmagine_embree_sensor_system` / `rmagine_optix_sensor_system`, attached once per `<world>`, like the map system): auto-discovers every `<sensor type="custom" gz:type="rmagine_embree|rmagine_optix">` anywhere in the world via gz-sim's `components::CustomSensor` (the closest available analogue to Gazebo Classic's `GZ_REGISTER_STATIC_SENSOR`; gz-sensors' own plugin-loading mechanism for custom sensor types was removed upstream). For each discovered sensor it looks up the map by `map_key`, raycasts against it (Spherical/Pinhole/O1Dn/OnDn models), and publishes `gz.msgs.LaserScan` (Spherical, single-ring only) and `gz.msgs.PointCloudPacked` over plain **gz-transport**; all sensors of one backend share a single `gz::transport::Node` owned by the factory system.
+- **Map system** (`rmagine_embree_map_system` / `rmagine_optix_map_system` / `rmagine_vulkan_map_system`, attached to `<world>`): builds and incrementally maintains one persistent Embree/OptiX/Vulkan scene from the world's `<visual>` geometry. Publishes the current map through an in-process registry keyed by `map_key` (default `"default"`). Adding/removing geometry triggers a full acceleration-structure rebuild; moving already-tracked geometry refits the existing one in place instead (all three backends).
+- **Sensor system** (`rmagine_embree_sensor_system` / `rmagine_optix_sensor_system` / `rmagine_vulkan_sensor_system`, attached once per `<world>`, like the map system): auto-discovers every `<sensor type="custom" gz:type="rmagine_embree|rmagine_optix|rmagine_vulkan">` anywhere in the world via gz-sim's `components::CustomSensor` (the closest available analogue to Gazebo Classic's `GZ_REGISTER_STATIC_SENSOR`; gz-sensors' own plugin-loading mechanism for custom sensor types was removed upstream). For each discovered sensor it looks up the map by `map_key`, raycasts against it (Spherical/Pinhole/O1Dn/OnDn models), and publishes `gz.msgs.LaserScan` (Spherical, single-ring only) and `gz.msgs.PointCloudPacked` over plain **gz-transport**; all sensors of one backend share a single `gz::transport::Node` owned by the factory system.
 
 This plugins are ROS-agnostic (map and sensor systems alike). If you want the data in ROS, bridge it with [`ros_gz_bridge`](https://github.com/gazebosim/ros_gz), see [Bridging to ROS](#usage) above. TF isn't published by this plugin either: attach gz-sim's own `gz::sim::systems::PosePublisher` to your robot and bridge its `gz.msgs.Pose_V` output to `tf2_msgs/msg/TFMessage`, exactly as shown in the quickstart.
 
